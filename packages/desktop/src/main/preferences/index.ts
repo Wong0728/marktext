@@ -49,6 +49,21 @@ class Preference extends TypedEmitter<PreferenceEvents> {
           if (store.get('startUpAction') === 'lastState') {
             store.set('startUpAction', 'openLastFolder')
           }
+        },
+        // `isGitlabCompatibilityEnabled` only ever turned on ```math blocks —
+        // pandoc's tex_math_gfm, which is what the preference is now called.
+        // Carry the opt-in over; init() drops the old key on its own, since it
+        // is no longer in static/preference.json.
+        //
+        // Keyed at the prerelease, not `0.20.0`: conf skips a migration whose
+        // version is greater than the running app's, so a `0.20.0` key would
+        // never fire on a dev or rc build — and init() deletes the old key on
+        // that same first launch, so the opt-in would be gone for good before
+        // the release ever got to read it.
+        '0.20.0-dev': (store) => {
+          if (store.get('isGitlabCompatibilityEnabled') === true) {
+            store.set('texMathGfm', true)
+          }
         }
       },
       beforeEachMigration: (_store, context) => {
