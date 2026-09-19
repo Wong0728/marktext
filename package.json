@@ -1,0 +1,61 @@
+{
+  "name": "marktext-monorepo",
+  "version": "0.20.0-dev",
+  "description": "MarkText monorepo root",
+  "private": true,
+  "homepage": "https://github.com/marktext/marktext",
+  "packageManager": "pnpm@10.33.4",
+  "engines": {
+    "node": ">=20.19.0",
+    "pnpm": ">=10"
+  },
+  "scripts": {
+    "postinstall": "tsx scripts/postinstall.ts",
+    "format": "prettier --write .",
+    "lint": "eslint --cache .",
+    "minify-locales": "tsx scripts/minify-locales.ts",
+    "rebuild-native": "pnpm --filter marktext rebuild-native",
+    "start": "pnpm --filter marktext start",
+    "dev": "pnpm --filter marktext dev",
+    "build": "pnpm --filter marktext build",
+    "build:unpack": "pnpm --filter marktext build:unpack",
+    "build:win": "pnpm --filter marktext build:win",
+    "build:win:x64": "pnpm --filter marktext build:win:x64",
+    "build:win:arm64": "pnpm --filter marktext build:win:arm64",
+    "build:mac": "pnpm --filter marktext build:mac",
+    "build:mac:x64": "pnpm --filter marktext build:mac:x64",
+    "build:mac:arm64": "pnpm --filter marktext build:mac:arm64",
+    "build:linux": "pnpm --filter marktext build:linux",
+    "perf:inspect": "pnpm --filter marktext perf:inspect",
+    "perf:inspect-brk": "pnpm --filter marktext perf:inspect-brk",
+    "test": "pnpm --filter marktext test",
+    "test:unit": "pnpm --filter marktext test:unit",
+    "test:e2e": "pnpm --filter marktext test:e2e",
+    "typecheck": "pnpm --filter marktext typecheck",
+    "typecheck:watch": "pnpm --filter marktext typecheck:watch",
+    "check": "pnpm lint && pnpm typecheck",
+    "gen-third-party": "tsx scripts/generateThirdPartyLicense.ts",
+    "validate-licenses": "tsx scripts/validateLicenses.ts"
+  },
+  "pnpm": {
+    "overrides": {
+      "postcss": "8.5.15",
+      "esbuild@>=0.27.0 <0.28.1": "0.28.1"
+    }
+  },
+  "devDependencies": {
+    "@babel/eslint-parser": "^7.29.7",
+    "electron": "~44.3.0",
+    "eslint": "^9.39.4",
+    "eslint-plugin-html": "^8.1.4",
+    "eslint-plugin-i18n-json": "^4.0.1",
+    "eslint-plugin-jsonc": "^3.2.0",
+    "eslint-plugin-vue": "^10.9.2",
+    "license-checker": "^25.0.1",
+    "neostandard": "^0.13.0",
+    "prettier": "^3.8.4",
+    "tsx": "^4.22.4",
+    "typescript-eslint": "^8.61.1",
+    "vue-eslint-parser": "^10.4.1"
+  }
+}

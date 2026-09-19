@@ -1,0 +1,202 @@
+.markdown-body {
+    box-sizing: border-box;
+    min-width: 200px;
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 45px;
+
+    font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+}
+
+@media not print {
+    .markdown-body {
+        padding: 45px;
+    }
+
+    @media (max-width: 767px) {
+        .markdown-body {
+            padding: 15px;
+        }
+    }
+}
+
+/* Table of contents injected at a `[TOC]` marker by the desktop export
+   wrapper (getHtmlToc). Ported from legacy muyajs exportStyle.css so the
+   exported TOC keeps the same look: body-colour links (not link-blue) and a
+   dotted leader line after each entry. */
+.toc-container {
+    width: 100%;
+}
+
+.toc-container .toc-title {
+    margin-bottom: 0;
+
+    font-weight: 700;
+    font-size: 1.2em;
+}
+
+.toc-container li,
+.toc-container ul,
+.toc-container ul li {
+    list-style: none !important;
+}
+
+.toc-container > ul {
+    padding-left: 0;
+}
+
+.toc-container ul li span {
+    display: flex;
+}
+
+.toc-container ul li span a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.toc-container ul li span span.dots {
+    flex: 1;
+    height: 0.65em;
+    margin: 0 10px;
+
+    border-bottom: 2px dotted black;
+}
+
+.markdown-body sup.footnote-ref a {
+    text-decoration: none;
+}
+
+.markdown-body .footnotes {
+    font-size: 0.85em;
+
+    opacity: 0.8;
+}
+
+.markdown-body .footnotes .footnote-backref {
+    font-family: initial;
+    text-decoration: none;
+}
+
+/* Keep TOC links body-coloured / underline-free on hover too, overriding
+   github-markdown-css's `a:hover`. Separated from the base `a` rule and placed
+   here so source order stays specificity-ascending. */
+.toc-container ul li span a:hover {
+    color: inherit;
+    text-decoration: none;
+}
+
+.markdown-body pre {
+    white-space: pre-wrap;
+}
+
+/* Render soft line breaks (Shift+Enter → a bare `\n` inside a block) the way
+   the editor does (`.mu-content` is pre-wrap) instead of emitting a
+   non-standard `<br>`, so the exported HTML stays CommonMark-conformant (the
+   `\n` is a plain line ending) yet still shows the break (#3676).
+
+   `li:not(:has(> p))` targets only tight list items, whose soft break is a
+   bare `\n` directly inside the `<li>`. Loose items wrap their content in
+   `<p>` (handled by the `p` rule); giving them `li` pre-wrap would expose
+   marked's pretty-printing newline between `</p>` and `</li>` as a stray blank
+   line, so they are deliberately excluded. Specificity stays level with the
+   earlier `.toc-container ul li` rule (no-descending-specificity). */
+.markdown-body p,
+.markdown-body li:not(:has(> p)) {
+    white-space: pre-wrap;
+}
+
+.markdown-body table {
+    display: table;
+}
+
+.markdown-body img[data-align='center'] {
+    display: block;
+    margin: 0 auto;
+}
+
+.markdown-body img[data-align='right'] {
+    display: block;
+    margin: 0 0 0 auto;
+}
+
+.markdown-body li:has(input[type='checkbox']) {
+    list-style-type: none;
+}
+
+.markdown-body li input[type='checkbox'] {
+    margin: 0 0 0 -1.3em;
+}
+
+.markdown-body ol ol,
+.markdown-body ul ol {
+    list-style-type: decimal;
+}
+
+.markdown-body ol ol ol,
+.markdown-body ol ul ol,
+.markdown-body ul ol ol,
+.markdown-body ul ul ol {
+    list-style-type: decimal;
+}
+
+.markdown-body div.plantuml,
+.markdown-body div.mermaid,
+.markdown-body div.vega-lite,
+.markdown-body div.flowchart,
+.markdown-body div.sequence {
+    display: block;
+    padding: 20px 0;
+
+    text-align: center;
+}
+
+/* Paged output: PDF export (Electron printToPDF) and browser printing both
+   render this document through Chromium's print pipeline, and until now nothing
+   in the export styles prevented a page break from landing inside a formula, a
+   diagram, a table row or an image — or left a heading stranded at the foot of
+   a page. `break-inside: avoid` is only a hint: Chromium still splits anything
+   taller than one page, so declaring it cannot lose content. */
+@media print {
+    .markdown-body h1,
+    .markdown-body h2,
+    .markdown-body h3,
+    .markdown-body h4,
+    .markdown-body h5,
+    .markdown-body h6 {
+        break-after: avoid-page;
+        break-inside: avoid;
+    }
+
+    /* A KaTeX formula is one visual unit: the MathML layer is hidden and the
+       painted layer is a pile of absolutely positioned spans, so a break in the
+       middle of it silently drops half of the equation. */
+    .markdown-body .katex,
+    .markdown-body .katex-display {
+        break-inside: avoid;
+    }
+
+    .markdown-body pre,
+    .markdown-body blockquote,
+    .markdown-body table,
+    .markdown-body tr,
+    .markdown-body img,
+    .markdown-body div.plantuml,
+    .markdown-body div.mermaid,
+    .markdown-body div.vega-lite,
+    .markdown-body div.flowchart,
+    .markdown-body div.sequence {
+        break-inside: avoid-page;
+    }
+
+    /* `![](…)` on its own line is an image-only paragraph; splitting it would
+       put the image and its caption paragraph on different pages. */
+    .markdown-body p:has(> img:only-child) {
+        break-inside: avoid-page;
+    }
+
+    .markdown-body p,
+    .markdown-body li {
+        orphans: 2;
+        widows: 2;
+    }
+}
