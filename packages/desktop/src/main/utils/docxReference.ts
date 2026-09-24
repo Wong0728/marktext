@@ -28,7 +28,9 @@ export interface DocxFontSettings {
 }
 
 // Half-point heading offsets above the body size. At the 12pt default this
-// yields H1=16pt / H2=14pt / H3=13pt, matching the web-exported document.
+// yields H1=16pt / H2=14pt, matching the web-exported document; H3/H4 carry
+// no explicit size in reference.docx and inherit the body size, so the
+// Heading3 offset below only takes effect on older reference documents.
 const HEADING_OFFSETS_HP: Array<[string, number]> = [
   ['Heading1', 8],
   ['Heading2', 4],

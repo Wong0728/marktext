@@ -457,6 +457,11 @@ const rasterizeLocalImages = async(doc: Document): Promise<void> => {
 export const prepareHtmlForDocx = async(html: string): Promise<string> => {
   const doc = new DOMParser().parseFromString(html, 'text/html')
 
+  // pandoc turns the HTML <title> into a "Title" paragraph above the
+  // document's own H1, duplicating the heading. Drop it so the DOCX starts
+  // at the H1 like the web-exported reference document.
+  doc.querySelector('head > title')?.remove()
+
   // Re-encode local images (SVG → PNG, oversized JPEG → downscaled JPEG) so
   // the converter receives portable, Word-friendly data URIs.
   await rasterizeLocalImages(doc)
