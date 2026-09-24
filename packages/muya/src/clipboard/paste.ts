@@ -651,7 +651,15 @@ async function applyPaste(clipboard: Clipboard, data: IPasteData): Promise<void>
     });
     const copyType = getCopyTextType(html, text, pasteType);
 
-    const { start, end } = anchorBlock.getCursor()!;
+    // A second paste (or an undo) can land while this one is suspended at the
+    // awaits above and detach this anchor — its cursor is cleared on removal.
+    // The snapshot below is stale then; abandon this paste instead of splicing
+    // into a detached block.
+    const cursor = anchorBlock.getCursor();
+    if (!cursor)
+        return;
+
+    const { start, end } = cursor;
     const { text: content } = anchorBlock;
     const wrapperBlock = anchorBlock.getAnchor();
     const ctx: IPasteContext = {
