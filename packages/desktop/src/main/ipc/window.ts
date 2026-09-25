@@ -35,11 +35,17 @@ const buildMenu = (template: MenuTemplate | undefined, popupId: number, windowId
         checked: !!item.checked,
         click: () => {
           const sender = popups.get(popupId)?.sender
-          try {
-            sender?.send('mt::menu::click', { windowId, id })
-          } catch {
-            /* sender destroyed */
-          }
+          if (!sender) return
+          // Electron 44 (Windows) swallows webContents.send() issued from
+          // inside the native menu's click/callback context; defer the send
+          // until the menu loop has exited.
+          setImmediate(() => {
+            try {
+              sender.send('mt::menu::click', { windowId, id })
+            } catch {
+              /* sender destroyed */
+            }
+          })
         },
         submenu: item.submenu ? buildMenu(item.submenu as MenuTemplateItem[], popupId, windowId) : undefined
       })
@@ -103,11 +109,13 @@ export const registerWindowHandlers = (): void => {
         y: position?.y,
         callback: () => {
           popups.delete(popupId)
-          try {
-            event.sender.send('mt::menu::closed', { windowId: win.id })
-          } catch {
-            /* destroyed */
-          }
+          setImmediate(() => {
+            try {
+              event.sender.send('mt::menu::closed', { windowId: win.id })
+            } catch {
+              /* destroyed */
+            }
+          })
         }
       })
     } catch (err) {

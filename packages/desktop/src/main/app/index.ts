@@ -1022,7 +1022,10 @@ class App {
     })
 
     ipcMain.handle('mt::fs-trash-item', async(_event, fullPath: string) => {
-      return shell.trashItem(fullPath)
+      // chokidar v5 emits POSIX separators on Windows, so sidebar tree
+      // pathnames reach here as `C:/a/b.md`; shell.trashItem rejects those
+      // with "Failed to parse path" (electron/electron#28831).
+      return shell.trashItem(path.normalize(fullPath))
     })
   }
 }

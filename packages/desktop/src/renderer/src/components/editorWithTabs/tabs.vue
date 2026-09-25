@@ -63,6 +63,7 @@ import { storeToRefs } from 'pinia'
 import { Plus, Close } from '@element-plus/icons-vue'
 import { showContextMenu } from '../../contextMenu/tabs'
 import bus from '../../bus'
+import { getUniqueId } from '../../util'
 import type { IFileState, TabDragPayload } from '@shared/types/files'
 
 const editorStore = useEditorStore()
@@ -192,24 +193,29 @@ const handleContextMenu = (event: MouseEvent, tab: IFileState) => {
 // --- tab drag & drop ---------------------------------
 
 const serializeTab = (file: IFileState) => {
-  return {
-    id: file.id,
-    pathname: file.pathname,
-    filename: file.filename,
-    markdown: file.markdown,
-    isSaved: file.isSaved,
-    encoding: file.encoding,
-    lineEnding: file.lineEnding,
-    adjustLineEndingOnSave: file.adjustLineEndingOnSave,
-    trimTrailingNewline: file.trimTrailingNewline
-  }
+  // The tab state is reactive (Proxy-based); structured clone used by IPC
+  // throws "An object could not be cloned" on proxies. Round-trip through
+  // JSON so every field (e.g. the FileEncoding object) is a plain value.
+  return JSON.parse(
+    JSON.stringify({
+      id: file.id,
+      pathname: file.pathname,
+      filename: file.filename,
+      markdown: file.markdown,
+      isSaved: file.isSaved,
+      encoding: file.encoding,
+      lineEnding: file.lineEnding,
+      adjustLineEndingOnSave: file.adjustLineEndingOnSave,
+      trimTrailingNewline: file.trimTrailingNewline
+    })
+  )
 }
 
 const buildTabPayload = (file: IFileState): TabDragPayload | null => {
   const windowId = window.marktext?.env?.windowId
   if (windowId == null) return null
   return {
-    dragId: crypto.randomUUID(),
+    dragId: getUniqueId(),
     sourceWindowId: windowId,
     tab: serializeTab(file)
   }
@@ -359,19 +365,19 @@ const onTabStripDrop = (event: DragEvent): void => {
   }
 }
 
-const onDragEnd = (event: DragEvent): void => {
+const onDragEnd = (_event: DragEvent): void => {
   const payload = currentDragPayload
   currentDragPayload = null
   draggingTabId.value = null
   dropMarker.value = null
   stopAutoScroll()
 
-  // `dropEffect === 'none'` means the tab was not dropped on this window's
-  // tab bar; let main decide whether the tab merges into another window,
-  // detaches into a new window, or the drag is cancelled.
-  if (!payload || !event.dataTransfer || event.dataTransfer.dropEffect !== 'none') {
-    return
-  }
+  // Don't gate on `dataTransfer.dropEffect`: Chromium can report the last
+  // dragover's effect (set to 'move' by this very tab strip) instead of
+  // 'none' when a drag ends outside any drop target. Main arbitrates by
+  // cursor position anyway: merge into another window, detach into a new
+  // window, or cancel when released inside this window.
+  if (!payload) return
 
   window.electron.ipcRenderer
     .invoke('mt::tab-drag-finished', payload.dragId, payload)
@@ -392,7 +398,7 @@ const openInNewWindow = (tabId: unknown) => {
   const windowId = window.marktext?.env?.windowId
   if (windowId == null) return
   const payload: TabDragPayload = {
-    dragId: crypto.randomUUID(),
+    dragId: getUniqueId(),
     sourceWindowId: windowId,
     tab: serializeTab(tab)
   }
