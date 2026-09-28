@@ -4,10 +4,13 @@ import type Format from '../format';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Muya } from '../../../muya';
 
-// #1250 — pressing Tab while an IME composition is active (e.g. cycling
-// Japanese candidates) must reach the IME, not run the editor's tabHandler.
-// keydownHandler already guards Enter and the arrow keys with `!isComposed`;
-// Tab was missing the same guard and inserted indentation mid-composition.
+// #1250 — while an IME composition is active (e.g. cycling Japanese
+// candidates), structural keys must not run the editor handlers: the native
+// behavior would split the contenteditable DOM and orphan nodes without
+// `__MUYA_BLOCK__` back references. keydownHandler therefore preventDefaults
+// Enter / arrows / Tab / Backspace / Delete during composition instead of
+// delegating to enterHandler / arrowHandler / tabHandler / backspaceHandler /
+// deleteHandler.
 
 const bootedHosts: HTMLElement[] = [];
 let originalVersion: string | undefined;
@@ -46,35 +49,46 @@ function firstBlock(muya: Muya): Format {
     return content;
 }
 
-function pressTab(content: Format): KeyboardEvent {
-    const event = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+function pressKey(content: Format, key: string): KeyboardEvent {
+    const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
     content.keydownHandler(event);
     return event;
 }
 
-describe('tab during IME composition (#1250)', () => {
-    it('does not run tabHandler while composing — Tab is left to the IME', () => {
+describe('keydown during IME composition (#1250)', () => {
+    const cases = [
+        { key: 'Enter', handler: 'enterHandler' },
+        { key: 'Tab', handler: 'tabHandler' },
+        { key: 'ArrowUp', handler: 'arrowHandler' },
+        { key: 'ArrowDown', handler: 'arrowHandler' },
+        { key: 'ArrowLeft', handler: 'arrowHandler' },
+        { key: 'ArrowRight', handler: 'arrowHandler' },
+        { key: 'Backspace', handler: 'backspaceHandler' },
+        { key: 'Delete', handler: 'deleteHandler' },
+    ] as const;
+
+    it.each(cases)('preventDefaults $key and skips $handler while composing', ({ key, handler }) => {
         const muya = bootMuya('hello\n');
         const content = firstBlock(muya);
         content.setCursor(0, 5);
         content.composeHandler(new Event('compositionstart'));
-        const tabHandler = vi.spyOn(content, 'tabHandler');
+        const spy = vi.spyOn(content, handler);
 
-        const event = pressTab(content);
+        const event = pressKey(content, key);
 
-        expect(tabHandler).not.toHaveBeenCalled();
-        expect(event.defaultPrevented).toBe(false);
+        expect(spy).not.toHaveBeenCalled();
+        expect(event.defaultPrevented).toBe(true);
         expect(content.text).toBe('hello');
     });
 
-    it('runs tabHandler normally when not composing', () => {
+    it.each(cases)('runs $handler normally when not composing', ({ key, handler }) => {
         const muya = bootMuya('hello\n');
         const content = firstBlock(muya);
         content.setCursor(0, 5);
-        const tabHandler = vi.spyOn(content, 'tabHandler');
+        const spy = vi.spyOn(content, handler);
 
-        pressTab(content);
+        pressKey(content, key);
 
-        expect(tabHandler).toHaveBeenCalled();
+        expect(spy).toHaveBeenCalled();
     });
 });

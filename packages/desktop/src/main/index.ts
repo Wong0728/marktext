@@ -13,6 +13,7 @@ import Accessor from './app/accessor'
 import App from './app'
 import { t } from './i18n'
 import { registerSandboxIpcHandlers } from './ipc'
+import { openImeDebugWindow } from './imeDebugWindow'
 
 // Set version strings into global and process.versions
 process.env.MARKTEXT_VERSION = MARKTEXT_VERSION
@@ -113,6 +114,16 @@ try {
 }
 const appController = new App(accessor, args as unknown as { _: string[] })
 appController.init()
+
+// Diagnostic escape hatch for input-method breakage: `MARKTEXT_IME_DEBUG=1
+// pnpm run dev` opens a standalone window that traces composition/input events
+// against a live muya editor. Dev-only — the flag is ignored in a packaged app
+// because the page is only emitted into the bundle under the same flag.
+if (process.env.MARKTEXT_IME_DEBUG === '1') {
+  app.whenReady().then(() => {
+    openImeDebugWindow()
+  })
+}
 
 // Quit when all windows are closed (except on macOS)
 app.on('window-all-closed', () => {

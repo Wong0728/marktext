@@ -84,6 +84,19 @@ export default defineConfig({
       },
       extensions: ['.mjs', '.ts', '.js', '.json', '.vue']
     },
+    build: {
+      rollupOptions: {
+        input: {
+          index: resolve(__dirname, 'src/renderer/index.html'),
+          // IME diagnostic page (see src/main/imeDebugWindow.ts). It is emitted
+          // only under the same flag that opens its window, so a normal build
+          // stays free of the tool. The vite dev server serves it either way.
+          ...(process.env.MARKTEXT_IME_DEBUG === '1'
+            ? { 'ime-debug': resolve(__dirname, 'src/renderer/ime-debug.html') }
+            : {})
+        }
+      }
+    },
     optimizeDeps: {
       include: ['pako', 'pathe'],
       esbuildOptions: {

@@ -358,6 +358,20 @@ export class Muya {
             const cursorBlock = this.editor.scrollPage?.queryBlock(selection.anchor.path);
             if (cursorBlock && cursorBlock.isContent())
                 cursorBlock.setCursor(begin, end, true);
+
+            return;
+        }
+
+        // No measurable selection (the engine can null it after a failed
+        // selection resolution): fall back to the active/anchored content
+        // block and re-apply its own cursor so the caret doesn't jump to the
+        // document start after a full re-render.
+        const block = this.editor.activeContentBlock ?? this.editor.selection.anchorBlock;
+        const cursor = block?.getCursor();
+        if (cursor) {
+            const begin = Math.min(cursor.anchor.offset, cursor.focus.offset);
+            const end = Math.max(cursor.anchor.offset, cursor.focus.offset);
+            block.setCursor(begin, end, true);
         }
     }
 
@@ -1343,7 +1357,7 @@ export class Muya {
         // Single block: the caret's content is the active block (in-place result
         // or unwrap-restored). The text can change in place (a heading's `# `
         // marker), so shift offsets by that front delta to track the same char.
-        const target = this.editor.activeContentBlock;
+        const target = this.editor.activeContentBlock ?? this.editor.selection.anchorBlock;
         if (!target)
             return;
 

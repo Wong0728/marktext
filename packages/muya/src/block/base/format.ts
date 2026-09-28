@@ -601,10 +601,21 @@ class Format extends Content {
         const inputType = 'inputType' in event && typeof event.inputType === 'string'
             ? event.inputType
             : '';
-        if (
-            this.isComposed
-            || /historyUndo|historyRedo/.test(inputType)
-        ) {
+        if (this.isComposed)
+            return;
+
+        // A native historyUndo/historyRedo has ALREADY mutated the DOM by the
+        // time this event fires. Syncing the current DOM text back into state
+        // keeps `block.text` from desyncing; skip autoPair/render because the
+        // DOM already reflects the result and the selection is already placed.
+        if (/historyUndo|historyRedo/.test(inputType)) {
+            const { domNode } = this;
+            this.text = getTextContent(domNode!, [
+                CLASS_NAMES.MU_MATH_RENDER,
+                CLASS_NAMES.MU_RUBY_RENDER,
+            ]);
+            this.muya.editor.history.markInputBoundary(inputType, null);
+
             return;
         }
 

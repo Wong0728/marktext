@@ -315,7 +315,14 @@ export class Editor {
             }
 
             if (!isSelectionInSameBlock || !anchorBlock) {
-                this.activeContentBlock = null;
+                // Do NOT clear activeContentBlock here: a null selection (e.g.
+                // a browser-cloned orphan mu-content span without a
+                // __MUYA_BLOCK__ backlink) is transient, but nulling the
+                // active block permanently detaches the engine from events.
+                // Skip only this event's block dispatch and keep the previous
+                // valid block as the attachment (same self-healing spirit as
+                // the focus() fallback in _restoreSelection).
+                debug.warn(`skip dispatching ${event.type}: selection unresolved (orphan content?)`);
                 return;
             }
 

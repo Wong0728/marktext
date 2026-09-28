@@ -720,17 +720,27 @@ class Content extends TreeNode {
 
         switch (event.key) {
             case EVENT_KEYS.Backspace:
+                if (this.isComposed) {
+                    event.preventDefault();
+                    break;
+                }
                 this.backspaceHandler(event);
                 break;
 
             case EVENT_KEYS.Delete:
+                if (this.isComposed) {
+                    event.preventDefault();
+                    break;
+                }
                 this.deleteHandler(event);
                 break;
 
             case EVENT_KEYS.Enter:
-                if (!this.isComposed)
-                    this.enterHandler(event);
-
+                if (this.isComposed) {
+                    event.preventDefault();
+                    break;
+                }
+                this.enterHandler(event);
                 break;
 
             case EVENT_KEYS.ArrowUp: // fallthrough
@@ -740,15 +750,19 @@ class Content extends TreeNode {
             case EVENT_KEYS.ArrowLeft: // fallthrough
 
             case EVENT_KEYS.ArrowRight: // fallthrough
-                if (!this.isComposed)
-                    this.arrowHandler(event);
-
+                if (this.isComposed) {
+                    event.preventDefault();
+                    break;
+                }
+                this.arrowHandler(event);
                 break;
 
             case EVENT_KEYS.Tab:
-                if (!this.isComposed)
-                    this.tabHandler(event);
-
+                if (this.isComposed) {
+                    event.preventDefault();
+                    break;
+                }
+                this.tabHandler(event);
                 break;
             default:
                 break;

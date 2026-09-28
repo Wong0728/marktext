@@ -75,8 +75,15 @@ class Clipboard {
                 return;
             }
 
-            const { isSelectionInSameBlock } = this.selection.getSelection() ?? {};
-            if (isSelectionInSameBlock)
+            // A null selection (e.g. nothing the editor owns is selected) must
+            // NOT fall through to the cross-block path: the key would be
+            // swallowed by preventDefault() and cutHandler() would no-op on
+            // the same null selection. Bail out and leave the key alone.
+            const selection = this.selection.getSelection();
+            if (!selection)
+                return;
+
+            if (selection.isSelectionInSameBlock)
                 return;
 
             if (!shouldCrossBlockCut(key, metaKey, event.ctrlKey))
