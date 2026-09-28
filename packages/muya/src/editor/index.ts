@@ -1,4 +1,5 @@
 import type { JSONOp, JSONOpComponent, JSONOpList } from 'ot-json1';
+import type { Subscription } from 'rxjs';
 import type Content from '../block/base/content';
 import type Format from '../block/base/format';
 import type { Muya } from '../muya';
@@ -7,7 +8,6 @@ import type { TState } from '../state/types';
 import type { Nullable } from '../types';
 import * as otText from 'ot-text-unicode';
 import { fromEvent, merge } from 'rxjs';
-import type { Subscription } from 'rxjs';
 import { registerBlocks } from '../block';
 import { ScrollPage } from '../block/scrollPage';
 import Clipboard from '../clipboard';
@@ -375,7 +375,10 @@ export class Editor {
             anchorBlock
             && anchor
             && focus
-            && scrollPage?.queryBlock(anchorPath) === anchorBlock
+            // `ScrollPage.queryBlock` consumes the path array in place
+            // (`path.shift`) — query against a copy so the cached
+            // `selection.anchorPath` survives this check.
+            && scrollPage?.queryBlock([...anchorPath]) === anchorBlock
         ) {
             anchorBlock.setCursor(anchor.offset, focus.offset, true);
             return;

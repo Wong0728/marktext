@@ -1,5 +1,7 @@
+import type TreeNode from '../block/base/treeNode';
 import type TableBodyCell from '../block/gfm/table/cell';
 import type { Muya } from '../muya';
+import type { Nullable } from '../types';
 import type { IAnchorFocusInfo, IImageSelectionData, ISelection } from './types';
 import {
     getCursorCoords,
@@ -11,9 +13,10 @@ import TableRectSelection from './TableRectSelection';
 import TextSelection from './TextSelection';
 import { SelectionType } from './types';
 
-// A block node reference (content leaf or parent container) as returned on
-// the selection endpoints.
-type IBlockRef = NonNullable<ReturnType<Selection['getSelection']>>['anchor']['block'];
+// A block node reference at the outmost-container level: `getSelectedText`
+// walks outmost blocks and their `.next` chains, so this is the tree-node base
+// type rather than the content-leaf type carried on the selection endpoints.
+type IBlockRef = TreeNode;
 
 class Selection {
     static getCursorYOffset(paragraph: HTMLElement) {
@@ -224,7 +227,7 @@ class Selection {
             // Tail of the boundary leaf, plus any later leaves of its block.
             parts.push(...this._leafTextsFrom(startBlock.outMostBlock!, startBlock, startOffset));
             // Whole outmost blocks strictly between the two boundaries.
-            let node: IBlockRef | null = sameOutmost ? null : startBlock.outMostBlock!.next;
+            let node: Nullable<IBlockRef> = sameOutmost ? null : startBlock.outMostBlock!.next;
             while (node != null && node !== endBlock.outMostBlock) {
                 parts.push(...this._leafTextsFrom(node, null, 0));
                 node = node.next;
@@ -248,7 +251,7 @@ class Selection {
 
     // Whether `a` precedes `b` in document order (outmost-block level).
     private _isBeforeInDocument(a: IBlockRef, b: IBlockRef): boolean {
-        let node: IBlockRef | null = a;
+        let node: Nullable<IBlockRef> = a;
         for (let i = 0; i < 10_000 && node != null; i++) {
             if (node === b)
                 return true;
@@ -259,7 +262,7 @@ class Selection {
 
     // Leaf texts of `outmost` from `boundary` (inclusive, from `offset` when
     // given) onwards. `boundary == null` means the whole block.
-    private _leafTextsFrom(outmost: IBlockRef, boundary: IBlockRef, offset: number): string[] {
+    private _leafTextsFrom(outmost: IBlockRef, boundary: IBlockRef | null, offset: number): string[] {
         const leaves: string[] = [];
         let pastBoundary = boundary == null;
         const walk = (block: unknown): void => {

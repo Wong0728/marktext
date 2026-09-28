@@ -57,11 +57,13 @@ function resetToEmptyParagraph(clipboard: Clipboard): void {
 }
 
 // Seat the caret and re-evaluate the block's type from its new text — a cut can
-// add or remove a block-leading marker (`# `, `- `, …).
+// add or remove a block-leading marker (`# `, `- `, …). The re-evaluation runs
+// in deletion mode: a marker merely exposed on a soft line must not split the
+// block (see `Format._convertIfNeeded`).
 function setCursorAndConvert(block: Content, offset: number): void {
     block.setCursor(offset, offset, true);
     if (block instanceof Format)
-        block.checkInlineUpdate();
+        block.checkInlineUpdate(true);
 }
 
 // Collapse the document to a single empty paragraph once a cut empties it.
@@ -343,6 +345,11 @@ function cutTableStructure(clipboard: Clipboard): boolean {
 }
 
 export function cutSelection(clipboard: Clipboard): void {
+    // Every cut shape below deletes user content: mark the input boundary so a
+    // cut within the coalescing window never merges with the surrounding
+    // typed text into one undo entry.
+    clipboard.muya.editor.history.markInputBoundary('deleteByCut', null);
+
     // Cut a selected image: the copy half wrote its raw markdown; remove it here.
     const selectedImage = clipboard.selection.image;
     if (selectedImage) {
@@ -457,6 +464,8 @@ function collapseLanguageInputCut(
 // frozen; once the cells are empty, the next press removes whole column(s) /
 // row(s) / the whole table, or drops the selection for a partial rectangle.
 export function deleteTableSelection(clipboard: Clipboard): void {
+    clipboard.muya.editor.history.markInputBoundary('deleteContentForward', null);
+
     if (clipboard.selection.table.emptySelectedCells())
         return;
 

@@ -354,6 +354,18 @@ class TextSelection {
             selection.extend(focusNode, getLegalOffset(focusNode, focusOffset));
     }
 
+    // Keep a cached endpoint offset inside its block's text. An offset past
+    // the text (handed over by a conversion, a stale handler, or a restored
+    // selection for a since-shortened block) parks the DOM caret at the block
+    // end via `getLegalOffset`, but the cache keeps the overshoot — the next
+    // read/edit would splice at a phantom position. Clamping here, at the
+    // single bottleneck every `setSelection` flows through, keeps the cached
+    // offset and the DOM range consistent.
+    private _clampOffsetToBlockText(endpoint: Nullable<INodeOffset>, block: Nullable<Content>): void {
+        if (endpoint && block && endpoint.offset > block.text.length)
+            endpoint.offset = block.text.length;
+    }
+
     private _updateSelection() {
         const {
             anchor,
@@ -374,12 +386,15 @@ class TextSelection {
             return;
         }
 
+        this._clampOffsetToBlockText(anchor, anchorBlock);
+        this._clampOffsetToBlockText(focus, focusBlock);
+
         const anchorParagraph = anchorBlock
             ? anchorBlock.domNode
-            : scrollPage?.queryBlock(anchorPath);
+            : scrollPage?.queryBlock([...anchorPath]);
         const focusParagraph = focusBlock
             ? focusBlock.domNode
-            : scrollPage?.queryBlock(focusPath);
+            : scrollPage?.queryBlock([...focusPath]);
 
         // getNodeAndOffset expects a DOM Node. The fallback branch can hand
         // back a Parent/Content block (from scrollPage.queryBlock); narrow to

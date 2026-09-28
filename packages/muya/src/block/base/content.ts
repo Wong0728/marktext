@@ -237,8 +237,19 @@ function collapsedInputAutoPair(
     const postInputChar = text.charAt(+offset);
     let needRender = false;
 
-    if (event.inputType.startsWith('delete'))
+    if (event.inputType.startsWith('delete')) {
+        // The pairing below indexes the pre-deletion text (`blockText`) with
+        // the post-deletion caret. That mapping only holds when exactly one
+        // character was removed at the caret. A range deletion (Backspace over
+        // `"a" "` leaving `"b"`) removed many: `blockText[offset]` would be the
+        // range's FIRST char and `text[offset]` the char AFTER the range, so
+        // two unrelated characters can look like a bracket pair and the closer
+        // gets eaten silently. Skip instead of pairing across offset spaces.
+        if (blockText.length - text.length !== 1)
+            return { text, needRender };
+
         return deleteAutoPair(event, text, start, end, offset, inputChar, postInputChar, blockText);
+    }
 
     if (
         !event.inputType.includes('delete')

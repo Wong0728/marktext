@@ -376,8 +376,11 @@ export class ParagraphFrontMenu extends BaseFloat {
             = editor.selection;
         const listBlock = ScrollPage.loadBlock(label).create(muya, state);
         block.replaceWith(listBlock);
+        // `ScrollPage.queryBlock` consumes the path array in place
+        // (`path.shift`) — query against a copy so the cached
+        // `selection.anchorPath` is not drained.
         const guessCursorBlock
-            = muya.editor.scrollPage?.queryBlock(anchorPath);
+            = muya.editor.scrollPage?.queryBlock([...anchorPath]);
         if (guessCursorBlock && isSelectionInSameBlock) {
             const begin = Math.min(anchor!.offset, focus!.offset);
             const end = Math.max(anchor!.offset, focus!.offset);

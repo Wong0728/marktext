@@ -18,13 +18,18 @@ interface IFakeThisOptions {
     autoPairMarkdownSyntax?: boolean;
 }
 
-function makeFakeThis(blockText: string, oldAnchorOffset: number, opts: IFakeThisOptions = {}) {
+function makeFakeThis(
+    blockText: string,
+    oldAnchorOffset: number,
+    opts: IFakeThisOptions = {},
+    focusOffset: number = oldAnchorOffset,
+) {
     const offset = oldAnchorOffset;
     return {
         text: blockText,
         selection: {
             anchor: { offset },
-            focus: { offset },
+            focus: { offset: focusOffset },
         },
         muya: {
             options: {
@@ -299,6 +304,37 @@ describe('autoPair — per-option opt-out', () => {
 
         expect(text).toBe('foo"');
         expect(needRender).toBe(false);
+    });
+});
+
+// ── range deletion must not pair across the old/new offset spaces ─────────
+// A native Backspace/Delete over a selection collapses the caret before the
+// `input` event, and `autoPair` then sees a "collapsed" delete. The pairing
+// heuristics index the PRE-deletion text (`blockText`) with the POST-deletion
+// caret, so two unrelated characters can look like a bracket pair: Backspace
+// over `"a" ` in `"a" "b"` silently ate the surviving `"` and left `b`.
+describe('autoPair — range deletion skips the pair heuristics', () => {
+    it('keeps the opening quote when a range deletion exposes `"b"`', () => {
+        // `"a" "b"` + Backspace over `"a" ` (offsets 0-4): the browser leaves
+        // `"b"` with the caret at 0. The range's first char (`"`) and the char
+        // after the range (`"`) must not be treated as a pair.
+        const fakeThis = makeFakeThis('"a" "b"', 0, {}, 4);
+        const event = makeInputEvent('deleteContentBackward', null);
+        const { text, needRender } = invokeAutoPair(fakeThis, event, '"b"', 0);
+
+        expect(text).toBe('"b"');
+        expect(needRender).toBe(false);
+    });
+
+    it('still absorbs the leftover closer on a single-character delete', () => {
+        // Collapsed caret inside an empty pair: Backspace deletes the opener
+        // and the surviving closer is absorbed — exactly one char was removed,
+        // so the old-text/new-caret mapping still holds.
+        const fakeThis = makeFakeThis('""', 1);
+        const event = makeInputEvent('deleteContentBackward', null);
+        const { text } = invokeAutoPair(fakeThis, event, '"', 0);
+
+        expect(text).toBe('');
     });
 });
 

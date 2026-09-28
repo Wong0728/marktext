@@ -681,18 +681,33 @@ class Format extends Content {
             }
         }
 
-        this.checkInlineUpdate();
+        this.checkInlineUpdate(inputType.startsWith('delete'));
     }
 
     // Re-evaluate this block's type from its text (a leading `# `, `- `, `> `…
     // promotes/demotes it). Table cells never reinterpret their text as markdown.
-    checkInlineUpdate(): void {
+    // `fromDeletion` marks a deletion-driven call (Backspace/Delete/cut): a
+    // marker merely EXPOSED on a soft line must not split or re-type the block,
+    // while block-leading markers keep converting so a cut's block type tracks
+    // its new text.
+    checkInlineUpdate(fromDeletion = false): void {
         if (this.blockName !== 'table.cell.content')
-            this._convertIfNeeded();
+            this._convertIfNeeded(fromDeletion);
     }
 
-    private _convertIfNeeded() {
+    private _convertIfNeeded(fromDeletion: boolean) {
         const { text } = this;
+
+        const result = text.match(INLINE_UPDATE_REG);
+
+        // A deletion that only exposes a marker on a soft line (`foo\n#tag`
+        // losing `tag`) must not split the block; typing the marker still does.
+        // Every soft-line-anchored fragment starts its match at that `\n`, so
+        // `index > 0` pins them; the `^`-anchored fragments (task list, setext
+        // underline, indented code) always match at 0 and stay conversion
+        // candidates.
+        if (fromDeletion && result && (result.index ?? 0) > 0)
+            return;
 
         const [
             match,
@@ -704,7 +719,7 @@ class Format extends Content {
             blockquote,
             indentedCodeBlock,
             thematicBreak,
-        ] = text.match(INLINE_UPDATE_REG) || [];
+        ] = result || [];
 
         switch (true) {
             case !!thematicBreak
@@ -815,8 +830,18 @@ class Format extends Content {
                 (acc, i) => acc + i.length + 1,
                 0,
             ); // Add one, because the `\n`
-            const startOffset = Math.max(0, start.offset - preParagraphTextLength);
-            const endOffset = Math.max(0, end.offset - preParagraphTextLength);
+            // The mapped offset can overshoot the (often empty) break content —
+            // e.g. a deletion leaving `foo\n#`-adjacent text — so clamp it into
+            // the content instead of parking the caret past its end.
+            const contentLength = thematicBreakContent.text.length;
+            const startOffset = Math.min(
+                Math.max(0, start.offset - preParagraphTextLength),
+                contentLength,
+            );
+            const endOffset = Math.min(
+                Math.max(0, end.offset - preParagraphTextLength),
+                contentLength,
+            );
 
             thematicBreakContent.setCursor(startOffset, endOffset, true);
         }
@@ -1069,8 +1094,18 @@ class Format extends Content {
                 (acc, i) => acc + i.length + 1,
                 0,
             ); // Add one, because the `\n`
-            const startOffset = Math.max(0, start.offset - preParagraphTextLength);
-            const endOffset = Math.max(0, end.offset - preParagraphTextLength);
+            // Clamp the mapped offset into the heading content: the marker
+            // line's `#` prefix disappears in the content, so the pre-edit
+            // offset can overshoot its length (e.g. typing `foo\n# `).
+            const contentLength = atxHeadingContent.text.length;
+            const startOffset = Math.min(
+                Math.max(0, start.offset - preParagraphTextLength),
+                contentLength,
+            );
+            const endOffset = Math.min(
+                Math.max(0, end.offset - preParagraphTextLength),
+                contentLength,
+            );
             atxHeadingContent.setCursor(startOffset, endOffset, true);
         }
     }
@@ -1488,9 +1523,23 @@ class Format extends Content {
         // When the merge crosses a list-item boundary, blocks that followed the
         // next paragraph inside its item (e.g. a nested sublist) must travel up
         // with the merged text. Left behind they become the sole child of the
-        // now-empty item and serialize with a doubled bullet (#1845).
+        // now-empty item and serialize with a doubled bullet (#1845). That only
+        // applies when the merged-in paragraph lives in a SIBLING container of
+        // this one (item next to item in one list, quote next to quote): those
+        // dissolve below their shared parent, so their leftovers must move. A
+        // paragraph merging from a wider container (a top-level paragraph into
+        // a list item) dissolves by itself — its later siblings are unrelated
+        // top-level blocks and must stay put.
         const paragraph = this.parent;
-        if (paragraph && paragraphBlock.parent !== paragraph.parent) {
+        const currentContainer = paragraph?.parent ?? null;
+        const mergedContainer = paragraphBlock.parent ?? null;
+        if (
+            paragraph
+            && currentContainer
+            && mergedContainer
+            && mergedContainer !== currentContainer
+            && mergedContainer.parent === currentContainer.parent
+        ) {
             const trailing: TreeNode[] = [];
             let sibling = paragraphBlock.next;
             while (sibling) {

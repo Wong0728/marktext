@@ -290,7 +290,13 @@ class History {
         if (this._selectionStack.length > 2)
             this._selectionStack.shift();
 
-        return this._selectionStack.length === 2 ? this._selectionStack[0] : null;
+        // With two snapshots the older one is the selection as it was BEFORE
+        // this edit — what an undo must restore. With only one snapshot (the
+        // very first edit after boot/clear) there is no pre-edit snapshot, so
+        // fall back to the post-edit selection: returning `null` would make
+        // the undo entry skip `_restoreSelection` entirely and leave the
+        // caret dangling after the pick/drop rebuild.
+        return this._selectionStack[0] ?? null;
     }
 
     private _record(op: JSONOpList, doc: TState[]) {
@@ -308,7 +314,7 @@ class History {
         ) {
             const { operation: lastOperation, selection: lastSelection }
                 = this._stack.undo.pop()!;
-            selection = lastSelection;
+            selection = lastSelection ?? null;
             undoOperation = json1.type.compose(undoOperation, lastOperation);
         }
         else {
