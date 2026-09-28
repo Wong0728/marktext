@@ -6,8 +6,9 @@ import { Muya } from '../../../muya';
 
 // #1250 — pressing Tab while an IME composition is active (e.g. cycling
 // Japanese candidates) must reach the IME, not run the editor's tabHandler.
-// keydownHandler already guards Enter and the arrow keys with `!isComposed`;
-// Tab was missing the same guard and inserted indentation mid-composition.
+// keydownHandler preventDefaults Enter / Backspace / Delete / Tab / arrows
+// during composition so the browser's native edit behavior cannot clone an
+// orphan `mu-content` span (see docs/ime-composition-delete-broken.md).
 
 const bootedHosts: HTMLElement[] = [];
 let originalVersion: string | undefined;
@@ -53,7 +54,7 @@ function pressTab(content: Format): KeyboardEvent {
 }
 
 describe('tab during IME composition (#1250)', () => {
-    it('does not run tabHandler while composing — Tab is left to the IME', () => {
+    it('does not run tabHandler while composing — Tab is preventDefaulted for the IME', () => {
         const muya = bootMuya('hello\n');
         const content = firstBlock(muya);
         content.setCursor(0, 5);
@@ -63,7 +64,7 @@ describe('tab during IME composition (#1250)', () => {
         const event = pressTab(content);
 
         expect(tabHandler).not.toHaveBeenCalled();
-        expect(event.defaultPrevented).toBe(false);
+        expect(event.defaultPrevented).toBe(true);
         expect(content.text).toBe('hello');
     });
 

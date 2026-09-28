@@ -26,6 +26,19 @@ import {
 const WORD_SEPARATORS = /[`~!@#$%^&*()\-=+[{\]}\\|;:'",.<>/?\s]/g;
 const WORD_DEFINITION = /-?\d*\.\d\w*|[^`~!@#$%^&*()\-=+[{\]}\\|;:'",.<>/?\s]+/g;
 
+// Keys whose native contenteditable behavior must be suppressed while an IME
+// composition is active (see keydownHandler).
+const IME_OWNED_KEYS = new Set([
+    EVENT_KEYS.Backspace,
+    EVENT_KEYS.Delete,
+    EVENT_KEYS.Enter,
+    EVENT_KEYS.Tab,
+    EVENT_KEYS.ArrowUp,
+    EVENT_KEYS.ArrowDown,
+    EVENT_KEYS.ArrowLeft,
+    EVENT_KEYS.ArrowRight,
+]);
+
 /**
  * Extract the word at the given offset from the text.
  *
@@ -729,6 +742,18 @@ class Content extends TreeNode {
         if (this._wrapSelectionWithAutoPair(event))
             return;
 
+        // While an IME composition is active the browser still owns the DOM
+        // text. Running the engine handlers here would mutate `this.text`
+        // while the composition string hangs off the DOM — and a native Enter
+        // would clone an orphan `mu-content` without the block backlink, which
+        // makes `getSelection()` return null (see
+        // docs/ime-composition-delete-broken.md). Prevent the native action
+        // and skip the engine; compositionend commits the text instead.
+        if (this.isComposed && IME_OWNED_KEYS.has(event.key)) {
+            event.preventDefault();
+            return;
+        }
+
         switch (event.key) {
             case EVENT_KEYS.Backspace:
                 this.backspaceHandler(event);
@@ -739,9 +764,7 @@ class Content extends TreeNode {
                 break;
 
             case EVENT_KEYS.Enter:
-                if (!this.isComposed)
-                    this.enterHandler(event);
-
+                this.enterHandler(event);
                 break;
 
             case EVENT_KEYS.ArrowUp: // fallthrough
@@ -751,14 +774,12 @@ class Content extends TreeNode {
             case EVENT_KEYS.ArrowLeft: // fallthrough
 
             case EVENT_KEYS.ArrowRight: // fallthrough
-                if (!this.isComposed)
-                    this.arrowHandler(event);
+                this.arrowHandler(event);
 
                 break;
 
             case EVENT_KEYS.Tab:
-                if (!this.isComposed)
-                    this.tabHandler(event);
+                this.tabHandler(event);
 
                 break;
             default:

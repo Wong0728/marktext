@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>MarkText · IME Debug</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #14161a;
+        --panel: #1b1e24;
+        --line: #2c313a;
+        --fg: #dfe3ea;
+        --muted: #8b93a1;
+        --accent: #6ea8fe;
+        --warn: #ffb454;
+        --bad: #ff6b6b;
+        --good: #7ddc8b;
+      }
+      * { box-sizing: border-box; }
+      html, body { height: 100%; margin: 0; }
+      body {
+        display: flex;
+        flex-direction: column;
+        background: var(--bg);
+        color: var(--fg);
+        font: 13px/1.5 "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+      }
+
+      header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        padding: 8px 12px;
+        background: var(--panel);
+        border-bottom: 1px solid var(--line);
+        flex: none;
+      }
+      button {
+        background: #262b33;
+        color: var(--fg);
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        padding: 5px 11px;
+        cursor: pointer;
+        font: inherit;
+      }
+      button:hover { background: #2f3540; }
+      button.rec-on { background: #4a2020; border-color: #7d3535; color: #ffb3b3; }
+      label.chk { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); cursor: pointer; }
+      .sep { width: 1px; height: 20px; background: var(--line); }
+      .path { color: var(--muted); font-family: Consolas, monospace; font-size: 11px; }
+      #diag { color: var(--good); font-weight: 600; }
+      #diag.stale { color: var(--bad); font-weight: 600; }
+      #hint { color: var(--warn); }
+
+      main { display: flex; flex: 1; min-height: 0; }
+
+      #panes {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        width: 46%;
+        min-width: 380px;
+        padding: 10px;
+        overflow: auto;
+        border-right: 1px solid var(--line);
+      }
+      .pane { border: 1px solid var(--line); border-radius: 7px; background: var(--panel); }
+      .pane > h2 {
+        margin: 0;
+        padding: 7px 11px;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--muted);
+        border-bottom: 1px solid var(--line);
+      }
+      .pane > h2 span { color: var(--accent); font-weight: 400; }
+      #plain, #muya-host { padding: 12px 14px; min-height: 130px; }
+      #plain { outline: none; min-height: 130px; }
+      #plain:focus { background: #1f242c; }
+      #muya-host { background: #fdfdfd; }
+      #muya-host .mu-container { box-shadow: none; }
+
+      #log { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+      #log-head {
+        display: flex; gap: 12px; align-items: center;
+        padding: 7px 12px; border-bottom: 1px solid var(--line);
+        color: var(--muted); flex: none;
+      }
+      #log-body { flex: 1; overflow: auto; font-family: Consolas, "Courier New", monospace; font-size: 11.5px; }
+      .row { border-bottom: 1px solid #22262e; padding: 3px 10px 4px; }
+      .row.flag { background: #2a1f1f; }
+      .hd { display: flex; gap: 8px; align-items: baseline; cursor: pointer; }
+      .seq { color: #4d5563; min-width: 46px; }
+      .dt { color: #5a6270; min-width: 62px; text-align: right; }
+      .kind { min-width: 74px; }
+      .kind.event { color: var(--accent); }
+      .kind.mutation { color: var(--warn); }
+      .kind.call { color: #c792ea; }
+      .kind.note { color: var(--muted); }
+      .detail { color: #9aa3b2; word-break: break-all; }
+      .flagtxt { color: var(--bad); font-weight: 600; }
+      .snap { color: #8fa08f; padding-left: 12px; white-space: pre-wrap; word-break: break-all; }
+      .snap b { color: var(--good); font-weight: 600; }
+      .call { color: #b78ee0; padding-left: 12px; }
+      .pane-tag { color: #5a6270; }
+      .hidden { display: none; }
+    </style>
+  </head>
+
+  <body>
+    <header>
+      <button id="toggle" class="rec-on">● 录制中</button>
+      <button id="clear">清空</button>
+      <button id="export">导出 JSONL</button>
+      <button id="copy">复制</button>
+      <div class="sep"></div>
+      <label class="chk"><input type="checkbox" id="f-muya" checked /> muya 面板</label>
+      <label class="chk"><input type="checkbox" id="f-plain" checked /> 原生面板</label>
+      <label class="chk"><input type="checkbox" id="f-mutation" checked /> 变更</label>
+      <label class="chk"><input type="checkbox" id="f-flag" /> 只看异常</label>
+      <div class="sep"></div>
+      <span id="diag" class="path"></span>
+      <span id="count" class="path">0 条</span>
+      <span id="sink" class="path"></span>
+      <span id="hint"></span>
+    </header>
+
+    <main>
+      <section id="panes">
+        <div class="pane">
+          <h2>基线面板 · 原生 <span>contenteditable</span>（无引擎）</h2>
+          <div id="plain" contenteditable="true" spellcheck="false"></div>
+        </div>
+        <div class="pane">
+          <h2>复现面板 · <span>Muya</span> 引擎（与编辑器同一条输入路径）</h2>
+          <div id="muya-host"><div id="muya"></div></div>
+        </div>
+      </section>
+
+      <section id="log">
+        <div id="log-head">
+          <span>事件时间线（点开看快照）</span>
+          <span style="margin-left:auto" class="path">state = 引擎 block.text ｜ dom = 屏幕上的文字</span>
+        </div>
+        <div id="log-body"></div>
+      </section>
+    </main>
+
+    <script type="module" src="/src/imeDebug/main.ts"></script>
+  </body>
+</html>

@@ -16,6 +16,7 @@ import emptyStates from '../../config/emptyStates';
 
 import { isAnyListState, isAtxHeadingState } from '../../state/types';
 import { deepClone, isHTMLElement } from '../../utils';
+import logger from '../../utils/logger';
 import { h, patch } from '../../utils/snabbdom';
 import BaseFloat from '../baseFloat';
 import { canTurnIntoMenu, FRONT_MENU } from './config';
@@ -36,6 +37,8 @@ function renderIcon({ label, icon }: { label: string; icon: string }) {
         ),
     );
 }
+
+const debug = logger('paragraphFrontMenu:');
 
 const defaultOptions = {
     placement: 'bottom' as const,
@@ -195,8 +198,10 @@ export class ParagraphFrontMenu extends BaseFloat {
         // below assumes `block.parent` (#4686).
         const block = this._block;
         this._block = null;
-        if (!block?.parent)
+        if (!block?.parent) {
+            debug.warn('front menu action skipped: block is detached');
             return;
+        }
 
         const oldState = block.getState();
 

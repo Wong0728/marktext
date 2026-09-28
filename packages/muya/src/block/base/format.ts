@@ -601,10 +601,19 @@ class Format extends Content {
         const inputType = 'inputType' in event && typeof event.inputType === 'string'
             ? event.inputType
             : '';
-        if (
-            this.isComposed
-            || /historyUndo|historyRedo/.test(inputType)
-        ) {
+        if (this.isComposed)
+            return;
+
+        // The browser already applied the native undo/redo to the DOM. Sync
+        // the engine state before bailing out, otherwise `this.text` stays
+        // ahead of the DOM and later edits resurrect the reverted characters.
+        // The text setter dispatches the json edit op without any autoPair.
+        if (/historyUndo|historyRedo/.test(inputType)) {
+            const textContent = getTextContent(this.domNode!, [
+                CLASS_NAMES.MU_MATH_RENDER,
+                CLASS_NAMES.MU_RUBY_RENDER,
+            ]);
+            this.text = textContent;
             return;
         }
 

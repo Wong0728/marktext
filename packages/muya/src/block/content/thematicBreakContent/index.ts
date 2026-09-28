@@ -53,6 +53,11 @@ class ThematicBreakContent extends Format {
             this.setCursor(offset, offset);
             super.enterHandler(event);
         }
+        else {
+            // Non-keyboard Enter: still stop the browser's native Enter from
+            // cloning an orphan `mu-content` span.
+            event.preventDefault();
+        }
     }
 
     override backspaceHandler(event: Event) {

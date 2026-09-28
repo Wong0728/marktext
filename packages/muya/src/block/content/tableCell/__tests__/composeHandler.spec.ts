@@ -135,4 +135,29 @@ describe('tableCellContent.composeHandler — empty-cell ZWSP guard', () => {
         expect(cursor).not.toBeNull();
         expect(cursor!.start.offset).toBe('你好'.length);
     });
+
+    it('compositionend does NOT trim when the trailing char is not the seed (guard)', async () => {
+        const muya = bootMuya(TABLE);
+        await flush();
+        const cell = tableCells(muya)[0];
+        muya.editor.activeContentBlock = cell;
+        cell.setCursor(0, 0, true);
+
+        cell.composeHandler(composeEvent('compositionstart'));
+        expect(zwspFlag(cell)).toBe(true);
+
+        // The seed never made it to the tail (e.g. cancelled composition, or
+        // the DOM was re-synced out of band). Trimming the last char would
+        // eat a real user character — the guard must leave the text alone.
+        vi.spyOn(cell, 'inputHandler').mockImplementation(() => {});
+        cell.text = '你好';
+
+        cell.composeHandler(composeEvent('compositionend'));
+
+        expect(cell.text).toBe('你好');
+        expect(zwspFlag(cell)).toBe(false);
+        const cursor = cell.getCursor();
+        expect(cursor).not.toBeNull();
+        expect(cursor!.start.offset).toBe(2);
+    });
 });

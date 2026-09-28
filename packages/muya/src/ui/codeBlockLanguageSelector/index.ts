@@ -3,6 +3,7 @@ import type LangInputContent from '../../block/content/langInputContent';
 import type ParagraphContent from '../../block/content/paragraphContent';
 import type { Muya } from '../../index';
 import { ScrollPage } from '../../block/scrollPage';
+import logger from '../../utils/logger';
 import { search } from '../../utils/prism';
 
 import { h, patch } from '../../utils/snabbdom';
@@ -10,6 +11,8 @@ import BaseScrollFloat from '../baseScrollFloat';
 import fileIcons from '../utils/fileIcons';
 
 import './index.css';
+
+const debug = logger('codeBlockLanguageSelector:');
 
 const defaultOptions = {
     placement: 'bottom-start' as const,
@@ -178,8 +181,10 @@ export class CodeBlockLanguageSelector extends BaseScrollFloat {
 
         // Bail if the block was detached from the document while the picker
         // stayed open — mutating an orphaned block crashes on a null parent (#4654).
-        if (!block.outMostBlock)
+        if (!block.outMostBlock) {
+            debug.warn('language selector action skipped: block is detached');
             return;
+        }
 
         function isParagraphContent(
             b: ParagraphContent | LangInputContent,

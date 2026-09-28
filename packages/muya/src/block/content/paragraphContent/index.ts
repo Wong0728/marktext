@@ -547,8 +547,12 @@ class ParagraphContent extends Format {
     }
 
     override enterHandler(event: Event) {
-        if (!isKeyboardEvent(event))
+        if (!isKeyboardEvent(event)) {
+            // Non-keyboard Enter: still stop the browser's native Enter from
+            // cloning an orphan `mu-content` span.
+            event.preventDefault();
             return;
+        }
 
         if (event.shiftKey)
             return this.shiftEnterHandler(event);

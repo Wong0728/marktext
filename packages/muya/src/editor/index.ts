@@ -315,7 +315,16 @@ export class Editor {
             }
 
             if (!isSelectionInSameBlock || !anchorBlock) {
-                this.activeContentBlock = null;
+                // A transiently unresolvable selection (e.g. an orphan
+                // `mu-content` cloned by a native Enter during IME composition
+                // — see docs/ime-composition-delete-broken.md) must NOT detach
+                // the engine: clearing activeContentBlock here permanently
+                // dropped every further event until a click re-selected a
+                // block. Keep the last valid block and skip only this event's
+                // block dispatch; any later setCursor re-attaches naturally.
+                debug.warn(
+                    `selection could not be resolved to a content block; skipping ${event.type} dispatch`,
+                );
                 return;
             }
 

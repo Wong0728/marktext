@@ -59,6 +59,12 @@ class AtxHeadingContent extends Format {
         else if (isKeyboardEvent(event)) {
             super.enterHandler(event);
         }
+        else {
+            // Non-keyboard Enter: still stop the browser's native Enter from
+            // cloning an orphan `mu-content` span (see
+            // docs/ime-composition-delete-broken.md).
+            event.preventDefault();
+        }
     }
 
     override backspaceHandler(event: Event) {

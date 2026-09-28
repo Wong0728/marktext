@@ -121,8 +121,12 @@ class TableCellContent extends Format {
     }
 
     override enterHandler(event: Event) {
-        if (!isKeyboardEvent(event))
+        if (!isKeyboardEvent(event)) {
+            // Non-keyboard Enter: still stop the browser's native Enter from
+            // cloning an orphan `mu-content` span.
+            event.preventDefault();
             return;
+        }
 
         if (event.shiftKey)
             return this._shiftEnter(event);
@@ -265,6 +269,14 @@ class TableCellContent extends Format {
         else if (event.type === 'compositionend' && this._hasZeroWidthSpaceAtBeginning) {
             this._hasZeroWidthSpaceAtBeginning = false;
             const { text } = this;
+            // Only strip when the trailing character is actually the ZWSP the
+            // browser moved to the end; unconditional trimming would eat a
+            // real user character when the composition ended unexpectedly
+            // (cancelled, or DOM already re-synced).
+            if (!text.endsWith('\u200B')) {
+                this.setCursor(text.length, text.length, true);
+                return;
+            }
             const offset = text.length - 1;
             this.text = text.substring(0, offset);
             this.setCursor(offset, offset, true);

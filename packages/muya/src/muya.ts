@@ -32,10 +32,13 @@ import { isAnyListState, isAtxHeadingState, isCodeBlockState } from './state/typ
 import { Ui } from './ui/ui';
 import { deepClone } from './utils';
 import { encodeImageSrc } from './utils/image';
+import logger from './utils/logger';
 import './assets/styles/blockSyntax.css';
 import './assets/styles/index.css';
 import './assets/styles/inlineSyntax.css';
 import './assets/styles/prismjs/light.theme.css';
+
+const debug = logger('muya:');
 
 // UI plugins (e.g. InlineFormatToolbar, EmojiSelector) follow a common
 // shape: a class with a static `pluginName` and a constructor that takes
@@ -352,13 +355,35 @@ export class Muya {
         const selection = this.editor.selection.getSelection();
         this.editor.scrollPage?.updateState(this.getState());
 
+        let anchorOffset: number;
+        let focusOffset: number;
+        let anchorPath: TBlockPath;
+
         if (selection && selection.isSelectionInSameBlock) {
-            const begin = Math.min(selection.anchor.offset, selection.focus.offset);
-            const end = Math.max(selection.anchor.offset, selection.focus.offset);
-            const cursorBlock = this.editor.scrollPage?.queryBlock(selection.anchor.path);
-            if (cursorBlock && cursorBlock.isContent())
-                cursorBlock.setCursor(begin, end, true);
+            anchorOffset = selection.anchor.offset;
+            focusOffset = selection.focus.offset;
+            anchorPath = selection.anchor.path;
         }
+        else {
+            // The live DOM selection can be unresolvable (e.g. an orphan
+            // `mu-content` cloned during IME composition). Fall back to the
+            // cached selection so a full re-render does not drop the caret;
+            // a stale path just makes queryBlock a no-op.
+            const cached = this.editor.selection;
+            if (!cached.anchorBlock || cached.anchorBlock !== cached.focusBlock || !cached.anchor || !cached.focus)
+                return;
+
+            anchorOffset = cached.anchor.offset;
+            focusOffset = cached.focus.offset;
+            // queryBlock consumes the path array in place, so hand it a copy.
+            anchorPath = [...cached.anchorPath];
+        }
+
+        const begin = Math.min(anchorOffset, focusOffset);
+        const end = Math.max(anchorOffset, focusOffset);
+        const cursorBlock = this.editor.scrollPage?.queryBlock(anchorPath);
+        if (cursorBlock && cursorBlock.isContent())
+            cursorBlock.setCursor(begin, end, true);
     }
 
     /** Update list indentation and re-render so it takes effect. */
@@ -397,8 +422,10 @@ export class Muya {
         }
 
         const sel = selection.getSelection();
-        if (!sel)
+        if (!sel) {
+            debug.warn(`format(${type}) skipped: selection could not be resolved`);
             return;
+        }
 
         const { anchor, focus, isSelectionInSameBlock } = sel;
         const anchorBlock = anchor.block;
@@ -1343,7 +1370,7 @@ export class Muya {
         // Single block: the caret's content is the active block (in-place result
         // or unwrap-restored). The text can change in place (a heading's `# `
         // marker), so shift offsets by that front delta to track the same char.
-        const target = this.editor.activeContentBlock;
+        const target = this.editor.activeContentBlock ?? this.editor.selection.anchorBlock;
         if (!target)
             return;
 

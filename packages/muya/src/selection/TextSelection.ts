@@ -7,6 +7,7 @@ import type Selection from './index';
 import type { IAnchorFocusInfo, INodeOffset, ISelection } from './types';
 import { BLOCK_DOM_PROPERTY } from '../config';
 import { isHTMLElement, isMouseEvent } from '../utils';
+import logger from '../utils/logger';
 import {
     buildSelectionAffiliation,
     endpointBlockInfo,
@@ -20,6 +21,28 @@ import {
     getOffsetOfParagraph,
 } from './dom';
 import { SelectionCaretType, SelectionDirection, SelectionType } from './types';
+
+const debug = logger('selection:');
+
+// The browser can clone an `mu-content` span during native edit behavior
+// (e.g. an un-cancelled Enter while an IME composition is active). The clone
+// lacks the `BLOCK_DOM_PROPERTY` backlink, so read the block from an adjacent
+// real content node instead of giving up on the whole selection.
+function resolveOrphanSiblingBlock(domNode: HTMLElement): Content | undefined {
+    const parent = domNode.parentElement;
+    if (!parent)
+        return undefined;
+
+    for (const sibling of parent.children) {
+        if (sibling !== domNode && isHTMLElement(sibling) && sibling.classList.contains('mu-content')) {
+            const block = sibling[BLOCK_DOM_PROPERTY] as Content | undefined;
+            if (block)
+                return block;
+        }
+    }
+
+    return undefined;
+}
 
 function computeDirection(
     anchorBlock: Content,
@@ -169,13 +192,20 @@ class TextSelection {
         if (!anchorDomNode || !focusDomNode)
             return null;
 
-        const anchorBlock = anchorDomNode[BLOCK_DOM_PROPERTY] as Content | undefined;
-        const focusBlock = focusDomNode[BLOCK_DOM_PROPERTY] as Content | undefined;
-        // An `mu-content` span cloned by the browser's native edit
-        // behavior is not linked back to a block. Bail out instead of
-        // crashing — the caller treats null the same as "no selection".
-        if (!anchorBlock || !focusBlock)
+        const anchorBlock
+            = (anchorDomNode[BLOCK_DOM_PROPERTY] as Content | undefined)
+                ?? resolveOrphanSiblingBlock(anchorDomNode);
+        const focusBlock
+            = (focusDomNode[BLOCK_DOM_PROPERTY] as Content | undefined)
+                ?? resolveOrphanSiblingBlock(focusDomNode);
+        // An `mu-content` span cloned by the browser's native edit behavior is
+        // not linked back to a block. Self-heal via the sibling real content
+        // node first; only bail out when none exists. Callers must treat null
+        // as "skip this event", never as "detach from the engine".
+        if (!anchorBlock || !focusBlock) {
+            debug.warn('selection resolves to content node(s) without a block backlink; returning null');
             return null;
+        }
 
         if (!anchorBlock.outMostBlock || !focusBlock.outMostBlock)
             return null;
@@ -399,8 +429,10 @@ class TextSelection {
         // getNodeAndOffset expects a DOM Node. The fallback branch can hand
         // back a Parent/Content block (from scrollPage.queryBlock); narrow to
         // an actual Node here, preserving the existing not-found behavior.
-        if (!(anchorParagraph instanceof Node) || !(focusParagraph instanceof Node))
+        if (!(anchorParagraph instanceof Node) || !(focusParagraph instanceof Node)) {
+            debug.warn('could not resolve cached selection to DOM nodes; DOM range not updated');
             return;
+        }
         const { node: anchorNode, offset: anchorOffset } = getNodeAndOffset(
             anchorParagraph,
             anchor.offset,

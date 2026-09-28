@@ -75,8 +75,11 @@ class Clipboard {
                 return;
             }
 
-            const { isSelectionInSameBlock } = this.selection.getSelection() ?? {};
-            if (isSelectionInSameBlock)
+            const selection = this.selection.getSelection();
+            if (!selection)
+                return;
+
+            if (selection.isSelectionInSameBlock)
                 return;
 
             if (!shouldCrossBlockCut(key, metaKey, event.ctrlKey))
