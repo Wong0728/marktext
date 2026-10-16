@@ -1,3 +1,52 @@
+# Fork changelog
+
+The entries below are this fork's releases; everything under them is inherited
+upstream history. Release artifacts and notes:
+https://github.com/Wong0728/marktext/releases
+
+## 0.20.0-fork.2
+
+**:cactus:Feature**
+
+- "Copy as Rich Text" on Windows can let Microsoft Word do the formatting: the selection is exported through the DOCX pipeline to a temporary file, opened read-only in an isolated hidden Word instance, and copied from there, so Word supplies its own clipboard formats — tables, list numbering and native equations included. Other platforms keep the built-in HTML/RTF writer.
+- The default DOCX export now matches the web-exported reference document (page setup, table borders, code shading, font settings).
+
+**:butterfly:Optimization**
+
+- DOCX engine resolution and dispatch are shared between file export and the Word clipboard path.
+- Relative image and link paths in an exported document resolve against that document's own directory, not the active tab's.
+- Percent-encoded local paths are decoded before becoming `file://` URLs.
+
+**:beetle:Bug fix**
+
+- Equations reach the RTF clipboard as OMML: the MathML root is matched by local name, since the previous `tagName` comparison never matched a real browser DOM.
+- Copying a selected inline image as rich text pastes the rendered image instead of its markdown source.
+- A backward selection inside a single list or block quote copies the intended span instead of the whole container.
+- A rich copy no longer skips the native clipboard writer when RTF conversion yields nothing.
+- An IME composition no longer leaves a cloned `mu-content` span behind; its offsets mis-positioned the caret, and the clone is now removed and the block re-rendered once composition ends.
+- A paste whose anchor lost the selection is abandoned instead of landing at the wrong position.
+- Cut, undo boundaries and cross-block selection extraction hardened.
+- Sidebar "move to trash" and tab transfer between windows restored on Windows.
+
+## 0.20.0-fork.1
+
+First release of this fork, on top of upstream `develop`.
+
+**:cactus:Feature**
+
+- DOCX export with two engines: a Pandoc path (native OMML equations via MathML, custom reference document with page setup and table borders) and a bundled pure-JS path (`@turbodocx/html-to-docx` with `mathml2omml` post-processing); both center image-only paragraphs and honor user font settings.
+- Math clipboard pipeline: rich copies carry formulas as standalone MathML (KaTeX `output: 'mathml'`, LaTeX source in `<annotation>`) so Word/Docs paste native equations.
+- Native multi-window tabs: drag a tab out to its own window, drop it on another window's title bar to merge, "open in new window" context menu.
+- Vim keybindings in Source Code mode, Source/WYSIWYG formatting keybinding parity, file-tree name filter.
+- Frontmatter-driven export presets; PDF rasterization in a dedicated offscreen window.
+- High-contrast dark theme across UI, Prism, CodeMirror and menus.
+- CI matrix entries for linux-arm64 and macos-universal.
+
+**:beetle:Bug fix**
+
+- Atomic writes retry on Windows lock errors (EPERM/EBUSY from antivirus, indexers, or a file open in Word).
+- Image attribute values are escaped on update and replace (upstream XSS fix).
+
 ## 0.17.1
 
 - Added experimental native support for Apple M1 (see #2983 if you have issues).

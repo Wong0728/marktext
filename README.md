@@ -197,14 +197,15 @@ This fork ([Wong0728/marktext](https://github.com/Wong0728/marktext)) extends up
 
 - **DOCX export overhaul**: two engines — a Pandoc-based path (native OMML equations via MathML, custom reference document with page setup and table borders) and a bundled pure-JS engine (`@turbodocx/html-to-docx` + `mathml2omml` post-processing); both center image-only paragraphs and honor user font settings.
 - **Math clipboard pipeline**: copy rich text containing formulas as standalone MathML (KaTeX `output: 'mathml'`, LaTeX source kept in `<annotation>`) so Word/Docs can paste native equations.
+- **Word-native selection copy**: on Windows, "Copy as Rich Text" routes the selection through the DOCX export pipeline into a hidden, isolated Word instance and copies from there, so Word itself supplies the clipboard formats — tables, list numbering and equations included.
 - **Native multi-window tabs**: drag tabs out to a new window, drop them onto another window's title bar to merge, and "open in new window" context menu — HTML5 DnD replacing dragula.
 - **Editor enhancements**: Vim keybindings in Source Code mode, Source/WYSIWYG formatting keybinding parity, file-tree name filter.
-- **Export improvements**: frontmatter-driven export presets, PDF rasterization in a dedicated offscreen window (decoupled from the editor DOM).
+- **Export improvements**: frontmatter-driven export presets, PDF rasterization in a dedicated offscreen window (decoupled from the editor DOM), and a default DOCX look aligned with the web-exported reference.
 - **Accessibility**: high-contrast dark theme across UI, Prism, CodeMirror and menus.
-- **Reliability**: atomic writes retry on Windows lock errors (EPERM/EBUSY from antivirus/indexers or files open in Word).
+- **Reliability**: atomic writes retry on Windows lock errors (EPERM/EBUSY from antivirus/indexers or files open in Word); IME composition, cut/undo boundaries, cross-block selection and stale pastes hardened in the editing engine.
 - **CI**: linux-arm64 and macos-universal build matrix entries.
 
-See [TODO.md](TODO.md) for the full change log. Upstream-first contributions extracted from this fork are submitted as separate pull requests.
+Release-by-release notes are in [CHANGELOG.md](packages/website/content/docs/CHANGELOG.md) and on the [releases page](https://github.com/Wong0728/marktext/releases); [TODO.md](TODO.md) tracks the underlying work items. Upstream-first contributions extracted from this fork are submitted as separate pull requests.
 
 ## License
 
