@@ -7,6 +7,7 @@ portable zip (.zip) in the dist/ directory.
 Usage: python build_production.py
 """
 
+import json
 import shutil
 import subprocess
 import sys
@@ -21,7 +22,12 @@ RESET = "\033[0m"
 REPO_ROOT = Path(__file__).resolve().parent
 DESKTOP_DIR = REPO_ROOT / "packages" / "desktop"
 DIST_DIR = REPO_ROOT / "dist"
-VERSION = "0.20.0-dev"
+
+
+def read_version():
+    """Version electron-builder stamps into the artifact names."""
+    with open(DESKTOP_DIR / "package.json", encoding="utf-8") as fh:
+        return json.load(fh)["version"]
 
 
 def print_header(msg):
@@ -136,6 +142,8 @@ def main():
     check_prerequisites()
     kill_running_marktext()
 
+    version = read_version()
+    print_header(f"Building production installer v{version}")
     rc = run_step(
         "pnpm run build:win",
         cwd=REPO_ROOT,
@@ -146,8 +154,8 @@ def main():
         print_error("\nProduction build failed.")
         sys.exit(1)
 
-    installer = DIST_DIR / f"marktext-win-x64-{VERSION}-setup.exe"
-    zip_file = DIST_DIR / f"marktext-win-x64-{VERSION}.zip"
+    installer = DIST_DIR / f"marktext-win-x64-{version}-setup.exe"
+    zip_file = DIST_DIR / f"marktext-win-x64-{version}.zip"
 
     print_header("Build complete!")
     if installer.exists():
