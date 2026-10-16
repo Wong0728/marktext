@@ -25,9 +25,12 @@ import { SelectionCaretType, SelectionDirection, SelectionType } from './types';
 const debug = logger('selection:');
 
 // The browser can clone an `mu-content` span during native edit behavior
-// (e.g. an un-cancelled Enter while an IME composition is active). The clone
-// lacks the `BLOCK_DOM_PROPERTY` backlink, so read the block from an adjacent
-// real content node instead of giving up on the whole selection.
+// (e.g. an un-cancelled Enter while an IME composition is active — see
+// docs/ime-composition-delete-broken.md). The clone lacks the
+// `BLOCK_DOM_PROPERTY` backlink. While a composition owns the DOM the clone
+// cannot be removed safely, so the block is read from an adjacent real
+// content node instead; once the composition ends, `_healOrphanClones` drops
+// the clone and re-renders the real block from state.
 function resolveOrphanSiblingBlock(domNode: HTMLElement): Content | undefined {
     const parent = domNode.parentElement;
     if (!parent)
@@ -192,15 +195,23 @@ class TextSelection {
         if (!anchorDomNode || !focusDomNode)
             return null;
 
+        // An orphan clone poisons every coordinate read through it: an offset
+        // measured inside the clone is relative to the clone, and committing
+        // it via `setCursor` parks the caret at a wrong — often zero —
+        // position of the real block. Repair the DOM here, then re-read a
+        // clean selection for the event that triggered the heal.
+        if (this._healOrphanClones(anchorDomNode, focusDomNode))
+            return this.getSelection();
+
         const anchorBlock
             = (anchorDomNode[BLOCK_DOM_PROPERTY] as Content | undefined)
                 ?? resolveOrphanSiblingBlock(anchorDomNode);
         const focusBlock
             = (focusDomNode[BLOCK_DOM_PROPERTY] as Content | undefined)
                 ?? resolveOrphanSiblingBlock(focusDomNode);
-        // An `mu-content` span cloned by the browser's native edit behavior is
-        // not linked back to a block. Self-heal via the sibling real content
-        // node first; only bail out when none exists. Callers must treat null
+        // Any orphan clone that can be healed was already removed above, so
+        // this fallback only serves the IME-composition window (and the rare
+        // clone with no adjacent real content node). Callers must treat null
         // as "skip this event", never as "detach from the engine".
         if (!anchorBlock || !focusBlock) {
             debug.warn('selection resolves to content node(s) without a block backlink; returning null');
@@ -249,6 +260,61 @@ class TextSelection {
         this.focusPath = focus.path;
         this._updateSelection();
         this._emitSelectionChange();
+    }
+
+    // The block's text state never contains a browser-cloned `mu-content`
+    // span, so state is the source of truth: drop the clone, re-render the
+    // real block, and collapse the native caret into it. During an active IME
+    // composition the browser owns the real span's DOM (re-rendering now would
+    // cancel the session), so healing is deferred — the tolerant adopt path in
+    // `getSelection` serves that window, and the first event after
+    // compositionend repairs the DOM. Returns true when a heal happened, in
+    // which case the caller must re-read the selection.
+    private _healOrphanClones(anchorDomNode: HTMLElement, focusDomNode: HTMLElement): boolean {
+        let healedBlock: Content | null = null;
+
+        for (const domNode of [anchorDomNode, focusDomNode]) {
+            if (domNode[BLOCK_DOM_PROPERTY] || !domNode.isConnected)
+                continue;
+
+            const realBlock = resolveOrphanSiblingBlock(domNode);
+            if (!realBlock || realBlock.isComposed)
+                continue;
+
+            const parent = domNode.parentElement;
+            if (!parent)
+                continue;
+
+            for (const child of [...parent.children]) {
+                if (
+                    isHTMLElement(child)
+                    && child.classList.contains('mu-content')
+                    && !child[BLOCK_DOM_PROPERTY]
+                ) {
+                    debug.warn(`healed orphan mu-content clone, discarded text: "${child.textContent}"`);
+                    child.remove();
+                }
+            }
+
+            realBlock.update();
+            healedBlock ??= realBlock;
+        }
+
+        if (!healedBlock)
+            return false;
+
+        // The native selection died with the removed clone. Park it at a known
+        // good position (block start) so the re-read — and the event dispatch
+        // that follows — see a valid, correctly coordinated selection.
+        const { node, offset } = getNodeAndOffset(healedBlock.domNode!, 0);
+        const range = this._doc.createRange();
+        range.setStart(node, getLegalOffset(node, offset));
+        range.collapse(true);
+        const selection = this._doc.getSelection();
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+
+        return true;
     }
 
     private _emitSelectionChange() {

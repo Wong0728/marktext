@@ -355,7 +355,9 @@ function lineBreakAutoPair(
 
 class Content extends TreeNode {
     private _text: string;
-    protected isComposed: boolean;
+    // Public so the selection layer can defer orphan-clone healing while the
+    // browser owns the DOM during an IME composition.
+    public isComposed: boolean;
 
     static override blockName = 'content';
 
