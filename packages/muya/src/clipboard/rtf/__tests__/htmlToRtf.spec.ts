@@ -1,4 +1,4 @@
-// @vitest-environment happy-dom
+// @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
 import { getClipBoardHtml } from '../../../utils/marked/getClipboardHtml';
 import { htmlToRtf } from '../htmlToRtf';

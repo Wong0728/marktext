@@ -75,7 +75,7 @@ function emitNode(node: Node): string {
 
     const element = node as Element;
 
-    if (element.tagName === 'MATH') {
+    if (element.localName === 'math') {
         return mathElementToRtf(element);
     }
     // KaTeX's outer span (or any wrapper) is transparent.
