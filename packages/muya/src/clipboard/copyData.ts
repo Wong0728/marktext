@@ -6,6 +6,7 @@ import type { ISelection } from '../selection/types';
 import type { TState } from '../state/types';
 import type { Nullable } from '../types';
 import type Clipboard from './index';
+import { SelectionDirection } from '../selection/types';
 import StateToMarkdown from '../state/stateToMarkdown';
 import { getClipBoardHtml, getSanitizeClipboardHtml } from '../utils/marked';
 import { htmlToRtf } from './rtf/htmlToRtf';
@@ -90,7 +91,10 @@ function resolveSelectionOrder(
     if (anchorOutMostBlockOffset == null || focusOutMostBlockOffset == null)
         return null;
 
-    const anchorFirst = anchorOutMostBlockOffset <= focusOutMostBlockOffset;
+    // Outer offsets cannot order leaves within the same list or block-quote.
+    const anchorFirst = anchorOutMostBlock === focusOutMostBlock
+        ? selection.direction === SelectionDirection.FORWARD
+        : anchorOutMostBlockOffset <= focusOutMostBlockOffset;
 
     return {
         anchorBlock,
@@ -414,7 +418,8 @@ export function writeClipboardData(
     // A selected inline image copies its raw `![alt](src)` markdown
     // verbatim, short-circuiting the text-selection clipboard data.
     const selectedImage = clipboard.muya.editor?.selection?.image;
-    if (selectedImage) {
+    const { copyType } = clipboard;
+    if (selectedImage && copyType !== CopyType.COPY_AS_RICH) {
         const { raw } = selectedImage.token;
         if (raw.length > 0) {
             event.clipboardData.setData('text/html', raw);
@@ -423,9 +428,12 @@ export function writeClipboardData(
         return;
     }
 
-    const { copyType } = clipboard;
-
-    const { html, text } = clipboard.getClipboardData();
+    const { html, text } = selectedImage
+        ? {
+                text: selectedImage.token.raw,
+                html: getClipBoardHtml(selectedImage.token.raw, buildHtmlOptions(clipboard.muya.options)),
+            }
+        : clipboard.getClipboardData();
 
     // Mirror native copy behavior: leave the system clipboard untouched
     // when the selection has nothing to contribute, so a previous copy
@@ -490,7 +498,7 @@ export function writeClipboardData(
                 }
             }
             const writeRichClipboard = clipboard.muya.options?.writeRichClipboard;
-            if (rtf && typeof writeRichClipboard === 'function') {
+            if (typeof writeRichClipboard === 'function') {
                 const handled = writeRichClipboard({ text, html: clipboardHtml, rtf });
                 if (handled)
                     return;

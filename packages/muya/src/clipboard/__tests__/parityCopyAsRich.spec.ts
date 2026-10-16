@@ -49,6 +49,41 @@ function makeClipboard(html: string, text: string) {
 }
 
 describe('parity PG9: copyAsRich writes rendered HTML as rich text', () => {
+    it('delegates non-math selections to the native rich clipboard', () => {
+        const writeRichClipboard = vi.fn(() => true);
+        const clipboard = makeClipboard('<p>selected</p>', 'selected');
+        clipboard.muya.options = { writeRichClipboard };
+        clipboard.copyType = CopyType.COPY_AS_RICH;
+        const { event, setData } = makeEvent();
+        clipboard.copyHandler(event);
+        expect(writeRichClipboard).toHaveBeenCalledWith({ text: 'selected', html: '<p>selected</p>', rtf: '' });
+        expect(setData).not.toHaveBeenCalled();
+    });
+
+    it('delegates an image-only rich selection rather than writing raw markdown', () => {
+        const writeRichClipboard = vi.fn(() => true);
+        const clipboard = new Clipboard({
+            options: { writeRichClipboard },
+            editor: { selection: { image: { token: { raw: '![diagram](images/model.svg)' } } } },
+        } as unknown as Muya);
+        clipboard.copyType = CopyType.COPY_AS_RICH;
+        const { event, setData } = makeEvent();
+        clipboard.copyHandler(event);
+        expect(writeRichClipboard).toHaveBeenCalledWith(expect.objectContaining({ text: '![diagram](images/model.svg)' }));
+        expect(setData).not.toHaveBeenCalled();
+    });
+
+    it('leaves the clipboard untouched for an empty selection', () => {
+        const writeRichClipboard = vi.fn(() => true);
+        const clipboard = makeClipboard('', '');
+        clipboard.muya.options = { writeRichClipboard };
+        clipboard.copyType = CopyType.COPY_AS_RICH;
+        const { event, setData } = makeEvent();
+        clipboard.copyHandler(event);
+        expect(writeRichClipboard).not.toHaveBeenCalled();
+        expect(setData).not.toHaveBeenCalled();
+    });
+
     it(
         'PG9: copyAsRich sets text/html=rendered html AND text/plain=text',
         () => {

@@ -47,27 +47,31 @@ function stubCrossSelection(
     anchorOffset: number,
     focusBlock: Content,
     focusOffset: number,
+    direction = SelectionDirection.FORWARD,
 ) {
     muya.editor.selection.getSelection = () => ({
         anchor: { offset: anchorOffset, block: anchorBlock, path: anchorBlock.path },
         focus: { offset: focusOffset, block: focusBlock, path: focusBlock.path },
         isCollapsed: false,
         isSelectionInSameBlock: false,
-        direction: SelectionDirection.FORWARD,
+        direction,
         type: SelectionCaretType.RANGE,
     });
 }
 
 describe('copy within a single list', () => {
-    it('truncates both boundary items and keeps fully-selected middle items', () => {
+    it.each([SelectionDirection.FORWARD, SelectionDirection.BACKWARD])('truncates both boundary items and keeps middle items (%s)', (direction) => {
         const muya = bootMuya('- one\n- two\n- three\n');
         const scrollPage = muya.editor.scrollPage!;
 
         const oneContent = scrollPage.firstContentInDescendant()!;
         const threeContent = scrollPage.lastContentInDescendant()!;
 
-        // after "o" in "one" to after "th" in "three"
-        stubCrossSelection(muya, oneContent, 1, threeContent, 2);
+        // Same range in either direction: after "o" in "one" to after "th" in "three".
+        if (direction === SelectionDirection.FORWARD)
+            stubCrossSelection(muya, oneContent, 1, threeContent, 2, direction);
+        else
+            stubCrossSelection(muya, threeContent, 2, oneContent, 1, direction);
 
         const { text } = muya.editor.clipboard.getClipboardData();
 
@@ -76,15 +80,18 @@ describe('copy within a single list', () => {
 });
 
 describe('copy within a single block-quote', () => {
-    it('truncates both boundary paragraphs, not the whole quote', () => {
+    it.each([SelectionDirection.FORWARD, SelectionDirection.BACKWARD])('truncates both boundary paragraphs, not the whole quote (%s)', (direction) => {
         const muya = bootMuya('> alpha\n>\n> beta\n');
         const scrollPage = muya.editor.scrollPage!;
 
         const alphaContent = scrollPage.firstContentInDescendant()!;
         const betaContent = scrollPage.lastContentInDescendant()!;
 
-        // after "al" in "alpha" to after "be" in "beta"
-        stubCrossSelection(muya, alphaContent, 2, betaContent, 2);
+        // Same range in either direction: after "al" in "alpha" to after "be" in "beta".
+        if (direction === SelectionDirection.FORWARD)
+            stubCrossSelection(muya, alphaContent, 2, betaContent, 2, direction);
+        else
+            stubCrossSelection(muya, betaContent, 2, alphaContent, 2, direction);
 
         const { text } = muya.editor.clipboard.getClipboardData();
 
