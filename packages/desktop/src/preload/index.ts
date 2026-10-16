@@ -15,7 +15,8 @@ import type {
   IpcSendChannels,
   IpcSyncChannels,
   IpcMainEventChannels,
-  BootInfo
+  BootInfo,
+  DocxClipboardPayload
 } from '@shared/types/ipc'
 
 type RendererEventListener<K extends keyof IpcMainEventChannels> = (
@@ -81,7 +82,8 @@ const clipboardAPI = {
   // be written from the renderer (Chromium's clipboardData has no RTF slot);
   // Word converts RTF OMML equation groups into native equations on paste.
   writeRich: (payload: { text: string; html: string; rtf: string }) =>
-    send('mt::clipboard::write-rich', payload)
+    send('mt::clipboard::write-rich', payload),
+  writeDocx: (payload: DocxClipboardPayload) => invoke('mt::clipboard::write-docx', payload)
 }
 
 const webFrameAPI = {

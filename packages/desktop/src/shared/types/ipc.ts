@@ -33,6 +33,15 @@ import type {
 } from './files'
 import type { MenuTemplate, MenuPopupPosition } from './menu'
 
+export interface DocxClipboardPayload {
+  content: string
+  pathname?: string
+  title?: string
+  docxEngine: 'pandoc' | 'js'
+  docxFont?: { latin?: string; eastAsia?: string; sizePt?: number }
+  mathBlocks?: Array<{ index: number; mathml: string; display: boolean }>
+}
+
 // =================================================================
 // Invoke channels (renderer → main, returns Promise<T>)
 // =================================================================
@@ -42,6 +51,7 @@ export interface IpcInvokeChannels {
   'mt::boot-info-async': { args: []; ret: BootInfo }
   'mt::clipboard::guess-file-path': { args: []; ret: string | null }
   'mt::clipboard::read-text': { args: []; ret: string }
+  'mt::clipboard::write-docx': { args: [payload: DocxClipboardPayload]; ret: void }
   'mt::cmd::exists': { args: [name: string]; ret: boolean }
   'mt::fonts::list': { args: []; ret: string[] }
   'mt::fs-trash-item': { args: [pathname: string]; ret: void }

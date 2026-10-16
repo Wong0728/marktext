@@ -476,11 +476,13 @@ watch(Object.values(persistableSettings), () => {
 onMounted(() => {
   restoreExportSettings()
   bus.on('showExportDialog', showDialog)
+  bus.on('copy-selection-as-word', copySelectionAsWord)
   bus.on('language-changed', updateTranslations)
 })
 
 onBeforeUnmount(() => {
   bus.off('showExportDialog', showDialog)
+  bus.off('copy-selection-as-word', copySelectionAsWord)
   bus.off('language-changed', updateTranslations)
 })
 
@@ -502,18 +504,7 @@ const showDialog = (type: unknown) => {
     activeName.value = 'info'
   }
 
-  // #7 — apply the document's own `export:` frontmatter preset on top of the
-  // persisted defaults, so a project ships its export preset with its files.
-  // Unknown keys and unparseable values are ignored; every other ref keeps
-  // the persisted value.
-  const editorStore = useEditorStore()
-  const preset = parseExportFrontmatter(editorStore.currentFile?.markdown ?? '')
-  for (const [key, value] of Object.entries(preset)) {
-    const settingRef = persistableSettings[key]
-    if (settingRef && typeof value === typeof settingRef.value) {
-      settingRef.value = value
-    }
-  }
+  applyDocumentPreset()
 
   showExportSettingsDialog.value = true
   bus.emit('editor-blur')
@@ -524,9 +515,9 @@ const showDialog = (type: unknown) => {
   }
 }
 
-const handleClicked = () => {
+const getExportOptions = (type: string): Record<string, unknown> => {
   const options: Record<string, unknown> = {
-    type: exportType.value,
+    type,
     pageSize: pageSize.value,
     pageSizeWidth: pageSizeWidth.value,
     pageSizeHeight: pageSizeHeight.value,
@@ -539,21 +530,21 @@ const handleClicked = () => {
     showFrontMatter: showFrontMatter.value,
     // Layout themes do not apply to DOCX (the engines ignore HTML CSS); its
     // look is controlled by the docxFont settings instead.
-    theme: exportType.value === 'docx' ? null : (theme.value === 'default' ? null : theme.value),
+    theme: type === 'docx' ? null : (theme.value === 'default' ? null : theme.value),
     tocTitle: tocTitle.value,
     tocIncludeTopHeading: tocIncludeTopHeading.value
   }
 
-  if (!isPrintable.value) {
+  if (type === 'styledHtml' || type === 'docx') {
     options.htmlTitle = htmlTitle.value
   }
 
-  if (exportType.value === 'styledHtml') {
+  if (type === 'styledHtml') {
     options.embedImages = embedImages.value
     options.exportZip = exportZip.value
   }
 
-  if (exportType.value === 'docx') {
+  if (type === 'docx') {
     options.docxEngine = docxEngine.value
     // Only deviating values travel with the payload; all-default means "use
     // the packaged reference document as-is".
@@ -566,7 +557,7 @@ const handleClicked = () => {
     }
   }
 
-  if (fontSettingsOverwrite.value && exportType.value !== 'docx') {
+  if (fontSettingsOverwrite.value && type !== 'docx') {
     Object.assign(options, {
       fontSize: fontSize.value,
       lineHeight: lineHeight.value,
@@ -603,8 +594,27 @@ const handleClicked = () => {
     })
   }
 
+  return options
+}
+
+const handleClicked = () => {
   showExportSettingsDialog.value = false
-  bus.emit('export', options)
+  bus.emit('export', getExportOptions(exportType.value))
+}
+
+const applyDocumentPreset = () => {
+  const preset = parseExportFrontmatter(useEditorStore().currentFile?.markdown ?? '')
+  for (const [key, value] of Object.entries(preset)) {
+    const settingRef = persistableSettings[key]
+    if (settingRef && typeof value === typeof settingRef.value) settingRef.value = value
+  }
+}
+
+const copySelectionAsWord = (payload: unknown) => {
+  const selection = payload as { markdown: string; pathname: string; title: string }
+  if (!selection.markdown) return
+  applyDocumentPreset()
+  bus.emit('export', { ...getExportOptions('docx'), ...selection, clipboard: true })
 }
 
 const onSelectChange = (key: string, value: unknown) => {

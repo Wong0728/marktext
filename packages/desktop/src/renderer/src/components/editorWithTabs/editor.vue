@@ -1284,6 +1284,10 @@ const handleFindAction = (action: unknown) => {
 
 interface ExportOptions {
   type: string
+  clipboard?: boolean
+  markdown?: string
+  pathname?: string
+  title?: string
   header?: unknown
   footer?: unknown
   headerFooterStyled?: unknown
@@ -1311,10 +1315,17 @@ const isPandocInstalled = async (): Promise<boolean> => {
 let isExporting = false
 
 const handleExport = async (options: unknown) => {
-  if (isExporting) return
+  const opts = options as ExportOptions
+  if (isExporting) {
+    if (opts.clipboard) notice.notify({ title: 'Word', type: 'warning', message: 'An export or copy is already in progress.' })
+    return
+  }
   isExporting = true
+  const muya = editor.value
+  const markdown = opts.markdown ?? muya.getMarkdown()
+  const pathname = opts.pathname ?? currentFile.value?.pathname ?? ''
+  const resourceDirectory = pathname ? window.path.dirname(pathname) : window.DIRNAME
   try {
-    const opts = options as ExportOptions
     const { type, headerFooterStyled, htmlTitle } = opts
 
     if (!/^pdf|print|styledHtml|docx$/.test(type)) {
@@ -1322,8 +1333,7 @@ const handleExport = async (options: unknown) => {
     }
 
     const extraCss = await getCssForOptions(opts as unknown as PdfCssOptions)
-    const htmlToc = getHtmlToc(editor.value.getTOC(), opts as unknown as HtmlTocOptions)
-    const markdown = editor.value.getMarkdown()
+    const htmlToc = opts.clipboard ? '' : getHtmlToc(muya.getTOC(), opts as unknown as HtmlTocOptions)
     const header = (opts.header ?? null) as HeaderFooterPart | null
     const footer = (opts.footer ?? null) as HeaderFooterPart | null
 
@@ -1336,12 +1346,14 @@ const handleExport = async (options: unknown) => {
       //   - pandoc: strip KaTeX visual spans, keep <math> MathML → OMML
       //   - JS:     strip MathML, keep KaTeX visual spans → styled text
         try {
-          const rawHtml = await exportStyledHTML(editor.value, markdown, {
+          if (opts.clipboard) notice.notify({ title: 'Word', type: 'info', message: 'Preparing Word clipboard…' })
+          const rawHtml = await exportStyledHTML(muya, markdown, {
             title: htmlTitle || '',
             printOptimization: false,
             extraCss,
             toc: htmlToc,
-            dir: props.textDirection
+            dir: props.textDirection,
+            resourceDirectory
           })
           const engine = (opts.docxEngine || 'auto') as 'auto' | 'pandoc' | 'js'
           // 'auto' resolves the same way the main process does: prefer pandoc
@@ -1357,13 +1369,18 @@ const handleExport = async (options: unknown) => {
           } else {
             content = await prepareHtmlForDocx(rawHtml)
           }
-          editorStore.EXPORT({
-            type,
+          const payload = {
             content,
-            docxEngine: engine,
+            docxEngine: useJs ? 'js' as const : 'pandoc' as const,
             mathBlocks,
             docxFont: opts.docxFont
-          })
+          }
+          if (opts.clipboard) {
+            await window.electron.clipboard.writeDocx({ ...payload, pathname, title: opts.title })
+            notice.notify({ title: 'Word', type: 'primary', message: 'Copied. Paste into Word using Keep Source Formatting.' })
+          } else {
+            editorStore.EXPORT({ type, ...payload })
+          }
         } catch (err) {
           cachedPandocExists = null
           log.error('Failed to export document:', err)
@@ -1875,12 +1892,17 @@ onMounted(() => {
     clipboardFilePath: guessClipboardFilePath,
     // Read the OS clipboard's plain text for "Paste as Plain Text" (execCommand('paste') no longer fires).
     clipboardText: () => window.electron.clipboard.readText(),
-    // "Copy as Rich Text" with formulas: write markdown + HTML + RTF natively
-    // (Chromium's clipboardData has no RTF slot; Word turns RTF OMML groups
-    // into native equations on paste). Returning true makes the engine skip
-    // the event's clipboardData writes.
+    // Windows reuses DOCX export so Word supplies its own clipboard formats.
     writeRichClipboard: (payload: { text: string; html: string; rtf: string }) => {
-      window.electron.clipboard.writeRich(payload)
+      if (window.electron.process.platform === 'win32') {
+        bus.emit('copy-selection-as-word', {
+          markdown: payload.text,
+          pathname: currentFile.value?.pathname || '',
+          title: currentFile.value?.filename || ''
+        })
+      } else {
+        window.electron.clipboard.writeRich(payload)
+      }
       return true
     },
     // Image-persist callbacks read by the engine's clipboard + drag-drop handlers

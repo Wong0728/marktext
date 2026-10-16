@@ -53,6 +53,7 @@ declare global {
     readText(): Promise<string>
     guessFilePath(): Promise<string | null>
     writeRich(payload: { text: string; html: string; rtf: string }): void
+    writeDocx(payload: IpcInvokeChannels['mt::clipboard::write-docx']['args'][0]): Promise<void>
   }
 
   interface ElectronWebFrameAPI {

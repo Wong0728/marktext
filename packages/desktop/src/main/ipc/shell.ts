@@ -2,6 +2,8 @@ import { fileURLToPath } from 'url'
 import { ipcMain, shell, clipboard, ClipboardItem } from 'electron'
 import log from 'electron-log'
 import { isDangerousExecutableFile } from 'common/filesystem/paths'
+import { copyDocxToClipboard } from '../utils/wordClipboard'
+import type { DocxClipboardPayload } from '@shared/types/ipc'
 
 // Protocols the renderer is allowed to hand to the OS via `openExternal`.
 // Everything else (notably `file:`, and custom schemes) is refused here so a
@@ -93,6 +95,9 @@ export const registerShellHandlers = (): void => {
       }
     }
   )
+  ipcMain.handle('mt::clipboard::write-docx', async(_e, payload: DocxClipboardPayload) => {
+    await copyDocxToClipboard(payload)
+  })
   ipcMain.handle('mt::clipboard::read-text', async() => {
     try {
       // Electron 44 made the main-process clipboard async (W3C-style).
