@@ -24,9 +24,9 @@ import { normalizeAndResolvePath, writeFile } from '../../filesystem'
 import { writeMarkdownFile } from '../../filesystem/markdown'
 import { getPath, getRecommendTitleFromMarkdownString } from '../../utils'
 import pandoc from '../../utils/pandoc'
-import { centerImageParagraphsFile, jsDocxEngine } from '../../utils/htmlToDocx'
+import { exportDocxFile, resolveDocxEngine } from '../../utils/htmlToDocx'
 import { printToPdfOffscreen } from '../../utils/offscreenPrint'
-import { prepareReferenceDoc, type DocxFontSettings } from '../../utils/docxReference'
+import type { DocxFontSettings } from '../../utils/docxReference'
 import { t } from '../../i18n'
 import type { UnsavedFile } from '@shared/types/files'
 
@@ -104,18 +104,6 @@ interface ExportPayload {
   zipImages?: Array<{ zipName: string; data: Uint8Array }>
 }
 
-/**
- * Resolve the user's engine preference to a concrete engine. 'auto' prefers
- * pandoc (so LaTeX formulas become native OMML equations) and falls back to
- * the bundled JS engine when pandoc is not installed — this keeps DOCX export
- * working out-of-the-box for users who have not installed pandoc.
- */
-const resolveDocxEngine = (preferred?: 'auto' | 'pandoc' | 'js'): 'pandoc' | 'js' => {
-  if (preferred === 'pandoc') return 'pandoc'
-  if (preferred === 'js') return 'js'
-  return pandoc.exists() ? 'pandoc' : 'js'
-}
-
 // Handle the export response from renderer process.
 const handleResponseForExport = async(e: IpcMainEvent, payload: ExportPayload): Promise<void> => {
   const { type, content, pathname, title, pageOptions } = payload
@@ -171,38 +159,17 @@ const handleResponseForExport = async(e: IpcMainEvent, payload: ExportPayload): 
           throw new Error('No HTML content found for DOCX export.')
         }
         const engine = resolveDocxEngine(payload.docxEngine)
-        if (engine === 'pandoc') {
-          if (!pandoc.exists()) {
-            noticeDocxPandocNotFound(win)
-            return
-          }
-          // `--resource-path` tells pandoc where to look for local images when
-          // the input comes from stdin. Fall back to the documents directory
-          // when the file has not been saved yet.
-          const resourcePath = pathname ? path.dirname(pathname) : getPath('documents')
-          // A custom reference document gives tables visible borders and adds a
-          // subtle background to inline / block code (VerbatimChar). Pandoc's
-          // default reference.docx has no table borders and no code shading.
-          // The user's DOCX font settings are baked into a patched copy of it.
-          const referenceDoc = await prepareReferenceDoc(payload.docxFont)
-          const pandocArgs = ['--wrap=none', `--resource-path=${resourcePath}`]
-          if (isFile(referenceDoc)) {
-            pandocArgs.push(`--reference-doc=${referenceDoc}`)
-          }
-          const converter = pandoc('html', 'docx', ...pandocArgs)
-          await converter.toFile(content, filePath)
-          // pandoc leaves image paragraphs left-aligned; center them in place.
-          await centerImageParagraphsFile(filePath)
-        } else {
-          // JS engine: no external binary, better tables / task lists. Math
-          // formulas are post-processed into native OMML via mathml2omml.
-          await jsDocxEngine.convert(content, filePath, {
-            resourcePath: pathname ? path.dirname(pathname) : getPath('documents'),
-            title: title || '',
-            mathBlocks: payload.mathBlocks,
-            docxFont: payload.docxFont
-          })
+        if (engine === 'pandoc' && !pandoc.exists()) {
+          noticeDocxPandocNotFound(win)
+          return
         }
+        await exportDocxFile(content, filePath, {
+          docxEngine: engine,
+          resourcePath: dirname,
+          title: title || '',
+          mathBlocks: payload.mathBlocks,
+          docxFont: payload.docxFont
+        })
       } else {
         if (!content) {
           throw new Error('No HTML content found.')

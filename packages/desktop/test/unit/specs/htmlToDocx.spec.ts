@@ -1,18 +1,28 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import JSZip from 'jszip'
 
-// The JS DOCX engine wrapper (src/main/utils/htmlToDocx.ts) has two external
-// dependencies we must isolate:
-//   1. @turbodocx/html-to-docx — the conversion library (default export fn)
-//   2. main_renderer/filesystem — writeFile (disk I/O)
-//   3. mathml2omml — MathML→OMML converter (used only when mathBlocks present)
-// Mocking all three lets us assert call args without touching disk or running
-// the real ~heavy DOCX serializer.
-
+// Isolate converters, font preparation and disk I/O; exercise ZIP post-processing
+// with real in-memory DOCX buffers.
 const mockHtmlToDocx = vi.hoisted(() => vi.fn())
 const mockWriteFile = vi.hoisted(() => vi.fn())
 const mockMml2omml = vi.hoisted(() => vi.fn())
 const mockApplyDocxFont = vi.hoisted(() => vi.fn(async(buffer: Buffer) => buffer))
+const mockPrepareReferenceDoc = vi.hoisted(() => vi.fn())
+const mockPandoc = vi.hoisted(() => vi.fn())
+const mockPandocExists = vi.hoisted(() => vi.fn())
+const mockPandocToFile = vi.hoisted(() => vi.fn())
+const mockIsFile = vi.hoisted(() => vi.fn())
+const mockReadFile = vi.hoisted(() => vi.fn())
+
+vi.mock('main_renderer/utils/pandoc', () => ({
+  default: Object.assign(mockPandoc, { exists: mockPandocExists })
+}))
+vi.mock('common/filesystem', () => ({ isFile: mockIsFile }))
+vi.mock('fs/promises', () => ({
+  readFile: mockReadFile,
+  default: { readFile: mockReadFile }
+}))
+vi.mock('main_renderer/utils', () => ({ getPath: () => '/mock/documents' }))
 
 vi.mock('@turbodocx/html-to-docx', () => ({
   default: mockHtmlToDocx
@@ -27,10 +37,12 @@ vi.mock('mathml2omml', () => ({
 }))
 
 vi.mock('main_renderer/utils/docxReference', () => ({
-  applyDocxFontToBuffer: mockApplyDocxFont
+  applyDocxFontToBuffer: mockApplyDocxFont,
+  prepareReferenceDoc: mockPrepareReferenceDoc
 }))
 
-const { convertHtmlToDocxFile, jsDocxEngine } = await import('main_renderer/utils/htmlToDocx')
+const { exportDocxFile, resolveDocxEngine, convertHtmlToDocxFile, jsDocxEngine } =
+  await import('main_renderer/utils/htmlToDocx')
 
 // Build a minimal valid DOCX (ZIP) with the given word/document.xml content,
 // so tests can feed a realistic buffer to the mocked HtmlToDocx.
@@ -50,6 +62,102 @@ const readDocxDocumentXml = async(buffer: Buffer): Promise<string> => {
   if (!file) throw new Error('word/document.xml not found in DOCX')
   return file.async('string')
 }
+
+describe('exportDocxFile', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockPandocExists.mockReturnValue(true)
+    mockPandoc.mockReturnValue({ toFile: mockPandocToFile })
+    mockPandocToFile.mockResolvedValue(undefined)
+    mockPrepareReferenceDoc.mockResolvedValue('/mock/reference.docx')
+    mockIsFile.mockReturnValue(true)
+    mockReadFile.mockResolvedValue(Buffer.from('unchanged-docx'))
+    mockWriteFile.mockResolvedValue(undefined)
+  })
+
+  afterEach(() => vi.restoreAllMocks())
+
+  it.each([undefined, 'auto', 'pandoc'] as const)(
+    'uses pandoc for %s when installed, preserving arguments and image centering',
+    async(docxEngine) => {
+      const docxFont = { latin: 'Arial', eastAsia: '宋体', sizePt: 12 }
+      const buffer = await buildMinimalDocx(
+        '<w:document><w:body><w:p><w:r><w:drawing/></w:r></w:p></w:body></w:document>'
+      )
+      // Post-processing must read only after pandoc has completed its write.
+      mockPandocToFile.mockImplementation(async() => {
+        await Promise.resolve()
+        mockReadFile.mockResolvedValue(buffer)
+      })
+
+      expect(resolveDocxEngine(docxEngine)).toBe('pandoc')
+      await exportDocxFile('<p>hello</p>', '/out/export.docx', {
+        docxEngine, resourcePath: '/docs/with spaces', docxFont
+      })
+
+      expect(mockPrepareReferenceDoc).toHaveBeenCalledWith(docxFont)
+      expect(mockIsFile).toHaveBeenCalledWith('/mock/reference.docx')
+      expect(mockPandoc).toHaveBeenCalledExactlyOnceWith(
+        'html', 'docx', '--wrap=none', '--resource-path=/docs/with spaces',
+        '--reference-doc=/mock/reference.docx'
+      )
+      expect(mockPandocToFile).toHaveBeenCalledExactlyOnceWith('<p>hello</p>', '/out/export.docx')
+      expect(mockReadFile).toHaveBeenCalledWith('/out/export.docx')
+      expect(mockWriteFile).toHaveBeenCalledExactlyOnceWith(
+        '/out/export.docx', expect.any(Buffer), 'docx', 'binary'
+      )
+      const xml = await readDocxDocumentXml(mockWriteFile.mock.calls[0]![1] as Buffer)
+      expect(xml).toContain('<w:jc w:val="center"/>')
+      expect(mockHtmlToDocx).not.toHaveBeenCalled()
+    }
+  )
+
+  it.each([
+    ['js', true], ['auto', false], [undefined, false]
+  ] as const)('uses JS for %s with pandoc installed=%s and forwards options', async(docxEngine, installed) => {
+    mockPandocExists.mockReturnValue(installed)
+    const convert = vi.spyOn(jsDocxEngine, 'convert').mockResolvedValue(undefined)
+    const options = {
+      docxEngine,
+      resourcePath: '/docs/images',
+      title: 'My document',
+      mathBlocks: [{ index: 0, mathml: '<math><mi>x</mi></math>', display: true }],
+      docxFont: { latin: 'Arial', eastAsia: '宋体', sizePt: 12 }
+    }
+
+    expect(resolveDocxEngine(docxEngine)).toBe('js')
+    await exportDocxFile('<p>hello</p>', '/out/export.docx', options)
+
+    expect(convert).toHaveBeenCalledExactlyOnceWith('<p>hello</p>', '/out/export.docx', options)
+    expect(mockPandoc).not.toHaveBeenCalled()
+    expect(mockPrepareReferenceDoc).not.toHaveBeenCalled()
+    expect(mockReadFile).not.toHaveBeenCalled()
+  })
+
+  it('rejects an explicit pandoc request when unavailable instead of silently using JS', async() => {
+    mockPandocExists.mockReturnValue(false)
+
+    expect(resolveDocxEngine('pandoc')).toBe('pandoc')
+    await expect(exportDocxFile('<p>hello</p>', '/out/export.docx', { docxEngine: 'pandoc' }))
+      .rejects.toThrow('Pandoc is not installed')
+
+    expect(mockPandoc).not.toHaveBeenCalled()
+    expect(mockHtmlToDocx).not.toHaveBeenCalled()
+    expect(mockWriteFile).not.toHaveBeenCalled()
+  })
+
+  it('defaults to auto and the documents directory, omitting a missing reference document', async() => {
+    mockIsFile.mockReturnValue(false)
+
+    await exportDocxFile('<p>hello</p>', '/out/export.docx')
+
+    expect(mockPandoc).toHaveBeenCalledExactlyOnceWith(
+      'html', 'docx', '--wrap=none', '--resource-path=/mock/documents'
+    )
+    expect(mockPrepareReferenceDoc).toHaveBeenCalledWith(undefined)
+    expect(mockWriteFile).not.toHaveBeenCalled()
+  })
+})
 
 describe('jsDocxEngine', () => {
   beforeEach(() => {

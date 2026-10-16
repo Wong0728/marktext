@@ -1,12 +1,7 @@
-// Pure-JS DOCX engine wrapper around @turbodocx/html-to-docx.
+// Shared DOCX export dispatch and pure-JS engine wrapper around @turbodocx/html-to-docx.
+// 'auto' prefers pandoc when installed; the bundled JS engine needs no external binary.
 //
-// Coexists with the pandoc-based path (../menu/actions/file.ts). The main
-// process dispatches to either this module or pandoc based on the user's
-// `docxEngine` choice ('auto' | 'pandoc' | 'js'). Unlike pandoc, this engine
-// requires no external binary and renders HTML tables / task lists / nested
-// lists with higher fidelity.
-//
-// LaTeX math is handled via post-processing: the renderer extracts KaTeX's
+// LaTeX math in the JS engine is handled via post-processing: the renderer extracts KaTeX's
 // MathML into `mathBlocks` (see prepareHtmlForJsDocx in exportHtml.ts) and
 // leaves a unique placeholder where each formula was. After @turbodocx
 // generates the DOCX buffer, injectOmmlMath unzips it, converts each MathML
@@ -16,8 +11,11 @@
 import HtmlToDocx from '@turbodocx/html-to-docx'
 import JSZip from 'jszip'
 import { readFile as fsReadFile } from 'fs/promises'
+import { isFile } from 'common/filesystem'
 import { writeFile } from '../filesystem'
-import { applyDocxFontToBuffer } from './docxReference'
+import { getPath } from '.'
+import pandoc from './pandoc'
+import { applyDocxFontToBuffer, prepareReferenceDoc } from './docxReference'
 import type { DocxFontSettings } from './docxReference'
 
 export interface MathBlock {
@@ -36,6 +34,40 @@ export interface JsDocxOptions {
   mathBlocks?: MathBlock[]
   /** User's DOCX font settings (latin / east-asian font, body size). */
   docxFont?: DocxFontSettings
+}
+
+/** Resolve the preference; 'auto' prefers pandoc and falls back to bundled JS. */
+export const resolveDocxEngine = (preferred?: 'auto' | 'pandoc' | 'js'): 'pandoc' | 'js' => {
+  if (preferred === 'pandoc') return 'pandoc'
+  if (preferred === 'js') return 'js'
+  return pandoc.exists() ? 'pandoc' : 'js'
+}
+
+/** Export HTML already preprocessed for the selected engine, without UI notices. */
+export const exportDocxFile = async(
+  html: string,
+  outputPath: string,
+  options: JsDocxOptions & { docxEngine?: 'auto' | 'pandoc' | 'js' } = {}
+): Promise<void> => {
+  const engine = resolveDocxEngine(options.docxEngine)
+  if (engine === 'js') {
+    return jsDocxEngine.convert(html, outputPath, options)
+  }
+  if (!pandoc.exists()) {
+    throw new Error('Pandoc is not installed. Please install Pandoc or switch to the JS engine.')
+  }
+
+  // Resolve stdin images relative to the document, or Documents for unsaved files.
+  const resourcePath = options.resourcePath || getPath('documents')
+  // Preserve table borders / code shading and bake in the user's font settings.
+  const referenceDoc = await prepareReferenceDoc(options.docxFont)
+  const pandocArgs = ['--wrap=none', `--resource-path=${resourcePath}`]
+  if (isFile(referenceDoc)) {
+    pandocArgs.push(`--reference-doc=${referenceDoc}`)
+  }
+  const converter = pandoc('html', 'docx', ...pandocArgs)
+  await converter.toFile(html, outputPath)
+  await centerImageParagraphsFile(outputPath)
 }
 
 /**
