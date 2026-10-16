@@ -108,8 +108,10 @@ const selectDocxEngine = async(page: Page, engine: 'auto' | 'pandoc' | 'js'): Pr
   // Match by the option value via a data attribute is not available, so we
   // match by partial text. The labels are locale-dependent but the English
   // defaults are used in the e2e environment.
-  const labelFragment = engine === 'js' ? 'Built-in JS'
-    : engine === 'pandoc' ? 'Pandoc'
+  const labelFragment = engine === 'js'
+    ? 'Built-in JS'
+    : engine === 'pandoc'
+      ? 'Pandoc'
       : 'Auto'
   const option = page.locator('.el-select-dropdown__item').filter({ hasText: labelFragment }).first()
   await option.waitFor({ state: 'visible', timeout: 5000 })

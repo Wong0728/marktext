@@ -120,7 +120,7 @@ const patchStylesXml = (xml: string, settings: DocxFontSettings): string => {
   return next
 }
 
-const patchDocxZip = async (zip: JSZip, settings: DocxFontSettings): Promise<void> => {
+const patchDocxZip = async(zip: JSZip, settings: DocxFontSettings): Promise<void> => {
   const theme = zip.file('word/theme/theme1.xml')
   if (theme) {
     zip.file('word/theme/theme1.xml', patchThemeXml(await theme.async('string'), settings))

@@ -78,7 +78,7 @@ export const registerShellHandlers = (): void => {
   // the three slots land atomically from one IPC message.
   ipcMain.on(
     'mt::clipboard::write-rich',
-    (_e, payload: { text: string; html: string; rtf: string }) => {
+    async(_e, payload: { text: string; html: string; rtf: string }) => {
       try {
         const data: Record<string, string> = {
           'text/plain': payload.text,
@@ -89,7 +89,7 @@ export const registerShellHandlers = (): void => {
           // Windows; desktop Word converts RTF OMML groups into equations.
           data['application/rtf'] = payload.rtf
         }
-        void clipboard.write([new ClipboardItem(data)])
+        await clipboard.write([new ClipboardItem(data)])
       } catch (err) {
         log.error('clipboard.write(rich) failed:', err)
       }
