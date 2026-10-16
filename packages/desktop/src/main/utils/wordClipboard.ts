@@ -21,6 +21,38 @@ public static class WordClipboard {
     [DllImport("ole32.dll")] public static extern void OleUninitialize();
     [DllImport("user32.dll")] public static extern uint GetClipboardSequenceNumber();
     [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hwnd, out uint processId);
+    [DllImport("user32.dll", SetLastError=true)] public static extern bool OpenClipboard(IntPtr hWndNewOwner);
+    [DllImport("user32.dll", SetLastError=true)] public static extern bool CloseClipboard();
+    [DllImport("user32.dll", SetLastError=true)] public static extern IntPtr GetClipboardData(uint uFormat);
+    [DllImport("user32.dll", SetLastError=true)] public static extern IntPtr SetClipboardData(uint uFormat, IntPtr hMem);
+    [DllImport("user32.dll", CharSet=CharSet.Unicode, SetLastError=true)] public static extern uint RegisterClipboardFormat(string lpszFormat);
+    [DllImport("kernel32.dll", SetLastError=true)] public static extern uint GlobalSize(IntPtr hMem);
+    [DllImport("kernel32.dll", SetLastError=true)] public static extern IntPtr GlobalLock(IntPtr hMem);
+    [DllImport("kernel32.dll", SetLastError=true)] public static extern bool GlobalUnlock(IntPtr hMem);
+    [DllImport("kernel32.dll", SetLastError=true)] public static extern IntPtr GlobalAlloc(uint uFlags, UIntPtr dwBytes);
+    [DllImport("kernel32.dll", SetLastError=true)] public static extern IntPtr GlobalFree(IntPtr hMem);
+    public static byte[] GetRawClipboardData(uint format) {
+        IntPtr h = GetClipboardData(format);
+        if (h == IntPtr.Zero) return null;
+        IntPtr p = GlobalLock(h);
+        if (p == IntPtr.Zero) return null;
+        try {
+            uint size = GlobalSize(h);
+            byte[] data = new byte[size];
+            Marshal.Copy(p, data, 0, (int)size);
+            return data;
+        } finally { GlobalUnlock(h); }
+    }
+    public static bool SetRawClipboardData(uint format, byte[] data) {
+        IntPtr h = GlobalAlloc(0x0002, (UIntPtr)data.Length);
+        if (h == IntPtr.Zero) return false;
+        IntPtr p = GlobalLock(h);
+        if (p == IntPtr.Zero) { GlobalFree(h); return false; }
+        try { Marshal.Copy(data, 0, p, data.Length); }
+        finally { GlobalUnlock(h); }
+        if (SetClipboardData(format, h) == IntPtr.Zero) { GlobalFree(h); return false; }
+        return true;
+    }
 }
 '@
 [Runtime.InteropServices.Marshal]::ThrowExceptionForHR([WordClipboard]::OleInitialize([IntPtr]::Zero))
@@ -67,14 +99,36 @@ try {
         throw 'The clipboard changed while Word was preparing the selection. Copy again.'
     }
     $range.Copy()
+    # WinForms maps 'HTML Format' and 'Rich Text Format' through the system ANSI code
+    # page; on a CJK system that corrupts Word's UTF-8 CF_HTML (a trailing CJK byte
+    # pairs with the following '<' and both are lost, and the header offsets then point
+    # past the shrunk buffer so Word refuses the paste). Carry those two formats as raw
+    # bytes instead. UnicodeText is a native UTF-16 WinForms format and stays on the
+    # DataObject snapshot.
     $source = [Windows.Forms.Clipboard]::GetDataObject()
+    $htmlFormat = [WordClipboard]::RegisterClipboardFormat('HTML Format')
+    $rtfFormat = [WordClipboard]::RegisterClipboardFormat('Rich Text Format')
+    $rawHtml = $null
+    $rawRtf = $null
+    if (-not [WordClipboard]::OpenClipboard([IntPtr]::Zero)) { throw 'Could not open the clipboard.' }
+    try {
+        $rawHtml = [WordClipboard]::GetRawClipboardData($htmlFormat)
+        $rawRtf = [WordClipboard]::GetRawClipboardData($rtfFormat)
+    } finally { [void][WordClipboard]::CloseClipboard() }
+    if ($null -eq $rawHtml) { throw 'Word did not provide HTML Format clipboard data.' }
+    if ($null -eq $rawRtf) { throw 'Word did not provide Rich Text Format clipboard data.' }
+    $unicodeText = $source.GetData('UnicodeText', $false)
+    if ($null -eq $unicodeText) { throw 'Word did not provide UnicodeText clipboard data.' }
     $snapshot = New-Object Windows.Forms.DataObject
-    foreach ($format in @('Rich Text Format', 'HTML Format', 'UnicodeText')) {
-        $value = $source.GetData($format, $false)
-        if ($null -eq $value) { throw "Word did not provide $format clipboard data." }
-        $snapshot.SetData($format, $false, $value)
-    }
+    $snapshot.SetData('UnicodeText', $false, $unicodeText)
     [Windows.Forms.Clipboard]::SetDataObject($snapshot, $true)
+    if (-not [WordClipboard]::OpenClipboard([IntPtr]::Zero)) { throw 'Could not open the clipboard for writing.' }
+    $rawWritten = $false
+    try {
+        $rawWritten = [WordClipboard]::SetRawClipboardData($htmlFormat, $rawHtml)
+        if ($rawWritten) { $rawWritten = [WordClipboard]::SetRawClipboardData($rtfFormat, $rawRtf) }
+    } finally { [void][WordClipboard]::CloseClipboard() }
+    if (-not $rawWritten) { throw 'Could not write the Word clipboard formats.' }
 } catch {
     $failure = $_.Exception.Message
 } finally {

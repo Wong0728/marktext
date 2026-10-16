@@ -117,6 +117,22 @@ describe('copyDocxToClipboard', () => {
     expectNoWork()
   })
 
+  it('carries HTML Format and Rich Text Format as raw bytes, never through WinForms strings', async() => {
+    await copyDocxToClipboard(payload)
+
+    const [, copyArgs] = mockExecFile.mock.calls[0]
+    const encoded = copyArgs[copyArgs.indexOf('-EncodedCommand') + 1]
+    const script = Buffer.from(encoded, 'base64').toString('utf16le')
+    // Regression guard: WinForms maps 'HTML Format'/'Rich Text Format' through the
+    // system ANSI code page, which on CJK systems corrupts Word's UTF-8 CF_HTML
+    // (mangled characters, stray /span> fragments and header offsets that point past
+    // the shrunk buffer, so Word refuses the paste and only "keep text only" works).
+    expect(script).toMatch(/GetRawClipboardData\(/)
+    expect(script).toMatch(/SetRawClipboardData\(/)
+    expect(script).not.toMatch(/\$snapshot\.SetData\(\s*['"](HTML Format|Rich Text Format)['"]/)
+    expect(script).toMatch(/\$snapshot\.SetData\('UnicodeText'/)
+  })
+
   it('requires the success marker even when PowerShell exits successfully, then allows retry', async() => {
     mockExecFile.mockResolvedValueOnce({ stdout: 'WORD_PROCESS:24680:638900000000000000\r\n', stderr: '' })
 
