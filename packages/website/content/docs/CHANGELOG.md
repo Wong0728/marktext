@@ -4,6 +4,12 @@ The entries below are this fork's releases; everything under them is inherited
 upstream history. Release artifacts and notes:
 https://github.com/Wong0728/marktext/releases
 
+## 0.20.0-fork.3
+
+**:beetle:Bug fix**
+
+- "Copy as Rich Text" through Word no longer corrupts the clipboard on CJK systems. The snapshot step decoded Word's `HTML Format` (and RTF) through the system ANSI code page, so the UTF-8 CF_HTML round-tripped through GBK: characters and tag openers were lost, the CF_HTML header offsets no longer matched the shrunk buffer, and Word refused the paste (only "keep text only" worked). Both formats are now carried as raw bytes, byte-exact from Word.
+
 ## 0.20.0-fork.2
 
 **:cactus:Feature**
