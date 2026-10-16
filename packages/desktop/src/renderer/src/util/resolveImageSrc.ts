@@ -8,7 +8,7 @@ import { pathToFileUrl } from './fileUrl'
 // the source folder.
 const IMAGE_EXT_REG = /\.(?:jpeg|jpg|png|gif|svg|webp)(?=\?|$)/i
 
-export function resolveLocalImageSrc(src: string): string {
+export function resolveLocalImageSrc(src: string, directory = window.DIRNAME): string {
   if (!src) return src
   // Already a URL or data: URI — leave as-is (avoids `file://file://…`).
   if (/^(?:https?:|file:|data:)/i.test(src)) return src
@@ -16,9 +16,14 @@ export function resolveLocalImageSrc(src: string): string {
   // gate) — leave anything else untouched, e.g. an extensionless absolute
   // server path `/api/image?id=…` must not become `file:///api/image…`.
   if (!IMAGE_EXT_REG.test(src)) return src
+  try {
+    src = decodeURIComponent(src)
+  } catch {
+    // A literal percent sign is valid in a local filename.
+  }
   // Absolute local image path (POSIX / UNC / Windows drive) → file://.
   if (/^(?:\/|\\\\|[a-zA-Z]:[\\/])/.test(src)) return pathToFileUrl(src)
   // Relative local image path — resolve against the document directory.
-  if (window.DIRNAME) return pathToFileUrl(window.path.resolve(window.DIRNAME, src))
+  if (directory) return pathToFileUrl(window.path.resolve(directory, src))
   return src
 }

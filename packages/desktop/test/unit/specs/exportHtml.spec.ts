@@ -250,6 +250,14 @@ describe('exportStyledHTML — relative image paths', () => {
     expect(out).toContain('alt="alt"')
   })
 
+  it('resolves encoded Chinese and spaces against the captured document directory', async() => {
+    const out = await exportStyledHTML(NO_MUYA, '![alt](./%E5%9B%BE%20one.png)', {
+      resourceDirectory: '/selected'
+    })
+    expect(out).toContain('src="file:///selected/%E5%9B%BE%20one.png"')
+    expect(out).not.toContain('%25')
+  })
+
   it('leaves a remote http(s) img src untouched', async() => {
     const out = await exportStyledHTML(NO_MUYA, '![alt](https://example.com/a.png)', {})
 

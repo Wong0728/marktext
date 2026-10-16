@@ -25,6 +25,7 @@ export interface HeaderFooterPart {
 }
 
 export interface ExportStyledHtmlOptions {
+  resourceDirectory?: string
   title?: string
   printOptimization?: boolean
   extraCss?: string
@@ -141,9 +142,9 @@ const IMG_SRC_REG = /(<img\b[^>]*?\ssrc=")([^"]*)(")/gi
  * as-is, so the PDF / print path (which rewrites again via printService) is a
  * no-op the second time.
  */
-const rewriteImageSrcs = (html: string): string =>
+const rewriteImageSrcs = (html: string, directory?: string): string =>
   html.replace(IMG_SRC_REG, (match, pre: string, src: string, post: string) => {
-    const resolved = resolveLocalImageSrc(src)
+    const resolved = resolveLocalImageSrc(src, directory)
     return resolved === src ? match : `${pre}${resolved}${post}`
   })
 
@@ -158,9 +159,9 @@ const ANCHOR_HREF_REG = /(<a\b[^>]*?\shref=")([^"]*)(")/gi
  * the source folder (#1688). Remote URLs, `mailto:`/`data:` schemes and in-page
  * fragment anchors are left untouched.
  */
-const rewriteAnchorHrefs = (html: string): string =>
+const rewriteAnchorHrefs = (html: string, directory?: string): string =>
   html.replace(ANCHOR_HREF_REG, (match, pre: string, href: string, post: string) => {
-    const resolved = resolveLocalLinkHref(href)
+    const resolved = resolveLocalLinkHref(href, directory)
     return resolved === href ? match : `${pre}${resolved}${post}`
   })
 
@@ -276,7 +277,7 @@ export const exportStyledHTML = async(
   markdown: string,
   options: ExportStyledHtmlOptions = {}
 ): Promise<string> => {
-  const { title = '', toc = '', header, footer, headerFooterStyled, dir } = options
+  const { title = '', toc = '', header, footer, headerFooterStyled, dir, resourceDirectory = window.DIRNAME } = options
   let { extraCss = '' } = options
 
   // The header/footer page table needs its own stylesheet — fold it into
@@ -300,10 +301,10 @@ export const exportStyledHTML = async(
 
   // Resolve relative image paths to absolute file:// URLs so the saved document
   // still shows its images when opened from a different folder (issue 230).
-  article = rewriteImageSrcs(article)
+  article = rewriteImageSrcs(article, resourceDirectory)
   // Same for relative local links so they still resolve after the document is
   // moved out of the source folder (#1688).
-  article = rewriteAnchorHrefs(article)
+  article = rewriteAnchorHrefs(article, resourceDirectory)
 
   // Inject the TOC at the `[TOC]` marker (legacy behaviour: only appears when
   // the document explicitly contains `[TOC]`). The marker is rendered as a
