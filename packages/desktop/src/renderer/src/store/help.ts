@@ -83,7 +83,12 @@ const documentStateKeys = [
   'searchMatches',
   'scrollTop',
   'muyaIndexCursor',
-  'notifications'
+  'notifications',
+  // Three-way merge state: restored from the crash snapshot so merges keep
+  // working after recovery (see IFileState).
+  'baseMarkdown',
+  'pendingExternalChange',
+  'lastMergedRegions'
 ] as const satisfies ReadonlyArray<keyof IFileState>
 
 export const getBlankFileState = (
@@ -122,6 +127,8 @@ export const getBlankFileState = (
     // A blank/loaded document IS its own on-disk baseline for source-mode
     // dirty tracking (see LISTEN_FOR_CONTENT_CHANGE).
     savedMarkdown: markdown,
+    // …and its own three-way merge base (see IFileState.baseMarkdown).
+    baseMarkdown: markdown,
     // The freshly-loaded document IS its on-disk/clean baseline. The engine
     // clears its undo history on `setContent`, so the baseline undo-stack depth
     // (the synthetic save-tracking id) is 0. Seeding `lastSavedHistoryId` to 0
@@ -154,6 +161,15 @@ export const createDocumentState = (
     // The loaded document's markdown is its on-disk baseline for source-mode
     // dirty tracking; crash-recovery restore clears this afterwards.
     savedMarkdown: typeof src.markdown === 'string' ? (src.markdown as string) : docState.markdown,
+    // …and its own three-way merge base (see IFileState.baseMarkdown). A
+    // crash-restored tab keeps the base captured in the snapshot so merges
+    // still three-way correctly after recovery.
+    baseMarkdown:
+      typeof src.baseMarkdown === 'string'
+        ? src.baseMarkdown
+        : typeof src.markdown === 'string'
+          ? (src.markdown as string)
+          : docState.markdown,
     // See `getBlankFileState`: the loaded document is its own clean baseline and
     // the engine's baseline undo-stack depth (the synthetic id) is 0.
     lastSavedHistoryId: 0

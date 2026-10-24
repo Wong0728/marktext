@@ -951,7 +951,13 @@
       "exportSuccessTitle": "匯出成功",
       "exportSuccessMessage": "已成功匯出「{name}」！",
       "fileRemovedOnDisk": "「{name}」已在磁碟上被刪除。",
-      "fileChangedOnDisk": "「{name}」已在磁碟上發生變更。是否重新載入？"
+      "fileChangedOnDisk": "「{name}」已在磁碟上發生變更。是否重新載入？",
+      "externalChangeMerged": "已將磁碟上的修改合併到「{name}」。復原即可回退本次合併。",
+      "externalChangeConflict": "「{name}」的磁碟版本與你的未儲存編輯存在衝突，已保留你的版本。可繼續編輯後重試合併，或載入磁碟版本。",
+      "viewMergedChanges": "檢視變更",
+      "fileChangedOnDiskWithEdits": "「{name}」已在磁碟上被修改，且你有未儲存的編輯。載入將放棄你的編輯；合併將把磁碟修改併入你的內容；關閉則保留你的版本。",
+      "loadExternalChange": "載入",
+      "mergeExternalChanges": "合併"
     }
   },
   "spellchecker": {

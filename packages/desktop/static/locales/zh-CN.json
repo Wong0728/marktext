@@ -964,7 +964,13 @@
       "exportSuccessTitle": "导出成功",
       "exportSuccessMessage": "已成功导出“{name}”！",
       "fileRemovedOnDisk": "“{name}” 已在磁盘上被删除。",
-      "fileChangedOnDisk": "“{name}” 已在磁盘上发生变更。是否重新加载？"
+      "fileChangedOnDisk": "“{name}” 已在磁盘上发生变更。是否重新加载？",
+      "externalChangeMerged": "已将磁盘上的修改合并到 “{name}”。撤销即可回退本次合并。",
+      "externalChangeConflict": "“{name}” 的磁盘版本与你的未保存编辑存在冲突，已保留你的版本。可继续编辑后重试合并，或载入磁盘版本。",
+      "viewMergedChanges": "查看变更",
+      "fileChangedOnDiskWithEdits": "“{name}” 已在磁盘上被修改，且你有未保存的修改。载入将放弃你的修改；合并将把磁盘修改并入你的内容；关闭则保留你的版本。",
+      "loadExternalChange": "载入",
+      "mergeExternalChanges": "合并"
     }
   },
   "spellchecker": {

@@ -11,11 +11,19 @@
     <div class="controls">
       <div>
         <span
+          v-if="currentNotification.secondaryLabel"
+          class="inline-button wide"
+          @click.stop="handleSecondaryClick"
+        >
+          {{ currentNotification.secondaryLabel }}
+        </span>
+        <span
           v-if="currentNotification.showConfirm"
           class="inline-button"
+          :class="{ wide: !!currentNotification.primaryLabel }"
           @click.stop="handleClick(true)"
         >
-          {{ t('common.ok') }}
+          {{ currentNotification.primaryLabel ?? t('common.ok') }}
         </span>
         <span
           class="inline-button"
@@ -68,6 +76,23 @@ const handleClick = (status: boolean) => {
     action(status)
   }
 }
+
+// The labeled extra button (e.g. the merge banner's "view changes"): consumes
+// the banner and runs the secondary action — the primary `action` (OK/cancel
+// semantics) is intentionally left untouched.
+const handleSecondaryClick = () => {
+  const notifications = currentFile.value?.notifications
+  if (!notifications || notifications.length === 0) {
+    console.error(t('editor.notifications.notificationNotFound'))
+    return
+  }
+
+  const item = notifications.shift()
+  const secondaryAction = item?.secondaryAction
+  if (secondaryAction) {
+    secondaryAction()
+  }
+}
 </script>
 
 <style scoped>
@@ -115,6 +140,12 @@ const handleClick = (status: boolean) => {
     font-size: 12px;
     cursor: pointer;
     border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  /* Labeled extra button (e.g. "view changes"): sized by its text. */
+  & .inline-button.wide {
+    width: auto;
+    padding: 0 8px;
+    white-space: nowrap;
   }
   & .inline-button:hover {
     background: rgba(255, 255, 255, 0.1);

@@ -940,7 +940,13 @@
       "exportSuccessTitle": "Exportado correctamente",
       "exportSuccessMessage": "¡Se exportó «{name}» correctamente!",
       "fileRemovedOnDisk": "«{name}» ha sido eliminado del disco.",
-      "fileChangedOnDisk": "«{name}» ha cambiado en el disco. ¿Deseas recargarlo?"
+      "fileChangedOnDisk": "«{name}» ha cambiado en el disco. ¿Deseas recargarlo?",
+      "externalChangeMerged": "Los cambios externos en el disco se fusionaron en «{name}». Deshacer revierte la fusión.",
+      "externalChangeConflict": "La versión del disco de «{name}» entra en conflicto con tus ediciones sin guardar. Se mantuvo tu versión: sigue editando y reintenta Fusionar, o carga la versión del disco.",
+      "viewMergedChanges": "Ver cambios",
+      "fileChangedOnDiskWithEdits": "«{name}» fue modificado en el disco y tienes ediciones sin guardar. Cargar descarta tus ediciones; Fusionar incorpora los cambios del disco en tu contenido; Cerrar conserva tu versión.",
+      "loadExternalChange": "Cargar",
+      "mergeExternalChanges": "Fusionar"
     }
   },
   "spellchecker": {

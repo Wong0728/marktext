@@ -940,7 +940,13 @@
       "exportSuccessTitle": "エクスポートに成功",
       "exportSuccessMessage": "「{name}」を正常にエクスポートしました！",
       "fileRemovedOnDisk": "「{name}」はディスク上で削除されました。",
-      "fileChangedOnDisk": "「{name}」はディスク上で変更されました。再読み込みしますか？"
+      "fileChangedOnDisk": "「{name}」はディスク上で変更されました。再読み込みしますか？",
+      "externalChangeMerged": "ディスク上の変更を「{name}」へマージしました。元に戻すとマージが取り消されます。",
+      "externalChangeConflict": "「{name}」のディスク版が未保存の編集と競合しています。あなたのバージョンを保持しました。編集してからマージを再試行するか、ディスク版を読み込んでください。",
+      "viewMergedChanges": "変更を見る",
+      "fileChangedOnDiskWithEdits": "ディスク上の「{name}」が変更され、未保存の編集があります。「読み込む」は編集を破棄し、「マージ」はディスクの変更を内容に取り込みます。「閉じる」はあなたのバージョンを保持します。",
+      "loadExternalChange": "読み込む",
+      "mergeExternalChanges": "マージ"
     }
   },
   "spellchecker": {

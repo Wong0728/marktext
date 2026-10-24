@@ -940,7 +940,13 @@
       "exportSuccessTitle": "Exportation réussie",
       "exportSuccessMessage": "« {name} » a été exporté avec succès !",
       "fileRemovedOnDisk": "« {name} » a été supprimé du disque.",
-      "fileChangedOnDisk": "« {name} » a été modifié sur le disque. Voulez-vous le recharger ?"
+      "fileChangedOnDisk": "« {name} » a été modifié sur le disque. Voulez-vous le recharger ?",
+      "externalChangeMerged": "Les modifications externes sur le disque ont été fusionnées dans « {name} ». Vous pouvez annuler la fusion.",
+      "externalChangeConflict": "La version disque de « {name} » entre en conflit avec vos modifications non enregistrées. Votre version a été conservée — modifiez encore et réessayez Fusionner, ou chargez la version du disque.",
+      "viewMergedChanges": "Voir les modifications",
+      "fileChangedOnDiskWithEdits": "« {name} » a été modifié sur le disque et vous avez des modifications non enregistrées. Charger abandonne vos modifications ; Fusionner intègre les changements du disque dans votre contenu ; Fermer conserve votre version.",
+      "loadExternalChange": "Charger",
+      "mergeExternalChanges": "Fusionner"
     }
   },
   "spellchecker": {

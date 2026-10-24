@@ -940,7 +940,13 @@
       "exportSuccessTitle": "Exportado com sucesso",
       "exportSuccessMessage": "“{name}” foi exportado com sucesso!",
       "fileRemovedOnDisk": "“{name}” foi removido no disco.",
-      "fileChangedOnDisk": "“{name}” foi alterado no disco. Deseja recarregar?"
+      "fileChangedOnDisk": "“{name}” foi alterado no disco. Deseja recarregar?",
+      "externalChangeMerged": "As alterações externas no disco foram mescladas em \"{name}\". Desfazer reverte a mesclagem.",
+      "externalChangeConflict": "A versão do disco de \"{name}\" entra em conflito com suas edições não salvas. Sua versão foi mantida — edite mais e tente Mesclar novamente, ou Carregue a versão do disco.",
+      "viewMergedChanges": "Ver alterações",
+      "fileChangedOnDiskWithEdits": "\"{name}\" foi modificado no disco e você tem edições não salvas. Carregar descarta suas edições; Mesclar incorpora as alterações do disco ao seu conteúdo; Fechar mantém sua versão.",
+      "loadExternalChange": "Carregar",
+      "mergeExternalChanges": "Mesclar"
     }
   },
   "spellchecker": {

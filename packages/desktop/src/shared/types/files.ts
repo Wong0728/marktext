@@ -90,6 +90,23 @@ export interface IFileState {
   // undone back to the saved text. `undefined` means the on-disk baseline is
   // unknown (e.g. a crash-recovered unsaved tab).
   savedMarkdown?: string
+  // Three-way merge base: the disk content as of the last point the editor
+  // fully incorporated it (load, save, clean external reload, successful
+  // merge). Unlike `savedMarkdown` this also moves when an external change is
+  // merged into a dirty tab — it is the common ancestor for the NEXT merge,
+  // not the last saved text. `undefined` = unknown; merging then degrades to
+  // the conservative keep-mine path.
+  baseMarkdown?: string
+  // External change that conflicted with unsaved edits and was set aside
+  // (theirs is NOT on disk in merged form). Replaced by each newer watcher
+  // event until the user resolves it; cleared on save (the user's version
+  // won) or when a later change merges cleanly.
+  pendingExternalChange?: { markdown: string; mtimeMs?: number }
+  // Line ranges (half-open, in the CURRENT merged content) of the external
+  // changes applied by the last merge — drives the merge highlight in the
+  // WYSIWYG block flash and the source-code mode line background. Cleared on
+  // save, on a full reload, and when the user edits the highlighted text.
+  lastMergedRegions?: Array<{ start: number; end: number }>
   // Muya block tree; only populated for the actively edited tab.
   blocks?: unknown
   isMixedLineEndings?: boolean
@@ -105,6 +122,13 @@ export interface FileNotification {
   style: string
   exclusiveType: string
   action: (status?: unknown) => void
+  // Custom label for the OK button (falls back to `common.ok`).
+  primaryLabel?: string
+  // Optional extra labeled button next to the OK/close controls (e.g. the
+  // external-change banner's "Merge" / "view changes"). Clicking it consumes
+  // the banner and runs `secondaryAction` instead of `action`.
+  secondaryLabel?: string
+  secondaryAction?: () => void
 }
 
 export type ITab = IFileState

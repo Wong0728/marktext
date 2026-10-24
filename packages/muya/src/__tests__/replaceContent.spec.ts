@@ -130,10 +130,12 @@ describe('muya replaceContent — single undo boundary', () => {
             const beforeDom = groundTruth(before).dom;
             const truth = groundTruth(after);
 
-            // Forward replacement records exactly ONE undo boundary.
+            // Forward replacement records exactly ONE undo boundary and
+            // reports the touched top-level block indices.
             const depthBefore = undoDepth(muya);
             const changed = muya.replaceContent(after);
-            expect(changed).toBe(true);
+            expect(Array.isArray(changed)).toBe(true);
+            expect((changed as number[]).length).toBeGreaterThan(0);
             expect(undoDepth(muya)).toBe(depthBefore + 1);
 
             // Json state AND live DOM both reflect the new content.

@@ -1,6 +1,7 @@
 import equal from 'deep-equal'
 import bus from '../bus'
 import { getUniqueId, deepClone } from '../util'
+import { threeWayMerge } from '../util/threeWayMerge'
 import listToTree, { type ListItem, type TreeNode } from '../util/listToTree'
 import {
   createDocumentState,
@@ -60,10 +61,16 @@ interface PushTabNotificationPayload {
   style?: string
   exclusiveType?: string
   action?: FileNotification['action']
+  // Custom label for the OK button (falls back to `common.ok`), e.g. the
+  // external-change banner's "Load disk version".
+  primaryLabel?: string
+  secondaryLabel?: string
+  secondaryAction?: () => void
 }
 
 interface FileChangePayload {
   pathname: string
+  mtimeMs?: number
   data: {
     isMixedLineEndings?: boolean
     lineEnding?: LineEnding | string
@@ -208,6 +215,17 @@ export const useEditorStore = defineStore('editor', {
           // never let an undo mark it saved (see LISTEN_FOR_CONTENT_CHANGE).
           existingTab.savedMarkdown = undefined
           existingTab.lastSavedHistoryId = -1
+          // Keep the pre-crash merge base/stash: the recovered content is the
+          // same buffer the merge state was computed against.
+          if (typeof tabData.baseMarkdown === 'string') {
+            existingTab.baseMarkdown = tabData.baseMarkdown
+          }
+          if (tabData.pendingExternalChange !== undefined) {
+            existingTab.pendingExternalChange = tabData.pendingExternalChange
+          }
+          if (tabData.lastMergedRegions !== undefined) {
+            existingTab.lastMergedRegions = tabData.lastMergedRegions
+          }
           firstRestored = firstRestored ?? existingTab
           continue
         }
@@ -301,7 +319,10 @@ export const useEditorStore = defineStore('editor', {
         showConfirm,
         style,
         exclusiveType,
-        action
+        action,
+        ...(data.primaryLabel !== undefined ? { primaryLabel: data.primaryLabel } : {}),
+        ...(data.secondaryLabel !== undefined ? { secondaryLabel: data.secondaryLabel } : {}),
+        ...(data.secondaryAction !== undefined ? { secondaryAction: data.secondaryAction } : {})
       })
     },
 
@@ -372,6 +393,10 @@ export const useEditorStore = defineStore('editor', {
       if (oldHistory) {
         tab.history = oldHistory
       }
+      // The full reload supersedes any stashed conflicting external change.
+      tab.pendingExternalChange = undefined
+      // …and the merge highlight (the content it pointed at is gone).
+      tab.lastMergedRegions = undefined
 
       if (isMixedLineEndings && typeof lineEnding === 'string') {
         this.pushTabNotification({
@@ -405,6 +430,173 @@ export const useEditorStore = defineStore('editor', {
           isReload: true
         })
       }
+      debouncedSendBufferedState()
+    },
+
+    /**
+     * A watched file changed on disk while the tab holds unsaved edits.
+     *
+     * Nothing is applied silently. The disk version is stashed on the tab and
+     * the tab banner offers the three-way choice:
+     *
+     * - **Load** — the historical behavior: discard the edits, load the disk
+     *   version.
+     * - **Merge** — three-way merge the disk version (`theirs`) against the
+     *   tab's merge base (`baseMarkdown`, the last disk content the editor
+     *   fully incorporated) and the user's buffer (`ours`). A clean merge is
+     *   applied through `replaceContent`, which records ONE invertible undo
+     *   boundary on top of the user's history, so Ctrl+Z restores their
+     *   pre-merge buffer with their own edits intact. Conflicts re-offer the
+     *   choice on a conflict banner — edit further and retry Merge, Load, or
+     *   Close.
+     * - **Close** — keep editing; the stash is superseded by each newer
+     *   watcher event and dropped on save (the user's version wins).
+     */
+    OFFER_EXTERNAL_CHANGE_RESOLUTION(change: FileChangePayload): void {
+      const { tabs } = this
+      const { data, pathname } = change
+      const tab = tabs.find((t) => window.fileUtils.isSamePathSync(t.pathname, pathname))
+      if (!tab || typeof data?.markdown !== 'string') {
+        return
+      }
+
+      tab.pendingExternalChange = {
+        markdown: data.markdown,
+        mtimeMs: change.mtimeMs
+      }
+      this.pushTabNotification({
+        tabId: tab.id,
+        msg: t('store.editor.fileChangedOnDiskWithEdits', { name: tab.filename }),
+        showConfirm: true,
+        exclusiveType: 'file_changed',
+        primaryLabel: t('store.editor.loadExternalChange'),
+        secondaryLabel: t('store.editor.mergeExternalChanges'),
+        secondaryAction: () => {
+          this.APPLY_MERGE_FROM_STASH(tab, change)
+        },
+        action: (status) => {
+          if (status) {
+            this.LOAD_PENDING_EXTERNAL_CHANGE(tab, change)
+          }
+        }
+      })
+      debouncedSendBufferedState()
+    },
+
+    /**
+     * The banner's Merge action: three-way merge the stashed disk version
+     * against the tab's merge base and the current buffer.
+     */
+    APPLY_MERGE_FROM_STASH(tab: IFileState, change: FileChangePayload): void {
+      const pending = tab.pendingExternalChange
+      if (!pending) {
+        return
+      }
+
+      const { baseMarkdown: base } = tab
+      if (typeof base !== 'string') {
+        // No known common ancestor (e.g. a crash-restored unsaved tab): what
+        // overlaps is undecidable — keep the user's version and re-offer.
+        this.PUSH_EXTERNAL_CONFLICT_BANNER(tab, change)
+        return
+      }
+
+      const { merged, conflicts, theirsRegions } = threeWayMerge(base, tab.markdown, pending.markdown)
+      if (conflicts > 0) {
+        this.PUSH_EXTERNAL_CONFLICT_BANNER(tab, change)
+        return
+      }
+
+      // Clean merge. `theirs` is now fully incorporated and becomes the merge
+      // base for the NEXT external change — agents rewrite in bursts, and the
+      // next disk version builds on this one, not on the merged text.
+      tab.pendingExternalChange = undefined
+      tab.baseMarkdown = pending.markdown
+
+      if (merged === tab.markdown) {
+        // The disk changes add nothing beyond the user's buffer (they already
+        // made the same edits). Only the base moves; drop the banner.
+        tab.notifications = tab.notifications.filter((n) => n.exclusiveType !== 'file_changed')
+        debouncedSendBufferedState()
+        return
+      }
+
+      tab.markdown = merged
+      tab.isSaved = false
+      // Drives the merge highlight (WYSIWYG block flash / source-mode line
+      // background) until the user edits, saves, or a new merge replaces it.
+      tab.lastMergedRegions = theirsRegions
+
+      const { currentFile } = this
+      if (currentFile && window.fileUtils.isSamePathSync(currentFile.pathname, tab.pathname)) {
+        // The engine only holds the active tab. The `isExternalMerge` branch
+        // in editor.vue applies this without moving the save baseline (the
+        // disk still holds `theirs`), so the tab reads dirty afterwards.
+        bus.emit('file-changed', {
+          id: tab.id,
+          markdown: merged,
+          cursor: tab.cursor,
+          renderCursor: true,
+          scrollTop: tab.scrollTop,
+          isExternalMerge: true
+        })
+      }
+
+      this.pushTabNotification({
+        tabId: tab.id,
+        msg: t('store.editor.externalChangeMerged', { name: tab.filename }),
+        style: 'info',
+        showConfirm: false,
+        exclusiveType: 'file_changed',
+        secondaryLabel: t('store.editor.viewMergedChanges'),
+        secondaryAction: () => {
+          // Inspect the merged-in regions as markdown text (source-code mode
+          // highlights `lastMergedRegions` line ranges).
+          bus.emit('view:toggle-view-entry', 'sourceCode')
+        }
+      })
+      debouncedSendBufferedState()
+    },
+
+    /**
+     * The banner's Load action: discard the edits and load the disk version
+     * — always the LATEST stashed one, not the closure's payload (a burst of
+     * external rewrites replaces the stash while a banner is still up).
+     */
+    LOAD_PENDING_EXTERNAL_CHANGE(tab: IFileState, change: FileChangePayload): void {
+      if (!tab.pendingExternalChange) {
+        return
+      }
+      this.loadChange({
+        pathname: tab.pathname,
+        mtimeMs: tab.pendingExternalChange.mtimeMs,
+        data: { ...change.data, markdown: tab.pendingExternalChange.markdown }
+      })
+    },
+
+    /**
+     * The merge hit overlapping edits: keep the user's version (nothing was
+     * applied) and re-offer the choice — retry Merge after further edits
+     * (the stash is untouched), Load the disk version, or Close.
+     */
+    PUSH_EXTERNAL_CONFLICT_BANNER(tab: IFileState, change: FileChangePayload): void {
+      this.pushTabNotification({
+        tabId: tab.id,
+        msg: t('store.editor.externalChangeConflict', { name: tab.filename }),
+        style: 'warn',
+        showConfirm: true,
+        exclusiveType: 'file_changed',
+        primaryLabel: t('store.editor.loadExternalChange'),
+        secondaryLabel: t('store.editor.mergeExternalChanges'),
+        secondaryAction: () => {
+          this.APPLY_MERGE_FROM_STASH(tab, change)
+        },
+        action: (status) => {
+          if (status) {
+            this.LOAD_PENDING_EXTERNAL_CHANGE(tab, change)
+          }
+        }
+      })
       debouncedSendBufferedState()
     },
 
@@ -602,7 +794,13 @@ export const useEditorStore = defineStore('editor', {
         if (tab) {
           // Renaming via Save As makes the new path the on-disk baseline for
           // source-mode dirty tracking (see LISTEN_FOR_CONTENT_CHANGE).
-          Object.assign(tab, { filename, pathname, isSaved: true, savedMarkdown: tab.markdown })
+          Object.assign(tab, {
+            filename,
+            pathname,
+            isSaved: true,
+            savedMarkdown: tab.markdown,
+            baseMarkdown: tab.markdown
+          })
           debouncedSendBufferedState()
         }
       })
@@ -625,6 +823,19 @@ export const useEditorStore = defineStore('editor', {
           // dirty tracking (WYSIWYG uses lastSavedHistoryId above).
           tab.savedMarkdown = tab.markdown
           tab.isSaved = true
+          // The save also advances the three-way merge base (the disk now
+          // holds exactly this content). A stashed conflicting external
+          // change is moot afterwards: the user's version won on disk, so
+          // drop both the stash and its notification — if the external
+          // writer insists, it will produce a fresh watcher event.
+          if (tab.pendingExternalChange) {
+            tab.pendingExternalChange = undefined
+            tab.notifications = tab.notifications.filter((n) => n.exclusiveType !== 'file_changed')
+          }
+          // The merge highlight has served its purpose once the content is
+          // safely on disk.
+          tab.lastMergedRegions = undefined
+          tab.baseMarkdown = tab.markdown
           debouncedSendBufferedState()
         }
       })
@@ -1768,13 +1979,25 @@ export const useEditorStore = defineStore('editor', {
                   if (timer) clearTimeout(timer)
                   autoSaveTimers.delete(id)
                 }
-
-                if (isSaved) {
-                  this.loadChange(change as unknown as FileChangePayload)
-                  return
-                }
               }
 
+              if (!isSaved) {
+                // The tab has unsaved edits: never clobber them and never
+                // merge silently. Offer the choice on the tab's banner —
+                // Load (discard edits), Merge (three-way against the merge
+                // base), Close (keep editing; the disk version stays stashed
+                // until the next watcher event or the next save).
+                this.OFFER_EXTERNAL_CHANGE_RESOLUTION(change as unknown as FileChangePayload)
+                break
+              }
+
+              if (autoSave) {
+                this.loadChange(change as unknown as FileChangePayload)
+                return
+              }
+
+              // No auto-save: the on-disk content moved away from what this
+              // tab shows, so it counts as unsaved until the user reloads.
               tab.isSaved = false
               this.pushTabNotification({
                 tabId: id,
@@ -2103,6 +2326,11 @@ interface BufferedTabState {
   wordCount: IFileState['wordCount']
   muyaIndexCursor: unknown
   scrollTop: number
+  // Three-way merge state: restored so external merges keep working against
+  // the pre-crash merge base instead of degrading to the conservative path.
+  baseMarkdown?: string
+  pendingExternalChange?: IFileState['pendingExternalChange']
+  lastMergedRegions?: IFileState['lastMergedRegions']
 }
 
 const createBufferedTabState = (tab: Partial<IFileState> & { id: string }): BufferedTabState => {
@@ -2122,7 +2350,12 @@ const createBufferedTabState = (tab: Partial<IFileState> & { id: string }): Buff
     cursor: toSerializableValue(tab.cursor, defaultFileState.cursor),
     wordCount: toSerializableValue(tab.wordCount, defaultFileState.wordCount),
     muyaIndexCursor: toSerializableValue(tab.muyaIndexCursor, defaultFileState.muyaIndexCursor),
-    scrollTop: tab.scrollTop ?? defaultFileState.scrollTop
+    scrollTop: tab.scrollTop ?? defaultFileState.scrollTop,
+    ...(tab.baseMarkdown !== undefined ? { baseMarkdown: tab.baseMarkdown } : {}),
+    ...(tab.pendingExternalChange !== undefined
+      ? { pendingExternalChange: tab.pendingExternalChange }
+      : {}),
+    ...(tab.lastMergedRegions !== undefined ? { lastMergedRegions: tab.lastMergedRegions } : {})
   }
 }
 

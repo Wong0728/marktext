@@ -136,12 +136,15 @@ class JSONState {
         op: JSONOpList;
         prevState: TState[];
         nextState: TState[];
+        /** Top-level block indices touched by the op (replaced, inserted or removed). */
+        changedIndices: number[];
     } {
         const prevState = this.getState();
         const nextState
             = typeof content === 'string' ? this.markdownToState(content) : deepClone(content);
 
         const components: JSONOpList[] = [];
+        const changedIndices: number[] = [];
         const max = Math.max(prevState.length, nextState.length);
 
         for (let i = 0; i < max; i++) {
@@ -157,17 +160,21 @@ class JSONState {
                             asDoc(nextState[i]),
                         )!,
                     );
+                    changedIndices.push(i);
                 }
             }
             else if (i < nextState.length) {
                 components.push(json1.insertOp([i], asDoc(nextState[i]))!);
+                changedIndices.push(i);
             }
         }
 
         // Remove surplus trailing blocks from the end so earlier indices stay
         // stable while composing.
-        for (let i = prevState.length - 1; i >= nextState.length; i--)
+        for (let i = prevState.length - 1; i >= nextState.length; i--) {
             components.push(json1.removeOp([i])!);
+            changedIndices.push(i);
+        }
 
         // Compose the components into one op. `json1.type.compose` returns
         // `JSONOp` (= null | JSONOpList) and its identity element is `null`
@@ -180,7 +187,7 @@ class JSONState {
 
         const op: JSONOpList = composed ?? [];
 
-        return { op, prevState, nextState };
+        return { op, prevState, nextState, changedIndices };
     }
 
     insertOperation(path: Path, state: TState) {

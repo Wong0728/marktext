@@ -295,11 +295,13 @@ export class Muya {
      * back the caret captured when the user switched INTO source mode. Omitted,
      * it falls back to the current live selection.
      *
-     * @returns `true` if a boundary was recorded, `false` if nothing changed.
+     * @returns the top-level block indices the replacement touched (for the
+     * desktop shell to highlight merged-in regions), or `false` when nothing
+     * changed.
      */
-    replaceContent(content: TState[] | string, recordSelection?: Nullable<IHistorySelection>): boolean {
+    replaceContent(content: TState[] | string, recordSelection?: Nullable<IHistorySelection>): false | number[] {
         const { jsonState, history } = this.editor;
-        const { op, prevState } = jsonState.buildReplaceOp(content);
+        const { op, prevState, changedIndices } = jsonState.buildReplaceOp(content);
 
         if (op.length === 0)
             return false;
@@ -315,7 +317,7 @@ export class Muya {
             this.editor.rebuildContents(op, selection, 'api');
         });
 
-        return true;
+        return changedIndices;
     }
 
     setOptions(options: Partial<IMuyaOptions>, forceRender = false) {

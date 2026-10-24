@@ -940,7 +940,13 @@
       "exportSuccessTitle": "Başarıyla dışa aktarıldı",
       "exportSuccessMessage": "\"{name}\" başarıyla dışa aktarıldı!",
       "fileRemovedOnDisk": "\"{name}\" diskten kaldırıldı.",
-      "fileChangedOnDisk": "\"{name}\" dosyasında değişiklikler var, yeniden yüklensin mi?"
+      "fileChangedOnDisk": "\"{name}\" dosyasında değişiklikler var, yeniden yüklensin mi?",
+      "externalChangeMerged": "Diskteki dış değişiklikler \"{name}\" ile birleştirildi. Geri al, birleştirmeyi geri alır.",
+      "externalChangeConflict": "\"{name}\" disk sürümü kaydedilmemiş düzenlemelerinizle çakışıyor. Sürümünüz korundu — düzenlemeye devam edip Birleştir'i yeniden deneyin veya disk sürümünü yükleyin.",
+      "viewMergedChanges": "Değişiklikleri gör",
+      "fileChangedOnDiskWithEdits": "\"{name}\" diskte değiştirildi ve kaydedilmemiş düzenlemeleriniz var. Yükle düzenlemelerinizi atar; Birleştir disk değişikliklerini içeriğinize katar; Kapat sürümünüzü korur.",
+      "loadExternalChange": "Yükle",
+      "mergeExternalChanges": "Birleştir"
     }
   },
   "spellchecker": {

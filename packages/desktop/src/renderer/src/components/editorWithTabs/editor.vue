@@ -1626,6 +1626,88 @@ interface FileChangePayload {
   muyaIndexCursor?: unknown
   blocks?: unknown
   isReload?: boolean
+  isExternalMerge?: boolean
+}
+
+// --- external merge application (isExternalMerge payloads) ---------------
+
+// An IME composition owns the DOM while active; a merge arriving mid-
+// composition is parked here and applied on `compositionend`.
+let isImeComposing = false
+let pendingExternalMergePayload: FileChangePayload | null = null
+
+// Blocks currently flashing the merge highlight, so a follow-up merge (or
+// unmount) can clear the previous flash.
+let mergeFlashNodes: HTMLElement[] = []
+let mergeFlashTimer: ReturnType<typeof setTimeout> | null = null
+
+const clearMergeFlash = () => {
+  if (mergeFlashTimer) {
+    clearTimeout(mergeFlashTimer)
+    mergeFlashTimer = null
+  }
+  for (const node of mergeFlashNodes) {
+    node.classList.remove('mu-external-merge-flash')
+  }
+  mergeFlashNodes = []
+}
+
+/**
+ * Transiently highlight the top-level blocks a merge just changed (indices
+ * come from `Muya.replaceContent`) so the user can see WHAT the external
+ * writer touched without hunting for it.
+ */
+const flashMergedBlocks = (indices: number[]) => {
+  const scrollPage = editor.value?.editor.scrollPage
+  if (!scrollPage) return
+  clearMergeFlash()
+  const blocks = [...scrollPage.children.iterator()]
+  for (const index of indices) {
+    const node = blocks[index]?.domNode
+    if (node) {
+      node.classList.add('mu-external-merge-flash')
+      mergeFlashNodes.push(node)
+    }
+  }
+  if (mergeFlashNodes.length > 0) {
+    mergeFlashTimer = setTimeout(clearMergeFlash, 4000)
+  }
+}
+
+/**
+ * Apply an externally merged document to the live engine (active tab only).
+ * Deferred payloads are dropped when the user switched tabs while the merge
+ * waited for an IME composition — the store already holds the merged text,
+ * and the next tab activation re-seeds the engine from it.
+ */
+const applyExternalMerge = (payload: FileChangePayload) => {
+  if (!editor.value || typeof payload.markdown !== 'string') return
+  if (currentFile.value?.id !== payload.id) return
+  const changed = editor.value.replaceContent(payload.markdown)
+  editorStore.UPDATE_TOC(editor.value.getTOC())
+  if (payload.cursor) {
+    applyCursor(editor.value, payload.cursor)
+  }
+  if (Array.isArray(changed)) {
+    flashMergedBlocks(changed)
+  }
+}
+
+const handleCompositionStart = () => {
+  isImeComposing = true
+}
+
+const handleCompositionEnd = () => {
+  isImeComposing = false
+  if (pendingExternalMergePayload) {
+    const payload = pendingExternalMergePayload
+    pendingExternalMergePayload = null
+    applyExternalMerge(payload)
+    // handleFileChange's scroll restore was skipped while parked.
+    if (typeof payload.scrollTop === 'number') {
+      scrollToCords(payload.scrollTop)
+    }
+  }
 }
 
 // listen for markdown change form source mode or change tabs etc
@@ -1637,7 +1719,8 @@ const handleFileChange = (payload: unknown) => {
     muyaIndexCursor,
     history: payloadHistory,
     scrollTop,
-    isReload
+    isReload,
+    isExternalMerge
   } = (payload ?? {}) as FileChangePayload
   if (!editor.value) return
   const container = getScrollContainer()
@@ -1697,6 +1780,24 @@ const handleFileChange = (payload: unknown) => {
       if (newCursor) {
         applyCursor(editor.value, newCursor)
       }
+    } else if (isExternalMerge) {
+      // External three-way merge (the store's `EXTERNAL_CHANGE_MERGE`): the
+      // merged content is NOT the on-disk baseline — the disk still holds the
+      // external version — so, unlike `isReload`, the save-tracking baseline
+      // must stay put and the synchronous `json-change` fired below reads the
+      // tab as dirty. `replaceContent` preserves the user's undo stack and
+      // records the merge as a single invertible rebuild boundary: the first
+      // Ctrl+Z restores their pre-merge buffer with their own edits intact,
+      // and redo re-applies the merge.
+      //
+      // While an IME composition owns the DOM a whole-document rebuild would
+      // corrupt the composition string — park the merge and apply it on
+      // `compositionend` instead (dropped if the tab switched meanwhile).
+      if (isImeComposing) {
+        pendingExternalMergePayload = { id, markdown: newMarkdown, cursor: newCursor, scrollTop }
+        return
+      }
+      applyExternalMerge({ id, markdown: newMarkdown, cursor: newCursor, scrollTop })
     } else {
       // Tab switch / programmatic content swap: `setContent` replaces the
       // document and clears history, so restore the real engine history (kept
@@ -1934,6 +2035,12 @@ onMounted(() => {
   // the document tree and instantiates the registered UI plugins).
   muya.init()
   editor.value = muya
+
+  // IME composition tracking on the engine container (the events bubble up
+  // from the contenteditable blocks): an external merge arriving mid-
+  // composition must not rebuild the DOM out from under the IME.
+  ele.addEventListener('compositionstart', handleCompositionStart)
+  ele.addEventListener('compositionend', handleCompositionEnd)
   // The first document's content is set via constructor options, so no
   // `file-loaded` / `setMarkdownToEditor` runs for it — seed its TOC here.
   editorStore.UPDATE_TOC(muya.getTOC())
@@ -2128,6 +2235,10 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  editorRef.value?.removeEventListener('compositionstart', handleCompositionStart)
+  editorRef.value?.removeEventListener('compositionend', handleCompositionEnd)
+  pendingExternalMergePayload = null
+  clearMergeFlash()
   bus.off('file-loaded', setMarkdownToEditor)
   bus.off('invalidate-image-cache', handleInvalidateImageCache)
   bus.off('undo', handleUndo)
@@ -2198,6 +2309,26 @@ onBeforeUnmount(() => {
 
 <style>
 /* ... existing style ... */
+
+/* Transient highlight of the blocks an external three-way merge just merged
+   in (see `flashMergedBlocks`). A fixed soft blue works on light and dark
+   themes; the animation fades it out and the class is removed afterwards. */
+.mu-external-merge-flash {
+  animation: muExternalMergeFlash 2.8s ease-out 1;
+}
+
+@keyframes muExternalMergeFlash {
+  0% {
+    background-color: rgba(59, 130, 246, 0.24);
+  }
+  70% {
+    background-color: rgba(59, 130, 246, 0.1);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
 .editor-wrapper {
   height: 100%;
   position: relative;

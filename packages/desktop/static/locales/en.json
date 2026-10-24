@@ -964,7 +964,13 @@
       "exportSuccessTitle": "Exported successfully",
       "exportSuccessMessage": "Exported \"{name}\" successfully!",
       "fileRemovedOnDisk": "\"{name}\" has been removed on disk.",
-      "fileChangedOnDisk": "\"{name}\" has been changed on disk. Do you want to reload it?"
+      "fileChangedOnDisk": "\"{name}\" has been changed on disk. Do you want to reload it?",
+      "externalChangeMerged": "External changes on disk were merged into \"{name}\". Undo reverts the merge.",
+      "externalChangeConflict": "The disk version of \"{name}\" conflicts with your unsaved edits. Your version was kept — edit further and retry Merge, or Load the disk version.",
+      "viewMergedChanges": "View changes",
+      "fileChangedOnDiskWithEdits": "\"{name}\" was changed on disk and you have unsaved edits. Load discards your edits; Merge incorporates the disk changes into your content; Close keeps your version.",
+      "loadExternalChange": "Load disk version",
+      "mergeExternalChanges": "Merge changes"
     }
   },
   "spellchecker": {

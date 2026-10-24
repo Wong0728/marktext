@@ -940,7 +940,13 @@
       "exportSuccessTitle": "Erfolgreich exportiert",
       "exportSuccessMessage": "„{name}“ wurde erfolgreich exportiert!",
       "fileRemovedOnDisk": "„{name}“ wurde auf dem Datenträger gelöscht.",
-      "fileChangedOnDisk": "„{name}“ wurde auf dem Datenträger geändert. Möchten Sie neu laden?"
+      "fileChangedOnDisk": "„{name}“ wurde auf dem Datenträger geändert. Möchten Sie neu laden?",
+      "externalChangeMerged": "Externe Festplattenänderungen wurden in „{name}“ zusammengeführt. Sie können die Zusammenführung über „Rückgängig“ zurücknehmen.",
+      "externalChangeConflict": "Die Festplattenversion von „{name}“ kollidiert mit Ihren ungespeicherten Bearbeitungen. Ihre Version wurde beibehalten – bearbeiten Sie weiter und führen Sie erneut zusammen, oder laden Sie die Festplattenversion.",
+      "viewMergedChanges": "Änderungen ansehen",
+      "fileChangedOnDiskWithEdits": "„{name}“ wurde auf der Festplatte geändert und Sie haben ungespeicherte Bearbeitungen. Laden verwirft Ihre Bearbeitungen; Zusammenführen übernimmt die Festplattenänderungen in Ihren Inhalt; Schließen behält Ihre Version.",
+      "loadExternalChange": "Laden",
+      "mergeExternalChanges": "Zusammenführen"
     }
   },
   "spellchecker": {

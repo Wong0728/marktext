@@ -182,6 +182,11 @@ const handleFileChange = (payload: unknown) => {
   } else {
     setCursorAtFirstLine(editor.value)
   }
+
+  // Repaint the merge highlight for the (possibly switched) tab — the store
+  // clears it on save / reload / next merge, so stale ranges can't survive.
+  removeMergedHighlightClasses()
+  applyMergedRegionHighlights()
 }
 
 const handleInvalidateImageCache = () => {
@@ -301,6 +306,50 @@ const saveContent = (cm: CMInstance) => {
     } else {
       // This may occur during tab switching but should not occur otherwise.
       console.warn('LISTEN_FOR_CONTENT_CHANGE: Cannot commit changes because not tab id was set!')
+    }
+  }
+}
+
+// --- external merge highlight -------------------------------------------
+// The store keeps `lastMergedRegions` (line ranges of the changes the last
+// external three-way merge applied, in current-content coordinates — see
+// EXTERNAL_CHANGE_MERGE). Source-code mode paints them as line backgrounds
+// so the merge banner's "view changes" entry has something to show. They
+// clear on the first user edit here, on save, and on the next merge.
+
+let mergedHighlightHandles: unknown[] = []
+
+const removeMergedHighlightClasses = () => {
+  const cm = editor.value
+  if (!cm) return
+  for (const handle of mergedHighlightHandles) {
+    cm.removeLineClass(handle, 'background', 'mu-merged-line')
+  }
+  mergedHighlightHandles = []
+}
+
+const clearMergedRegions = () => {
+  removeMergedHighlightClasses()
+  const tab = currentTab.value
+  if (tab?.lastMergedRegions) {
+    tab.lastMergedRegions = undefined
+  }
+}
+
+const applyMergedRegionHighlights = () => {
+  const cm = editor.value
+  const regions = currentTab.value?.lastMergedRegions
+  if (!cm || !regions || regions.length === 0) return
+  const lineCount = cm.lineCount()
+  for (const region of regions) {
+    const start = Math.max(0, Math.min(region.start, lineCount - 1))
+    const end = Math.min(region.end, lineCount)
+    for (let line = start; line < end; line++) {
+      const handle = cm.getLineHandle(line)
+      if (handle) {
+        cm.addLineClass(handle, 'background', 'mu-merged-line')
+        mergedHighlightHandles.push(handle)
+      }
     }
   }
 }
@@ -523,6 +572,16 @@ onMounted(() => {
   tabId.value = id
 
   listenChange()
+
+  // Paint the last merge's changed lines (if any) and drop the highlight on
+  // the first user-origin edit (CM's `setValue` on external reloads is not a
+  // user edit).
+  applyMergedRegionHighlights()
+  codeMirrorInstance.on('change', (_cm: CMInstance, change: { origin?: string }) => {
+    if (change?.origin && change.origin !== 'setValue') {
+      clearMergedRegions()
+    }
+  })
 })
 
 onBeforeUnmount(() => {
@@ -559,6 +618,13 @@ onBeforeUnmount(() => {
   box-sizing: border-box;
   overflow: auto;
 }
+
+/* Line background for the ranges the last external three-way merge applied
+   (see `applyMergedRegionHighlights`). Fixed soft blue, light and dark. */
+.source-code .CodeMirror-linebackground.mu-merged-line {
+  background-color: rgba(59, 130, 246, 0.14);
+}
+
 .source-code .CodeMirror {
   height: auto;
   margin: 50px auto;
