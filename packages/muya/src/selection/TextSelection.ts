@@ -1,10 +1,14 @@
 import type Content from '../block/base/content';
 import type Format from '../block/base/format';
+import type BulletList from '../block/commonMark/bulletList';
+import type OrderList from '../block/commonMark/orderList';
+import type TaskList from '../block/gfm/taskList';
 import type { TBlockPath } from '../block/types';
 import type { Muya } from '../muya';
 import type { Nullable } from '../types';
 import type Selection from './index';
-import type { IAnchorFocusInfo, INodeOffset, ISelection } from './types';
+import type { IAnchorFocusInfo, INodeOffset, ISelection, ISelectionEndpoints } from './types';
+import { revealBlock } from '../block/folding';
 import { BLOCK_DOM_PROPERTY } from '../config';
 import { isHTMLElement, isMouseEvent } from '../utils';
 import logger from '../utils/logger';
@@ -19,10 +23,31 @@ import {
     getLegalOffset,
     getNodeAndOffset,
     getOffsetOfParagraph,
+    lineAtPoint,
+    resolveEndpoint,
 } from './dom';
 import { SelectionCaretType, SelectionDirection, SelectionType } from './types';
 
-const debug = logger('selection:');
+const debug = logger('textselection:');
+
+// Code, table and tight-list content is newline-separated; anything else needs
+// a blank line, which is also what would re-parse a tight list as loose.
+function getTextSeparator(previous: Content, next: Content): string {
+    const ancestors = next.getAncestors();
+    let container = previous.getAncestors().find(block => ancestors.includes(block));
+    if (container?.blockName === 'list-item' || container?.blockName === 'task-list-item')
+        container = container.parent ?? undefined;
+
+    if (container?.blockName === 'code-block' || container?.blockName.startsWith('table'))
+        return '\n';
+
+    if (container && ['bullet-list', 'order-list', 'task-list'].includes(container.blockName)) {
+        const list = container as BulletList | OrderList | TaskList;
+        return list.meta.loose ? '\n\n' : '\n';
+    }
+
+    return '\n\n';
+}
 
 // The browser can clone an `mu-content` span during native edit behavior
 // (e.g. an un-cancelled Enter while an IME composition is active — see
@@ -45,6 +70,27 @@ function resolveOrphanSiblingBlock(domNode: HTMLElement): Content | undefined {
     }
 
     return undefined;
+}
+
+// The IME-composition fallback of `resolveEndpoint`: the cloned span has no
+// `BLOCK_DOM_PROPERTY` backlink, so the endpoint is adopted from the adjacent
+// real content block. An offset measured inside the clone is relative to the
+// clone — callers must treat an adopted endpoint as advisory and never
+// commit it via `setCursor`.
+function adoptOrphanEndpoint(node: Node, offset: number): IAnchorFocusInfo | null {
+    const contentDOM = findContentDOM(node);
+    if (!contentDOM || contentDOM[BLOCK_DOM_PROPERTY])
+        return null;
+
+    const block = resolveOrphanSiblingBlock(contentDOM);
+    if (!block?.isContent() || !block.outMostBlock)
+        return null;
+
+    return {
+        offset: getOffsetOfParagraph(node, contentDOM) + offset,
+        block,
+        path: block.path,
+    };
 }
 
 function computeDirection(
@@ -88,7 +134,7 @@ class TextSelection {
 
     private _selectInfo: {
         isSelect: boolean;
-        selection: { anchor: IAnchorFocusInfo; focus: IAnchorFocusInfo } | null;
+        selection: ISelectionEndpoints | null;
     } = {
         isSelect: false,
         selection: null,
@@ -169,6 +215,19 @@ class TextSelection {
         if (aBlock == null || fBlock == null)
             return;
 
+        if (this._muya.isReadOnly) {
+            const first = aBlock.domNode;
+            const last = fBlock.domNode;
+            if (!first || !last)
+                return;
+            // Reading selections must preserve folding and avoid editor selection side effects.
+            const range = this._doc.createRange();
+            range.setStart(first, 0);
+            range.setEnd(last, last.childNodes.length);
+            this._selectRange(range);
+            return;
+        }
+
         this.setSelection(
             { offset: 0, block: aBlock, path: aBlock.path },
             { offset: fBlock.text.length, block: fBlock, path: fBlock.path },
@@ -189,69 +248,82 @@ class TextSelection {
         if (!anchorNode || !focusNode)
             return null;
 
-        const anchorDomNode = findContentDOM(anchorNode);
-        const focusDomNode = findContentDOM(focusNode);
-
-        if (!anchorDomNode || !focusDomNode)
-            return null;
-
         // An orphan clone poisons every coordinate read through it: an offset
         // measured inside the clone is relative to the clone, and committing
         // it via `setCursor` parks the caret at a wrong — often zero —
         // position of the real block. Repair the DOM here, then re-read a
         // clean selection for the event that triggered the heal.
-        if (this._healOrphanClones(anchorDomNode, focusDomNode))
+        if (this._healOrphanClones(findContentDOM(anchorNode), findContentDOM(focusNode)))
             return this.getSelection();
 
-        const anchorBlock
-            = (anchorDomNode[BLOCK_DOM_PROPERTY] as Content | undefined)
-                ?? resolveOrphanSiblingBlock(anchorDomNode);
-        const focusBlock
-            = (focusDomNode[BLOCK_DOM_PROPERTY] as Content | undefined)
-                ?? resolveOrphanSiblingBlock(focusDomNode);
+        const anchor = resolveEndpoint(anchorNode, anchorOffset) ?? adoptOrphanEndpoint(anchorNode, anchorOffset);
+        const focus = resolveEndpoint(focusNode, focusOffset) ?? adoptOrphanEndpoint(focusNode, focusOffset);
+
         // Any orphan clone that can be healed was already removed above, so
-        // this fallback only serves the IME-composition window (and the rare
+        // the fallback only serves the IME-composition window (and the rare
         // clone with no adjacent real content node). Callers must treat null
         // as "skip this event", never as "detach from the engine".
-        if (!anchorBlock || !focusBlock) {
+        if (!anchor || !focus) {
             debug.warn('selection resolves to content node(s) without a block backlink; returning null');
             return null;
         }
 
-        if (!anchorBlock.outMostBlock || !focusBlock.outMostBlock)
-            return null;
-
-        const anchorPath = anchorBlock.path;
-        const focusPath = focusBlock.path;
-
-        const aOffset = getOffsetOfParagraph(anchorNode, anchorDomNode) + anchorOffset;
-        const fOffset = getOffsetOfParagraph(focusNode, focusDomNode) + focusOffset;
-        const anchor = { offset: aOffset };
-        const focus = { offset: fOffset };
-
+        const anchorBlock = anchor.block;
+        const focusBlock = focus.block;
         const isCollapsed = anchorBlock === focusBlock && anchor.offset === focus.offset;
         const isSelectionInSameBlock = anchorBlock === focusBlock;
 
-        const direction = computeDirection(
-            anchorBlock,
-            focusBlock,
-            anchor.offset,
-            focus.offset,
-            isSelectionInSameBlock,
-        );
-        const type = computeCaretType(anchorBlock, focusBlock, isCollapsed);
-
         return {
-            anchor: { offset: anchor.offset, block: anchorBlock, path: anchorPath },
-            focus: { offset: focus.offset, block: focusBlock, path: focusPath },
+            anchor,
+            focus,
             isCollapsed,
             isSelectionInSameBlock,
-            direction,
-            type,
+            direction: computeDirection(
+                anchorBlock,
+                focusBlock,
+                anchor.offset,
+                focus.offset,
+                isSelectionInSameBlock,
+            ),
+            type: computeCaretType(anchorBlock, focusBlock, isCollapsed),
         };
     }
 
+    getSelectedText(): string {
+        const selection = this.getSelection();
+        if (!selection || selection.isCollapsed)
+            return '';
+
+        const { anchor, focus, direction } = selection;
+        // `getSelection()` resolves whichever editor the range landed in.
+        if (anchor.block.muya !== this._muya || focus.block.muya !== this._muya)
+            return '';
+
+        const [start, end] = direction === SelectionDirection.BACKWARD ? [focus, anchor] : [anchor, focus];
+        if (start.block === end.block)
+            return start.block.text.slice(start.offset, end.offset);
+
+        const parts = [start.block.text.slice(start.offset)];
+        let previous = start.block;
+        let block = previous.nextContentInContext();
+        while (block) {
+            parts.push(getTextSeparator(previous, block), block === end.block ? block.text.slice(0, end.offset) : block.text);
+            if (block === end.block)
+                return parts.join('');
+            previous = block;
+            block = block.nextContentInContext();
+        }
+
+        // `direction` is DOM order, the walk is tree order: they disagree only
+        // for a block no longer in the document.
+        debug.warn('the selection end is not reachable from its start');
+
+        return '';
+    }
+
     setSelection(anchor: IAnchorFocusInfo, focus: IAnchorFocusInfo) {
+        revealBlock(anchor.block);
+        revealBlock(focus.block);
         this.anchor = { offset: anchor.offset };
         this.anchorBlock = anchor.block;
         this.anchorPath = anchor.path;
@@ -270,11 +342,11 @@ class TextSelection {
     // `getSelection` serves that window, and the first event after
     // compositionend repairs the DOM. Returns true when a heal happened, in
     // which case the caller must re-read the selection.
-    private _healOrphanClones(anchorDomNode: HTMLElement, focusDomNode: HTMLElement): boolean {
+    private _healOrphanClones(anchorDomNode: Nullable<HTMLElement>, focusDomNode: Nullable<HTMLElement>): boolean {
         let healedBlock: Content | null = null;
 
         for (const domNode of [anchorDomNode, focusDomNode]) {
-            if (domNode[BLOCK_DOM_PROPERTY] || !domNode.isConnected)
+            if (!domNode || domNode[BLOCK_DOM_PROPERTY] || !domNode.isConnected)
                 continue;
 
             const realBlock = resolveOrphanSiblingBlock(domNode);
@@ -325,8 +397,7 @@ class TextSelection {
         // Follow the caret (focus end) for forward selections so typewriter
         // scrolling tracks the cursor rather than the selection start.
         const cursorCoords = getCursorCoords(direction === SelectionDirection.FORWARD);
-        // Duck-type the Format block — a value import of Format here would
-        // create a selection -> format circular dependency.
+        // Use a type-only Format import to avoid a selection → format dependency cycle.
         const anchorBlockRef = anchorBlock as Format | null;
         const formats
             = isSelectionInSameBlock
@@ -361,16 +432,32 @@ class TextSelection {
     private _listenSelectActions() {
         const { eventCenter, domNode } = this._muya;
 
-        const handleMousedown = () => {
+        const handleMousedown = (event: Event) => {
+            if (this._muya.isReadOnly)
+                return;
             this._selectInfo = {
                 isSelect: true,
                 selection: null,
             };
+
+            if (!isMouseEvent(event) || event.button !== 0 || event.detail < 3)
+                return;
+
+            const line = lineAtPoint(this._doc, event.clientX, event.clientY);
+            if (!line)
+                return;
+
+            event.preventDefault();
+            this._selectInfo.isSelect = false;
+            line.block.setCursor(line.start, line.end);
         };
 
         const handleMouseupOrLeave = () => {
-            if (this._selectInfo.selection)
-                this.setSelection(this._selectInfo.selection.anchor, this._selectInfo.selection.focus);
+            if (this._muya.isReadOnly)
+                return;
+            const { selection } = this._selectInfo;
+            if (selection?.anchor.block.outMostBlock && selection.focus.block.outMostBlock)
+                this.setSelection(selection.anchor, selection.focus);
 
             this._selectInfo = {
                 isSelect: false,
@@ -379,6 +466,8 @@ class TextSelection {
         };
 
         const handleMousemoveOrClick = (event: Event) => {
+            if (this._muya.isReadOnly)
+                return;
             if (!isMouseEvent(event))
                 return;
 

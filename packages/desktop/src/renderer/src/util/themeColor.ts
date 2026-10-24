@@ -4,7 +4,6 @@ import materialDarkTheme from '../assets/themes/material-dark.theme.css?inline'
 import oneDarkTheme from '../assets/themes/one-dark.theme.css?inline'
 import ulyssesTheme from '../assets/themes/ulysses.theme.css?inline'
 
-// New gogh themes - Dark
 import draculaTheme from '../assets/themes/dracula.theme.css?inline'
 import nordTheme from '../assets/themes/nord.theme.css?inline'
 import catppuccinMochaTheme from '../assets/themes/catppuccin-mocha.theme.css?inline'
@@ -27,7 +26,6 @@ import nightfoxTheme from '../assets/themes/nightfox.theme.css?inline'
 import cyberdreamTheme from '../assets/themes/cyberdream.theme.css?inline'
 import highContrastTheme from '../assets/themes/high-contrast.theme.css?inline'
 
-// New gogh themes - Light
 import catppuccinLatteTheme from '../assets/themes/catppuccin-latte.theme.css?inline'
 import gruvboxLightTheme from '../assets/themes/gruvbox-light.theme.css?inline'
 import tokyoNightLightTheme from '../assets/themes/tokyo-night-light.theme.css?inline'
@@ -36,7 +34,6 @@ import ayuLightTheme from '../assets/themes/ayu-light.theme.css?inline'
 import everforestLightTheme from '../assets/themes/everforest-light.theme.css?inline'
 import rosePineDawnTheme from '../assets/themes/rose-pine-dawn.theme.css?inline'
 
-// Prism.js syntax highlighting themes
 import darkPrismTheme from '../assets/themes/prismjs/dark.theme.css?inline'
 import oneDarkPrismTheme from '../assets/themes/prismjs/one-dark.theme.css?inline'
 import draculaPrismTheme from '../assets/themes/prismjs/dracula.theme.css?inline'
@@ -70,7 +67,6 @@ import graphitePrismTheme from '../assets/themes/prismjs/graphite.theme.css?inli
 import ulyssesPrismTheme from '../assets/themes/prismjs/ulysses.theme.css?inline'
 import highContrastPrismTheme from '../assets/themes/prismjs/high-contrast.theme.css?inline'
 
-// Original themes
 export const dark = (): string => {
   return darkTheme + '\n' + darkPrismTheme
 }
@@ -91,7 +87,6 @@ export const ulysses = (): string => {
   return ulyssesTheme + '\n' + ulyssesPrismTheme
 }
 
-// New gogh themes - Dark (with matching Prism themes)
 export const dracula = (): string => {
   return draculaTheme + '\n' + draculaPrismTheme
 }
@@ -178,7 +173,6 @@ export const highContrast = (): string => {
   return highContrastTheme + '\n' + highContrastPrismTheme
 }
 
-// New gogh themes - Light (with matching Prism themes)
 export const catppuccinLatte = (): string => {
   return catppuccinLatteTheme + '\n' + catppuccinLattePrismTheme
 }

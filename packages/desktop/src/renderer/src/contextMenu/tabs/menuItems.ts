@@ -1,14 +1,13 @@
 import * as contextMenu from './actions'
 import { t } from '../../i18n'
 
-// NOTE: This are mutable fields that may change at runtime.
 
 export const SEPARATOR = {
   type: 'separator'
 }
 
 // Use function form to avoid calling the translation function during module load
-type TabMenuItem = { _tabId: string; [key: string]: unknown }
+type TabMenuItem = { _tabId: string; _pathname?: string | null; [key: string]: unknown }
 
 export const getCloseThis = () => ({
   label: t('contextMenu.tabs.close'),
@@ -75,6 +74,14 @@ export const getOpenInNewWindow = () => ({
   }
 })
 
+export const getShowInSideBar = () => ({
+  label: t('contextMenu.tabs.showInSideBar'),
+  id: 'showInSideBar',
+  click(menuItem: TabMenuItem, _browserWindow?: unknown) {
+    contextMenu.showInSideBar(menuItem._pathname)
+  }
+})
+
 // Retained for backward compatibility
 export const CLOSE_THIS = getCloseThis()
 export const CLOSE_OTHERS = getCloseOthers()
@@ -84,3 +91,4 @@ export const RENAME = getRENAME()
 export const COPY_PATH = getCopyPath()
 export const SHOW_IN_FOLDER = getShowInFolder()
 export const OPEN_IN_NEW_WINDOW = getOpenInNewWindow()
+export const SHOW_IN_SIDE_BAR = getShowInSideBar()

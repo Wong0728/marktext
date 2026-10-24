@@ -52,6 +52,7 @@ table.page-container > tfoot { display: table-header-group; }
 .page-header .hf-container,
 .page-footer-fake .hf-container,
 .page-footer .hf-container { display: flex; justify-content: space-between; font-size: 0.75em; font-weight: 400; }
+.hf-container { font-family: "Noto Music", "Noto Sans Math", "Open Sans", sans-serif; }
 .page-header { display: table-header-group; }
 .page-header .hf-container { margin-bottom: 16px; }
 .page-header.styled .hf-container { padding-bottom: 1px; border-bottom: 1px solid var(--footerHeaderBorderColor); }
@@ -128,8 +129,8 @@ const createTableBody = (article: string): string =>
 // Match a standalone `[TOC]` line (mirrors legacy marked TOC block token).
 const TOC_REG = /^ {0,3}\[TOC\] *$/im
 
-// Match the `src="…"` of an <img> tag in the (already sanitized, double-quoted)
-// engine output, so relative image paths can be rewritten to absolute `file://`
+// Match the `href="…"` of an <a> tag in the (already sanitized, double-quoted)
+// engine output, so relative local links can be rewritten to absolute `file://`
 // URLs. A string rewrite avoids re-serializing the whole article DOM (which
 // holds rendered KaTeX / diagram SVG).
 const IMG_SRC_REG = /(<img\b[^>]*?\ssrc=")([^"]*)(")/gi
@@ -280,9 +281,6 @@ export const exportStyledHTML = async(
   const { title = '', toc = '', header, footer, headerFooterStyled, dir, resourceDirectory = window.DIRNAME } = options
   let { extraCss = '' } = options
 
-  // The header/footer page table needs its own stylesheet — fold it into
-  // extraCss (which `generate` injects into <head>) up front so we only render
-  // the document once.
   const appendHeaderFooter = !!header || !!footer
   if (appendHeaderFooter) {
     extraCss = extraCss ? HEADER_FOOTER_CSS + extraCss : HEADER_FOOTER_CSS
@@ -301,6 +299,8 @@ export const exportStyledHTML = async(
 
   // Resolve relative image paths to absolute file:// URLs so the saved document
   // still shows its images when opened from a different folder (issue 230).
+  // (The engine already resolves local images while sanitizing; this pass is
+  // idempotent on `file://` srcs and covers anything it left relative.)
   article = rewriteImageSrcs(article, resourceDirectory)
   // Same for relative local links so they still resolve after the document is
   // moved out of the source folder (#1688).
@@ -312,9 +312,9 @@ export const exportStyledHTML = async(
   // back to a raw `[TOC]` if present.
   if (toc) {
     if (/<p>\s*\[TOC\]\s*<\/p>/i.test(article)) {
-      article = article.replace(/<p>\s*\[TOC\]\s*<\/p>/i, toc)
+      article = article.replace(/<p>\s*\[TOC\]\s*<\/p>/i, () => toc)
     } else if (TOC_REG.test(article)) {
-      article = article.replace(TOC_REG, toc)
+      article = article.replace(TOC_REG, () => toc)
     }
   }
 

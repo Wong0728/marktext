@@ -123,10 +123,8 @@ const resolveLocale = (g: VueI18nGlobal | undefined): string => {
   return g.locale.value ?? 'en'
 }
 
-// Creates a reactive translated mapping function
 export const getTranslatedSearchContent: CachedTranslator = (() => {
   const fn = (() => {
-    // Generate keys by iterating through each language
     const result: TranslatedSearchEntry[] = []
     Object.keys(preferencesSchema).forEach((k) => {
       const entry = preferencesSchema[k]
@@ -138,8 +136,7 @@ export const getTranslatedSearchContent: CachedTranslator = (() => {
       const [category] = description.split('--')
       const categoryName = category ?? ''
 
-      // Map category names
-      let mappedCategory = categoryName.toLowerCase()
+      let mappedCategory: string
       if (categoryName === 'General') mappedCategory = 'general'
       else if (categoryName === 'Editor') mappedCategory = 'editor'
       else if (categoryName === 'Markdown') mappedCategory = 'markdown'
@@ -151,11 +148,9 @@ export const getTranslatedSearchContent: CachedTranslator = (() => {
       else if (categoryName === 'Spelling') mappedCategory = 'spelling'
       else if (categoryName === 'Custom CSS') mappedCategory = 'custom css'
       else {
-        // Handle special category names
         mappedCategory = categoryName.toLowerCase().replace(/\s+/g, '-')
       }
 
-      // Compute the category for route navigation (only allow existing routes, otherwise fall back to general)
       let routeCategory = mappedCategory
       const validRoutes = [
         'general',
@@ -168,18 +163,15 @@ export const getTranslatedSearchContent: CachedTranslator = (() => {
       ]
       if (!validRoutes.includes(routeCategory)) routeCategory = 'general'
 
-      // Try to translate the category and item
       const categoryKey = `preferences.search.categories.${mappedCategory}`
       const itemKey = `preferences.search.items.${k}`
 
-      // Translate the category name
-      let translatedCategory = categoryName
+      let translatedCategory: string
       const englishCategory = categoryName
       try {
         translatedCategory = t(categoryKey)
       } catch (e) {
         console.warn(`   ⚠️ Search category translation failed: ${errMessage(e)}`)
-        // Try fallback to preferences.categories
         try {
           const fallbackKey = `preferences.categories.${mappedCategory}`
           translatedCategory = t(fallbackKey)
@@ -189,14 +181,12 @@ export const getTranslatedSearchContent: CachedTranslator = (() => {
         }
       }
 
-      // Translate preference description
-      let translatedPreference = description.split('--')[1] || description
+      let translatedPreference: string
       const englishPreference = description.split('--')[1] || description
       try {
         translatedPreference = t(itemKey)
       } catch (e) {
         console.warn(`   ⚠️ Search item translation failed: ${errMessage(e)}`)
-        // Try fallback to preferences.items
         try {
           const fallbackKey = `preferences.items.${k}`
           translatedPreference = t(fallbackKey)
@@ -222,17 +212,13 @@ export const getTranslatedSearchContent: CachedTranslator = (() => {
   return fn
 })()
 
-// Add language change listener
 export const setupLanguageChangeListener = (): void => {
-  // Listen for language change events
   const handleLanguageChange = () => {
-    // Trigger search content refresh
     if (window.__VUE_I18N__) {
       try {
         const g = resolveGlobal(window.__VUE_I18N__)
         const currentLanguage = resolveLocale(g)
 
-        // Here we can dispatch a custom event to notify the search component to refresh
         window.dispatchEvent(
           new CustomEvent('languageChanged', {
             detail: { language: currentLanguage }
@@ -244,19 +230,17 @@ export const setupLanguageChangeListener = (): void => {
     }
   }
 
-  // Listen for locale changes in the i18n instance
   if (window.__VUE_I18N__) {
     try {
       const g = resolveGlobal(window.__VUE_I18N__)
       if (g && g.locale && typeof g.locale !== 'string' && g.locale.value !== undefined) {
-        // Use Vue's reactive system to listen for language changes
+        // Locale changes are polled below.
       }
     } catch (e) {
       console.warn('⚠️ Failed to set up language change listener:', e)
     }
   }
 
-  // Add a polling fallback mechanism as a backup
   setInterval(() => {
     try {
       if (window.__VUE_I18N__) {
@@ -270,9 +254,8 @@ export const setupLanguageChangeListener = (): void => {
     } catch {
       // Ignore errors and continue checking
     }
-  }, 1000) // Check once per second
+  }, 1000)
 
-  // Record the initial language
   try {
     if (window.__VUE_I18N__) {
       const g = resolveGlobal(window.__VUE_I18N__)
@@ -283,17 +266,13 @@ export const setupLanguageChangeListener = (): void => {
   }
 }
 
-// Initialize the language change listener
 setupLanguageChangeListener()
 
-// Add manual refresh function
 export const refreshSearchContent = (): TranslatedSearchEntry[] => {
-  // Clear the language cache to force re-fetch
   if (getTranslatedSearchContent.lastLanguage) {
     delete getTranslatedSearchContent.lastLanguage
   }
 
-  // Trigger the language change event
   window.dispatchEvent(
     new CustomEvent('languageChanged', {
       detail: { language: 'force-refresh' }

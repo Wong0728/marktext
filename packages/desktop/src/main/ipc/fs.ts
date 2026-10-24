@@ -1,19 +1,17 @@
 import fs from 'fs-extra'
-import { statSync, constants, type Stats } from 'fs'
+import { type Stats } from 'fs'
 import { ipcMain } from 'electron'
-import { isFile as commonIsFile, isDirectory as commonIsDirectory } from 'common/filesystem'
-
-interface SerializedStat {
-  size: number
-  mtimeMs: number
-  ctimeMs: number
-  isFile: boolean
-  isDirectory: boolean
-  isSymbolicLink: boolean
-}
+import {
+  isFile as commonIsFile,
+  isDirectory as commonIsDirectory,
+  isExecutableFile
+} from 'common/filesystem'
+import type { SerializedStat } from '@shared/types/files'
+import { copyFileWithContentHash } from '../filesystem'
 
 const serializeStat = (stats: Stats): SerializedStat => ({
   size: stats.size,
+  birthtimeMs: stats.birthtimeMs,
   mtimeMs: stats.mtimeMs,
   ctimeMs: stats.ctimeMs,
   isFile: stats.isFile(),
@@ -55,6 +53,9 @@ export const registerFsHandlers = (): void => {
   ipcMain.handle('mt::fs::copy', (_e, src: string, dest: string) =>
     fs.copy(assertValidPath(src), assertValidPath(dest))
   )
+  ipcMain.handle('mt::fs::copy-with-content-hash', (_e, src: string, outputDir: string) =>
+    copyFileWithContentHash(assertValidPath(src), assertValidPath(outputDir))
+  )
   ipcMain.handle('mt::fs::ensure-dir', (_e, p: string) => fs.ensureDir(assertValidPath(p)))
 
   ipcMain.handle('mt::fs::output-file', (_e, p: string, data: unknown) =>
@@ -75,16 +76,7 @@ export const registerFsHandlers = (): void => {
   ipcMain.handle('mt::fs::path-exists', (_e, p: string) => fs.pathExists(assertValidPath(p)))
   ipcMain.handle('mt::fs::unlink', (_e, p: string) => fs.unlink(assertValidPath(p)))
   ipcMain.handle('mt::fs::readdir', (_e, p: string) => fs.readdir(assertValidPath(p)))
-  ipcMain.handle('mt::fs::is-executable', (_e, p: string) => {
-    try {
-      const stat = statSync(assertValidPath(p))
-      if (process.platform === 'win32') return stat.isFile()
-      return (
-        stat.isFile() &&
-        (stat.mode & (constants.S_IXUSR | constants.S_IXGRP | constants.S_IXOTH)) !== 0
-      )
-    } catch {
-      return false
-    }
-  })
+  // The same predicate the main process spawns by, or the preferences panel
+  // green-ticks a cliScript that then fails with EACCES.
+  ipcMain.handle('mt::fs::is-executable', (_e, p: string) => isExecutableFile(assertValidPath(p)))
 }

@@ -3,7 +3,12 @@
     "counter": {
       "words": "Wörter",
       "characters": "Zeichen",
+      "charactersNoSpaces": "Zeichen (ohne Leerzeichen)",
+      "charactersWithSpaces": "Zeichen (mit Leerzeichen)",
       "paragraphs": "Absätze",
+      "allCharacters": "Alle Zeichen",
+      "document": "Dokument",
+      "documentSelection": "Dokument / Auswahl",
       "selectedWords": "Ausgewählte Wörter"
     },
     "file": {
@@ -22,13 +27,14 @@
       "export": "Exportieren",
       "exportHtml": "Als HTML exportieren",
       "exportPdf": "Als PDF exportieren",
-      "exportDocx": "Als DOCX exportieren",
+      "convertWithPandoc": "Mit Pandoc konvertieren",
       "import": "Importieren",
       "print": "Drucken",
       "closeTab": "Tab schließen",
       "closeWindow": "Fenster schließen",
       "quit": "Beenden",
-      "preferences": "Einstellungen"
+      "preferences": "Einstellungen",
+      "exportDocx": "Als DOCX exportieren"
     },
     "edit": {
       "edit": "Bearbeiten",
@@ -68,6 +74,7 @@
       "table": "Tabelle",
       "codeFences": "Code-Blöcke",
       "quoteBlock": "Zitat-Block",
+      "githubAlerts": "GitHub-Hinweise",
       "mathBlock": "Mathematik-Block",
       "htmlBlock": "HTML-Block",
       "orderedList": "Nummerierte Liste",
@@ -82,6 +89,7 @@
       "minimize": "Minimieren",
       "zoomIn": "Vergrößern",
       "zoomOut": "Verkleinern",
+      "resetZoom": "Zoom zurücksetzen",
       "fullScreen": "Vollbild",
       "bringAllToFront": "Alle nach vorne bringen",
       "alwaysOnTop": "Immer im Vordergrund"
@@ -118,7 +126,7 @@
       "sourceCodeMode": "Quellcode-Modus",
       "typewriterMode": "Schreibmaschinen-Modus",
       "focusMode": "Fokus-Modus",
-      "toggleTableOfContents": "Inhaltsverzeichnis umschalten",
+      "toggleTableOfContents": "Inhaltsverzeichnis anzeigen",
       "reloadImages": "Bilder neu laden",
       "showDeveloperTools": "Entwicklertools anzeigen",
       "reloadWindow": "Fenster neu laden"
@@ -142,8 +150,8 @@
       "theme": "Design (&T)",
       "dark": "Dunkel",
       "followThemDisabled": "Themenauswahl deaktiviert, wenn dem Systemdesign gefolgt wird",
-      "lightThemes": "— Helle Designs —",
-      "darkThemes": "— Dunkle Designs —",
+      "lightThemes": "Helle Designs",
+      "darkThemes": "Dunkle Designs",
       "ayuDark": "Ayu Dunkel",
       "ayuLight": "Ayu Hell",
       "ayuMirage": "Ayu Mirage",
@@ -187,6 +195,7 @@
     "copyAsRich": "Als Rich Text kopieren",
     "copyAsHtml": "Als HTML kopieren",
     "pasteAsPlainText": "Als reinen Text einfügen",
+    "lookUp": "\"{selection}\" nachschlagen",
     "insertParagraphBefore": "Absatz davor einfügen",
     "insertParagraphAfter": "Absatz danach einfügen",
     "spelling": "Rechtschreibung...",
@@ -201,6 +210,7 @@
       "paste": "Einfügen",
       "rename": "Umbenennen",
       "moveToTrash": "In Papierkorb verschieben",
+      "copyPath": "Pfad kopieren",
       "showInFolder": "Im Ordner anzeigen"
     },
     "tabs": {
@@ -211,6 +221,7 @@
       "rename": "Umbenennen",
       "copyPath": "Pfad kopieren",
       "showInFolder": "Im Ordner anzeigen",
+      "showInSideBar": "In Seitenleiste anzeigen",
       "openInNewWindow": "In neuem Fenster öffnen"
     }
   },
@@ -229,6 +240,7 @@
   },
   "sideBar": {
     "search": {
+      "backToFiles": "Zurück zu Dateien",
       "searchInFolder": "Im Ordner suchen...",
       "noFolderOpen": "Kein Ordner geöffnet",
       "noResultsFound": "Keine Ergebnisse gefunden.",
@@ -247,13 +259,33 @@
       "noMatchingFiles": "Keine passenden Dateien"
     },
     "toc": {
-      "title": "Inhaltsverzeichnis"
+      "expand": "Inhaltsverzeichnis aufklappen",
+      "collapse": "Inhaltsverzeichnis zuklappen",
+      "empty": "Keine Überschriften",
+      "title": "Inhaltsverzeichnis",
+      "expandAll": "Alle ausklappen",
+      "collapseAll": "Alle einklappen"
     },
     "icons": {
       "files": "Dateien",
       "search": "Suchen",
-      "toc": "Inhaltsverzeichnis",
-      "settings": "Einstellungen"
+      "settings": "Einstellungen",
+      "toc": "Inhaltsverzeichnis"
+    }
+  },
+  "titleBar": {
+    "applicationMenu": "Anwendungsmenü",
+    "minimize": "Minimieren",
+    "maximize": "Maximieren",
+    "restore": "Wiederherstellen",
+    "close": "Schließen",
+    "documentStatistics": {
+      "title": "Dokumentstatistik",
+      "fileInformation": "Dateiinformationen",
+      "created": "Erstellt",
+      "lastModified": "Geändert",
+      "unavailable": "—",
+      "open": "Dokumentstatistik öffnen"
     }
   },
   "commandPalette": {
@@ -267,13 +299,9 @@
   "exportSettings": {
     "autoNumberingHeadings": "Automatische Nummerierung der Überschriften",
     "title": "Export-Optionen",
-    "info": {
-      "label": "Information",
-      "description": "Bitte passen Sie das Seitenlayout an und klicken Sie auf 'Exportieren', um fortzufahren."
-    },
     "page": {
       "label": "Seite",
-      "pageTitle": "Seitentitel:",
+      "pageTitle": "Seitentitel",
       "pageSize": "Seitengröße:",
       "landscapeOrientation": "Querformat:",
       "pageMargin": "Seitenrand (mm):",
@@ -310,12 +338,13 @@
       "description": "Wenn eine Kopf- und/oder Fußzeile definiert ist, wird der Text auf allen Seiten angezeigt."
     },
     "toc": {
-      "includeTopHeading": "Oberste Überschrift einschließen",
-      "includeTopHeadingDetail": "Details der obersten Überschrift einschließen",
+      "description": "Um ein Inhaltsverzeichnis im exportierten Dokument anzuzeigen, geben Sie [TOC] in einer eigenen Zeile im Dokument ein. Das Inhaltsverzeichnis erscheint an dieser Stelle.",
+      "includeTopHeading": "Überschriften der Ebene 1 einschließen",
+      "includeTopHeadingDetail": "Alle Überschriften der Ebene 1 (H1) in das Inhaltsverzeichnis aufnehmen.",
       "label": "Inhaltsverzeichnis",
       "title": "Inhaltsverzeichnis"
     },
-    "export": "Exportieren...",
+    "export": "Exportieren",
     "options": {
       "pageSizes": {
         "a3": "A3",
@@ -341,6 +370,10 @@
         "default": "GitHub (Standard)",
         "liber": "Liber"
       }
+    },
+    "info": {
+      "label": "Information",
+      "description": "Bitte passen Sie das Seitenlayout an und klicken Sie auf 'Exportieren', um fortzufahren."
     }
   },
   "recent": {
@@ -353,6 +386,7 @@
   },
   "preferences": {
     "title": "Einstellungen",
+    "learnMore": "Mehr erfahren: {name}",
     "search": {
       "placeholder": "In Einstellungen suchen...",
       "categories": {
@@ -373,6 +407,7 @@
         "autoNormalizeLineEndings": "Zeilenenden beim Öffnen von Dateien automatisch normalisieren. Wenn deaktiviert, werden Dateien unverändert geöffnet.",
         "titleBarStyle": "Der Titelleisten-Stil (nur Windows und Linux-System)",
         "openFilesInNewWindow": "Dateien in einem neuen Fenster öffnen",
+        "openFilesInPreviewMode": "Sidebar-Dateien in Vorschauregistern öffnen",
         "openFolderInNewWindow": "Ordner über Menü in einem neuen Fenster öffnen",
         "zoom": "Das Zoom-Level. Zwischen 0.5 und 2.0 inklusive",
         "hideScrollbar": "Ob Scrollbalken ausgeblendet werden sollen",
@@ -388,8 +423,9 @@
         "wrapCodeBlocks": "Text in Codeblöcken umbrechen",
         "editorLineWidth": "Definiert die maximale Editor-Bereichsbreite. Ein leerer String oder Suffixe von ch (Zeichen), px (Pixel) oder % (Prozent) sind erlaubt",
         "codeFontSize": "Schriftgröße im Codeblock, der Bereich ist 12 ~ 18",
-        "codeFontFamily": "Schriftfamilie im Codeblock",
+        "codeFontFamily": "Code-Schriftart. Gilt für Inline-Code und Codeblöcke.",
         "codeBlockLineNumbers": "Ob Zeilennummern angezeigt werden sollen",
+        "sourceCodeLineNumbers": "Zeilennummern im Quellcode-Modus anzeigen",
         "trimUnnecessaryCodeBlockEmptyLines": "Leere Zeilen am Anfang und Ende des Codeblocks entfernen",
         "autoPairBracket": "Automatische Klammern beim Bearbeiten",
         "autoPairMarkdownSyntax": "Markdown-Syntax automatisch vervollständigen",
@@ -411,8 +447,16 @@
         "frontmatterType": "Der Frontmatter-Typ",
         "superSubScript": "Pandocs Markdown-Erweiterung für hoch- und tiefgestellte Zeichen aktivieren",
         "footnote": "Pandocs Markdown-Erweiterung für Fußnoten aktivieren",
+        "texMathDollars": "Pandocs Markdown-Erweiterung tex_math_dollars aktivieren",
+        "texMathGfm": "Pandocs Markdown-Erweiterung tex_math_gfm aktivieren",
+        "texMathSingleBackslash": "Pandocs Markdown-Erweiterung tex_math_single_backslash aktivieren",
+        "texMathDoubleBackslash": "Pandocs Markdown-Erweiterung tex_math_double_backslash aktivieren",
+        "highlightSyntax": "Die nicht standardmäßige ==text==-Hervorhebungssyntax aktivieren",
+        "inlineDiff": "Die nicht standardmäßige Inline-Diff-Syntax {+ … +} / [- … -] aktivieren",
+        "multilineBlockquote": "Die nicht standardmäßige mehrzeilige Zitat-Syntax >>> … >>> aktivieren",
+        "githubAlerts": "GitHub-Hinweise",
         "isHtmlEnabled": "HTML-Rendering aktivieren",
-        "isGitlabCompatibilityEnabled": "GitLab-Kompatibilitätsmodus aktivieren",
+        "softNewlineAsSpace": "Weiche Zeilenumbrüche als Leerzeichen behandeln",
         "sequenceTheme": "Sequenzdiagramm-Theme",
         "plantumlServer": "PlantUML-Server-URL",
         "theme": "Das in MarkText verwendete Theme auswählen",
@@ -428,7 +472,8 @@
         "imageRelativeDirectoryName": "Der relative Bildordner-Name",
         "fileSortOrder": "Sortierreihenfolge für Dateien in geöffneten Ordnern: aufsteigend oder absteigend.",
         "openedFilesInSidebar": "Ob geöffnete Dateien in der Seitenleiste angezeigt werden sollen.",
-        "softNewlineAsSpace": "Weiche Zeilenumbrüche als Leerzeichen behandeln"
+        "showPandocConvert": "Pandoc-Konvertierungsmenü anzeigen. Erfordert eine Pandoc-Installation.",
+        "isGitlabCompatibilityEnabled": "GitLab-Kompatibilitätsmodus aktivieren"
       }
     },
     "categories": {
@@ -472,10 +517,20 @@
         "selectFolder": "Ordner auswählen",
         "openBlankPage": "Leere Seite öffnen"
       },
+      "pandoc": {
+        "title": "Pandoc-Konvertierung",
+        "description": "Pandoc-Konvertierungsmenü anzeigen",
+        "detailedDescription": "Erfordert eine Pandoc-Installation",
+        "found": "Gefunden: {path}",
+        "notFound": "Nicht gefunden",
+        "recheck": "Erneut prüfen"
+      },
       "sidebar": {
         "title": "Seitenleiste",
         "wrapTextInToc": "Text im Inhaltsverzeichnis umbrechen",
         "showOpenedFiles": "Geöffnete Dateien anzeigen",
+        "autoReveal": "Aktive Datei in der Seitenleiste anzeigen",
+        "openFilesInPreviewMode": "Sidebar-Dateien in Vorschauregistern öffnen. Bearbeiten oder Doppelklicken behält das Register bei.",
         "excludePatterns": "Ausschlussmuster",
         "excludePatternsNotes": "Hinweise zu Ausschlussmustern",
         "fileSortBy": {
@@ -504,8 +559,10 @@
           "german": "Deutsch",
           "japanese": "日本語",
           "korean": "한국어",
+          "dutch": "Nederlands",
           "portuguese": "Português",
-          "turkish": "Türkçe"
+          "turkish": "Türkçe",
+          "russian": "Русский"
         }
       }
     },
@@ -517,14 +574,17 @@
         "lineHeight": "Zeilenhöhe",
         "fontFamily": "Schriftfamilie",
         "maxWidth": "Maximale Breite",
-        "maxWidthNotes": "Maximale Breite des Editor-Inhalts"
+        "maxWidthNotes": "Maximale Breite des Editor-Inhalts. Geben Sie eine Zahl gefolgt von px, ch (Zeichen) oder % ein, z. B. 800px, 80ch oder 60%. Leer lassen, um die Standardbreite zu verwenden.",
+        "maxWidthInvalid": "Geben Sie eine Zahl gefolgt von px, ch oder % ein, z. B. 800px.",
+        "codeFontFamily": "Code-Schriftart",
+        "codeFontFamilyNotes": "Gilt für Inline-Code und Codeblöcke."
       },
       "codeBlock": {
         "title": "Code-Block",
         "fontSize": "Schriftgröße",
-        "fontFamily": "Schriftfamilie",
         "showLineNumbers": "Zeilennummern anzeigen",
-        "removeEmptyLines": "Leere Zeilen entfernen"
+        "removeEmptyLines": "Leere Zeilen entfernen",
+        "fontFamily": "Schriftfamilie"
       },
       "writingBehavior": {
         "title": "Schreibverhalten",
@@ -564,7 +624,8 @@
         "hideLinkPopup": "Link-Popup ausblenden",
         "autoCheck": "Automatische Überprüfung",
         "autoNormalizeLineEndings": "Zeilenenden beim Öffnen automatisch auf LF normalisieren",
-        "wrapCodeBlocks": "Code-Blöcke umbrechen"
+        "wrapCodeBlocks": "Code-Blöcke umbrechen",
+        "sourceCodeLineNumbers": "Zeilennummern im Quellcode-Modus anzeigen"
       }
     },
     "image": {
@@ -634,6 +695,14 @@
         "superSubScript": "Hoch-/Tiefgestellt",
         "footnote": "Fußnote",
         "footnoteNotes": "Fußnoten",
+        "texMathDollars": "TeX-Mathematik mit $ und $$",
+        "texMathGfm": "GitHub-TeX-Mathematik ($`…`$ und ```math)",
+        "texMathSingleBackslash": "TeX-Mathematik mit einfachem Backslash",
+        "texMathDoubleBackslash": "TeX-Mathematik mit doppeltem Backslash",
+        "highlightSyntax": "Hervorhebung (==text==)",
+        "inlineDiff": "Inline-Diff ({+ … +})",
+        "multilineBlockquote": "Mehrzeiliges Zitat (>>>)",
+        "githubAlerts": "GitHub-Hinweise aktivieren",
         "frontmatterType": {
           "jsonBrace": "JSON-Klammer",
           "jsonSemicolon": "JSON-Semikolon",
@@ -661,10 +730,10 @@
         "showHeadingNumbers": "Überschriftennummern im Editor anzeigen"
       },
       "compatibility": {
-        "enableGitlab": "GitLab-Kompatibilität aktivieren",
         "enableHtml": "HTML-Unterstützung aktivieren",
+        "softNewlineAsSpace": "Weiche Zeilenumbrüche als Leerzeichen behandeln",
         "title": "Kompatibilität",
-        "softNewlineAsSpace": "Weiche Zeilenumbrüche als Leerzeichen behandeln"
+        "enableGitlab": "GitLab-Kompatibilität aktivieren"
       },
       "lists": {
         "bulletListMarker": "Aufzählungszeichen",
@@ -685,6 +754,7 @@
     "theme": {
       "title": "Design",
       "followSystemTheme": "Systemdesign folgen",
+      "followSystemNote": "Wenn Sie dem Systemthema folgen, ist die Themenliste unten gesperrt. Deaktivieren Sie dies, um Themen frei zu wechseln.",
       "modeThemes": "Design-Auswahl",
       "lightModeTheme": "Helles Modus-Design",
       "darkModeTheme": "Dunkles Modus-Design",
@@ -767,6 +837,7 @@
       "quit": "Beenden",
       "toggleAutoSave": "Automatisches Speichern umschalten",
       "importFile": "Datei importieren",
+      "revealInSideBar": "In Seitenleiste anzeigen",
       "exportFile": "Datei exportieren",
       "exportFilePdf": "Als PDF exportieren",
       "zoom": "Zoom",
@@ -887,19 +958,18 @@
     "ok": "OK"
   },
   "dialog": {
+    "moveToTrash": "Möchtest du \"{name}\" wirklich in den Papierkorb verschieben?",
     "cancel": "Abbrechen",
     "changesWillBeLost": "Änderungen gehen verloren",
     "close": "Schließen",
     "dontSave": "Nicht speichern",
-    "discard": "Verwerfen",
-    "recover": "Wiederherstellen",
-    "unsavedContentFound": "Nicht gespeicherte Inhalte aus der letzten Sitzung gefunden",
-    "unsavedContentFoundDetail": "MarkText wurde beim letzten Mal nicht ordnungsgemäß beendet. {count} nicht gespeicherte Tabs wiederherstellen? Beim Verwerfen gehen sie dauerhaft verloren.",
     "file": "Datei",
     "fileExists": "Datei existiert bereits: {filename}",
     "files": "Dateien",
     "importWarning": "Import-Warnung",
-    "installPandoc": "Pandoc installieren",
+    "installPandoc": "Pandoc wurde nicht gefunden. Installieren Sie es, oder setzen Sie die Umgebungsvariable MARKTEXT_PANDOC auf den Pfad zur pandoc-Binary und starten Sie MarkText neu.",
+    "exportWarning": "Export-Warnung",
+    "exportWarningMore": "…und {count} weitere",
     "keepOpen": "Offen halten",
     "replace": "Ersetzen",
     "save": "Speichern",
@@ -908,7 +978,11 @@
     "unsafeFileTitle": "Möglicherweise unsichere Datei",
     "unsafeFileMessage": "Dieser Link öffnet eine Datei, die Code ausführen kann",
     "unsafeFileDetail": "„{name}“ ist eine ausführbare Datei oder ein Skript. Das Öffnen kann Programme auf Ihrem Computer ausführen. Fahren Sie nur fort, wenn Sie diesem Dokument vertrauen.",
-    "openAnyway": "Trotzdem öffnen"
+    "openAnyway": "Trotzdem öffnen",
+    "discard": "Verwerfen",
+    "recover": "Wiederherstellen",
+    "unsavedContentFound": "Nicht gespeicherte Inhalte aus der letzten Sitzung gefunden",
+    "unsavedContentFoundDetail": "MarkText wurde beim letzten Mal nicht ordnungsgemäß beendet. {count} nicht gespeicherte Tabs wiederherstellen? Beim Verwerfen gehen sie dauerhaft verloren."
   },
   "error": {
     "configSchemaViolation": "Konfigurationsschema-Verletzung",
@@ -939,6 +1013,7 @@
       "errorWhileSaving": "Beim Speichern ist ein Fehler aufgetreten: {msg}",
       "exportSuccessTitle": "Erfolgreich exportiert",
       "exportSuccessMessage": "„{name}“ wurde erfolgreich exportiert!",
+      "exportLinkedMediaMessage": "\"{name}\" exportiert. Dieses Format verlinkt Bilder, statt sie einzubetten — legen Sie die Bilder zur Datei und geben Sie den ganzen Ordner weiter.",
       "fileRemovedOnDisk": "„{name}“ wurde auf dem Datenträger gelöscht.",
       "fileChangedOnDisk": "„{name}“ wurde auf dem Datenträger geändert. Möchten Sie neu laden?",
       "externalChangeMerged": "Externe Festplattenänderungen wurden in „{name}“ zusammengeführt. Sie können die Zusammenführung über „Rückgängig“ zurücknehmen.",
@@ -964,6 +1039,21 @@
       "rows": "Zeilen",
       "columns": "Spalten"
     },
+    "mediaViewer": {
+      "title": "Vorschau",
+      "close": "Schließen",
+      "zoomIn": "Vergrößern",
+      "zoomOut": "Verkleinern",
+      "fit": "An Fenster anpassen",
+      "actualSize": "Originalgröße",
+      "saveTitle": "Diagramm speichern",
+      "saveSvg": "Als SVG speichern",
+      "savePng": "Als PNG speichern",
+      "copyImage": "Bild kopieren",
+      "copied": "Bild in die Zwischenablage kopiert",
+      "saveFailed": "Bild konnte nicht gespeichert werden: {error}",
+      "copyFailed": "Bild konnte nicht kopiert werden: {error}"
+    },
     "notifications": {
       "notificationNotFound": "Benachrichtigung nicht gefunden"
     },
@@ -981,6 +1071,27 @@
       "languageMissing": "Rechtschreibprüfungssprache fehlt {languageCode}",
       "switchError": "Rechtschreibprüfung-Wechselfehler für {languageCode}, {error}",
       "title": "Rechtschreibprüfung"
+    },
+    "tabs": {
+      "close": "{name} schließen",
+      "preview": "{name}, Vorschauregister"
     }
+  },
+  "readingMode": {
+    "title": "Lesemodus",
+    "edit": "Bearbeitungsmodus",
+    "lock": "Lesemodus aktivieren",
+    "unlock": "Zum Bearbeitungsmodus wechseln",
+    "defaultMode": "Standardmodus beim Öffnen von Dateien",
+    "defaultNote": "Gilt für vorhandene Dateien, die ab jetzt geöffnet werden. Neue Dokumente bleiben bearbeitbar.",
+    "unsaved": "Der Lesemodus ist aktiviert. Ungespeicherte Änderungen bleiben erhalten; das automatische Speichern ist pausiert.",
+    "failed": "Der Dokumentmodus konnte nicht gewechselt werden",
+    "closeSave": "Zum Bearbeitungsmodus wechseln und speichern",
+    "exportSource": "Wählen Sie ein anderes Exportziel als die Quelldatei.",
+    "unavailable": "Im Lesemodus nicht verfügbar",
+    "skipped": "Schreibgeschützte Dokumente mit ungespeicherten Änderungen wurden übersprungen.",
+    "viewImage": "Bild anzeigen",
+    "copyLink": "Linkadresse kopieren",
+    "resumed": "Der Bearbeitungsmodus ist aktiviert. Das automatische Speichern wurde fortgesetzt."
   }
 }

@@ -1,39 +1,69 @@
 <template>
   <div class="side-bar-search">
-    <div class="search-wrapper">
-      <input
-        ref="searchEl"
-        v-model="keyword"
-        type="text"
-        class="search-input"
-        :placeholder="t('sideBar.search.searchInFolder')"
-        @keyup="search"
-      >
-      <div class="controls">
-        <span
-          :title="t('search.caseSensitive')"
-          class="is-case-sensitive"
-          :class="{ active: isCaseSensitive }"
-          @click.stop="caseSensitiveClicked()"
+    <div class="search-header">
+      <icon-tooltip :content="t('sideBar.search.backToFiles')">
+        <button
+          type="button"
+          class="plain-button back-button"
+          :aria-label="t('sideBar.search.backToFiles')"
+          @click="emit('back')"
         >
-          <FindCaseIcon aria-hidden="true" />
-        </span>
-        <span
-          :title="t('search.wholeWord')"
-          class="is-whole-word"
-          :class="{ active: isWholeWord }"
-          @click.stop="wholeWordClicked()"
+          <el-icon
+            :size="18"
+            aria-hidden="true"
+          >
+            <BackIcon />
+          </el-icon>
+        </button>
+      </icon-tooltip>
+      <div class="search-wrapper">
+        <input
+          ref="searchEl"
+          v-model="keyword"
+          type="text"
+          class="search-input"
+          :placeholder="t('sideBar.search.searchInFolder')"
+          @keydown="handleSearchKeydown"
+          @keyup="handleSearchKeyup"
         >
-          <FindWordIcon aria-hidden="true" />
-        </span>
-        <span
-          :title="t('search.useRegex')"
-          class="is-regex"
-          :class="{ active: isRegexp }"
-          @click.stop="regexpClicked()"
-        >
-          <FindRegexIcon aria-hidden="true" />
-        </span>
+        <div class="controls">
+          <icon-tooltip :content="t('search.caseSensitive')">
+            <button
+              type="button"
+              class="plain-button is-case-sensitive"
+              :class="{ active: isCaseSensitive }"
+              :aria-label="t('search.caseSensitive')"
+              :aria-pressed="isCaseSensitive"
+              @click.stop="caseSensitiveClicked()"
+            >
+              <FindCaseIcon aria-hidden="true" />
+            </button>
+          </icon-tooltip>
+          <icon-tooltip :content="t('search.wholeWord')">
+            <button
+              type="button"
+              class="plain-button is-whole-word"
+              :class="{ active: isWholeWord }"
+              :aria-label="t('search.wholeWord')"
+              :aria-pressed="isWholeWord"
+              @click.stop="wholeWordClicked()"
+            >
+              <FindWordIcon aria-hidden="true" />
+            </button>
+          </icon-tooltip>
+          <icon-tooltip :content="t('search.useRegex')">
+            <button
+              type="button"
+              class="plain-button is-regex"
+              :class="{ active: isRegexp }"
+              :aria-label="t('search.useRegex')"
+              :aria-pressed="isRegexp"
+              @click.stop="regexpClicked()"
+            >
+              <FindRegexIcon aria-hidden="true" />
+            </button>
+          </icon-tooltip>
+        </div>
       </div>
     </div>
 
@@ -104,7 +134,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useLayoutStore } from '@/store/layout'
 import { useProjectStore } from '@/store/project'
 import { useEditorStore } from '@/store/editor'
@@ -117,9 +147,12 @@ import RipgrepDirectorySearcher from '../../node/ripgrepSearcher'
 import FindCaseIcon from '@/assets/icons/searchIcons/iconCase.svg'
 import FindWordIcon from '@/assets/icons/searchIcons/iconWord.svg'
 import FindRegexIcon from '@/assets/icons/searchIcons/iconRegex.svg'
-import { VideoPause } from '@element-plus/icons-vue'
+import { Back as BackIcon, VideoPause } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
+import IconTooltip from '@/components/iconTooltip/index.vue'
 import type { SearchResult } from './types'
+
+const emit = defineEmits<{ back: [restoreFocus?: boolean] }>()
 
 const { t } = useI18n()
 const layoutStore = useLayoutStore()
@@ -140,7 +173,7 @@ const isWholeWord = ref(false)
 const isRegexp = ref(false)
 const searchEl = ref<HTMLInputElement | null>(null)
 
-const { rightColumn, showSideBar } = storeToRefs(layoutStore)
+const { showSideBar } = storeToRefs(layoutStore)
 const { currentFile } = storeToRefs(editorStore)
 const { projectTree } = storeToRefs(projectStore)
 const {
@@ -172,8 +205,18 @@ const showNoResultFoundMessage = computed(() => {
   )
 })
 
+const handleSearchKeydown = (event: KeyboardEvent): void => {
+  if (event.key !== 'Escape' || event.isComposing || event.keyCode === 229) return
+  event.preventDefault()
+  event.stopPropagation()
+  emit('back', false)
+}
+
+const handleSearchKeyup = (event: KeyboardEvent): void => {
+  if (event.key !== 'Escape') search()
+}
+
 const search = (): void => {
-  // No root directory is opened.
   if (showNoFolderOpenedMessage.value || !projectTree.value) {
     return
   }
@@ -206,7 +249,6 @@ const search = (): void => {
       newSearchResult.push(res as SearchResult)
     },
     didSearchPaths: (numPathsFound: unknown) => {
-      // More than 100 files with (multiple) matches were found.
       if (!canceled && typeof numPathsFound === 'number' && numPathsFound > 100) {
         canceled = true
         cancellable.cancel()
@@ -214,19 +256,16 @@ const search = (): void => {
       }
     },
 
-    // UI options
     isCaseSensitive: isCaseSensitive.value,
     isWholeWord: isWholeWord.value,
     isRegexp: isRegexp.value,
 
-    // Options loaded from settings
     exclusions: searchExclusions.value,
     maxFileSize: searchMaxFileSize.value || null,
     includeHidden: searchIncludeHidden.value,
     noIgnore: searchNoIgnore.value,
     followSymlinks: searchFollowSymlinks.value,
 
-    // Only search markdown files
     inclusions: window.fileUtils.MARKDOWN_INCLUSIONS
   })
 
@@ -313,34 +352,21 @@ const cancelSearcher = (): void => {
 }
 
 watch(showSideBar, (value, oldValue) => {
-  if (rightColumn.value === 'search') {
-    if (value && !oldValue) {
-      handleFindInFolder(false)
-    } else {
-      bus.emit('search-blur')
-    }
+  if (value && !oldValue) {
+    handleFindInFolder(false)
+  } else {
+    bus.emit('search-blur')
   }
 })
 
 onMounted(() => {
   handleFindInFolder()
   bus.on('findInFolder', handleFindInFolder)
-  if (keyword.value.length > 0 && searcherRunning.value === false) {
-    searcherRunning.value = true
-    search()
-  }
 })
-
-onBeforeUnmount(() => {
+onUnmounted(() => {
   bus.off('findInFolder', handleFindInFolder)
-  if (searchCancelTimer) {
-    clearTimeout(searchCancelTimer)
-    searchCancelTimer = null
-  }
-  if (searcherRunning.value && searcherCancelCallback) {
-    searcherCancelCallback()
-    searcherCancelCallback = null
-  }
+  cancelSearcher()
+  stopShowSearchCancelAreaTimer()
 })
 </script>
 
@@ -350,9 +376,32 @@ onBeforeUnmount(() => {
   flex-direction: column;
   height: 100%;
 }
+.search-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 4px 8px 10px;
+  flex-shrink: 0;
+  -webkit-app-region: no-drag;
+}
+.back-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 28px;
+  border-radius: 4px;
+  color: var(--sideBarIconColor);
+}
+.back-button:hover {
+  background: var(--sideBarItemHoverBgColor);
+}
 .search-wrapper {
   display: flex;
-  margin: 37px 8px 10px 8px;
+  margin: 0;
+  flex: 1;
+  min-width: 0;
   padding: 0 6px;
   border-radius: 4px;
   height: 28px;
@@ -369,18 +418,15 @@ onBeforeUnmount(() => {
     outline: none;
     padding: 0;
     font-size: 13px;
-    width: 50%;
+    min-width: 0;
+    width: 0;
   }
   & > .controls {
     display: flex;
     flex-shrink: 0;
-    margin-top: 0;
-    & > span {
-      cursor: pointer;
-      width: 18px;
-      height: 18px;
-      margin-left: 0;
-      margin-right: 0;
+    & > button {
+      width: 20px;
+      height: 24px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -401,16 +447,6 @@ onBeforeUnmount(() => {
     }
   }
 
-  & > svg {
-    cursor: pointer;
-    flex-shrink: 0;
-    width: 20px;
-    height: 20px;
-    margin-right: 10px;
-    &:hover {
-      color: var(--sideBarIconColor);
-    }
-  }
 }
 .cancel-area {
   text-align: center;

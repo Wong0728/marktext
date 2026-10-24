@@ -14,11 +14,6 @@ import type Preference from '../../preferences'
 
 export { default as dockMenu } from './dock'
 
-/**
- * Create the setting window menu.
- *
- * @param keybindings The keybindings instance
- */
 export const configSettingMenu = (keybindings: Keybindings): MenuItemConstructorOptions[] => {
   return [
     ...(process.platform === 'darwin' ? [marktext(keybindings)] : []),
@@ -27,13 +22,6 @@ export const configSettingMenu = (keybindings: Keybindings): MenuItemConstructor
   ]
 }
 
-/**
- * Create the application menu for the editor window.
- *
- * @param keybindings The keybindings instance.
- * @param preferences The preference instance.
- * @param recentlyUsedFiles The recently used files.
- */
 export default function(
   keybindings: Keybindings,
   preferences: Preference,
@@ -43,7 +31,7 @@ export default function(
     ...(process.platform === 'darwin' ? [marktext(keybindings)] : []),
     file(keybindings, preferences, recentlyUsedFiles),
     edit(keybindings),
-    paragraph(keybindings),
+    paragraph(keybindings, preferences),
     format(keybindings),
     window(keybindings),
     theme(preferences),

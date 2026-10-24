@@ -111,9 +111,12 @@ MarkText es un editor de Markdown de código abierto impulsado por el apoyo de s
 
 **Patrocinador Especial**
 
-| [<img src="../assets/sponsors/serpapi.png" width="150">](https://serpapi.com/?utm_source=marktext) | [Extrae resultados de Google y otros motores de búsqueda con nuestra API rápida, sencilla y completa.](https://serpapi.com/?utm_source=marktext) |
-| ------------- |:-------------|
-| [<img src="../assets/sponsors/ukey.png" width="150">](https://www.ukey.com) | [Secure hardware wallet made simple.](https://www.ukey.com) |
+<table>
+<tr>
+<td width="182"><a href="https://serpapi.com/?utm_source=marktext"><img src="../assets/sponsors/serpapi.png" width="150"></a></td>
+<td align="left"><a href="https://serpapi.com/?utm_source=marktext">Extrae resultados de Google y otros motores de búsqueda con nuestra API rápida, sencilla y completa.</a></td>
+</tr>
+</table>
 
 ## Capturas de pantalla
 
@@ -126,7 +129,7 @@ MarkText es un editor de Markdown de código abierto impulsado por el apoyo de s
 - Extensiones Markdown como expresiones matemáticas (KaTeX), front matter y emojis.
 - Soporte para atajos de párrafo y estilo en línea para mejorar tu eficiencia de escritura.
 - Exportación de archivos **HTML** y **PDF**.
-- Varios [temas](../end-user/THEMES.md): **Cadmium Light**, **Material Dark**, etc.
+- Varios [temas](https://marktext.me/docs/themes): **Cadmium Light**, **Material Dark**, etc.
 - Varios modos de edición: **Modo Código Fuente**, **Modo Máquina de Escribir**, **Modo Enfoque**.
 - Pegado de imágenes directamente desde el portapapeles.
 
@@ -134,11 +137,11 @@ MarkText es un editor de Markdown de código abierto impulsado por el apoyo de s
 
 ![Plataforma](https://img.shields.io/static/v1.svg?label=Platform&message=Linux-64%20|%20macOS-64%20|%20Win-32%20|%20Win-64&style=for-the-badge)
 
-| ![](https://raw.githubusercontent.com/wiki/ryanoasis/nerd-fonts/screenshots/v1.0.x/mac-pass-sm.png)                                                                                                  | ![](https://raw.githubusercontent.com/wiki/ryanoasis/nerd-fonts/screenshots/v1.0.x/windows-pass-sm.png)                                                                                                          | ![](https://raw.githubusercontent.com/wiki/ryanoasis/nerd-fonts/screenshots/v1.0.x/linux-pass-sm.png)                                                                                                                        |
-|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
+|                                             ![](https://raw.githubusercontent.com/wiki/ryanoasis/nerd-fonts/screenshots/v1.0.x/mac-pass-sm.png)                                             |                                             ![](https://raw.githubusercontent.com/wiki/ryanoasis/nerd-fonts/screenshots/v1.0.x/windows-pass-sm.png)                                             |                                                    ![](https://raw.githubusercontent.com/wiki/ryanoasis/nerd-fonts/screenshots/v1.0.x/linux-pass-sm.png)                                                    |
+| :-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
 | [![latest version](https://img.shields.io/github/downloads/marktext/marktext/latest/marktext-x64.dmg.svg)](https://github.com/marktext/marktext/releases/download/v0.17.1/marktext-x64.dmg) | [![latest version](https://img.shields.io/github/downloads/marktext/marktext/latest/marktext-setup.exe.svg)](https://github.com/marktext/marktext/releases/download/v0.17.1/marktext-setup.exe) | [![latest version](https://img.shields.io/github/downloads/marktext/marktext/latest/marktext-x86_64.AppImage.svg)](https://github.com/marktext/marktext/releases/download/v0.17.1/marktext-x86_64.AppImage) |
 
-¿Quieres ver las nuevas funciones de la última versión? Consulta el [CHANGELOG](../CHANGELOG.md).
+¿Quieres ver las nuevas funciones de la última versión? Consulta el [CHANGELOG](https://marktext.me/docs/changelog).
 
 #### macOS
 
@@ -166,7 +169,7 @@ winget install marktext
 
 #### Linux
 
-Por favor sigue las [instrucciones de instalación de Linux](../end-user/LINUX.md).
+Por favor sigue las [instrucciones de instalación de Linux](https://marktext.me/docs/installation).
 
 #### Otros
 
@@ -174,17 +177,16 @@ Todos los binarios para Linux, macOS y Windows se pueden descargar desde la [pá
 
 ## Desarrollo
 
-Si deseas compilar MarkText tú mismo, consulta nuestras [instrucciones de compilación](../dev/BUILD.md).
+Si deseas compilar MarkText tú mismo, consulta nuestras [instrucciones de compilación](https://marktext.me/docs/dev/build).
 
-- [Documentación de usuario](../README.md)
-- [Documentación de desarrollador](../dev/README.md)
+- [Documentación de usuario](https://marktext.me/docs/introduction)
+- [Documentación de desarrollador](https://marktext.me/docs/dev/overview)
 
 Si tienes preguntas sobre MarkText, puedes abrir un issue. Por favor usa el formato predeterminado al hacerlo. Por supuesto, si envías un PR directamente, será muy apreciado.
 
 ## Contribución
 
 MarkText está en desarrollo. Por favor lee la [Guía de Contribución](../../.github/CONTRIBUTING.md) antes de hacer un pull request. ¿Quieres añadir funciones a MarkText? Consulta nuestra [hoja de ruta](https://github.com/marktext/marktext/projects) e issues abiertos.
-
 
 ## Colaboradores
 

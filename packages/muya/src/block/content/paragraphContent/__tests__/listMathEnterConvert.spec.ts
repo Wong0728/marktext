@@ -53,8 +53,6 @@ function flush(): Promise<void> {
     return new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
 }
 
-// Drive `$$` + Enter on the list item's paragraph content and return the
-// resulting top-level document state (the order-list).
 async function enterDollarsInList(token: string): Promise<{ listChildren: number; itemBlockNames: string[] }> {
     const muya = bootMuya('1. x\n');
     const content = muya.editor.scrollPage!.firstContentInDescendant() as unknown as Content;
@@ -97,5 +95,11 @@ describe('#2276 — `$$`/code-fence + Enter inside a list converts in place, no 
         const { listChildren, itemBlockNames } = await enterDollarsInList('<div>');
         expect(listChildren).toBe(1);
         expect(itemBlockNames).toContain('html-block');
+    });
+
+    it('same-line display math `$$a$$ b` splits the item instead of becoming a math block (#5364)', async () => {
+        const { listChildren, itemBlockNames } = await enterDollarsInList('$$a$$ b');
+        expect(listChildren).toBe(2);
+        expect(itemBlockNames).toEqual(['paragraph']);
     });
 });

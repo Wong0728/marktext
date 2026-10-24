@@ -1,6 +1,12 @@
 import { expect, test } from '@playwright/test'
 import type { ElectronApplication, Page } from 'playwright'
-import { launchWithMarkdown, clickMenuById, waitForEditor } from './helpers'
+import {
+  makeRoomForOutline,
+  launchWithMarkdown,
+  clickMenuById,
+  waitForEditor,
+  sendIpcToRenderer
+} from './helpers'
 
 // Build a long document with many top-level headings so the editor content
 // overflows its scroll container. Each heading title is unique so the sidebar
@@ -12,7 +18,6 @@ const buildLongDoc = (): string => {
   const parts: string[] = []
   for (let i = 1; i <= HEADING_COUNT; i++) {
     parts.push(`# Heading Number ${i}`)
-    // Several filler paragraphs so each section is taller than the viewport.
     for (let p = 0; p < 6; p++) {
       parts.push(`Filler paragraph ${p} under heading ${i}. Lorem ipsum dolor sit amet, consectetur adipiscing elit.`)
     }
@@ -58,6 +63,25 @@ const isHeadingInViewport = (page: Page, index: number): Promise<boolean> =>
     return hRect.top >= cRect.top - 1 && hRect.top <= cRect.bottom
   }, index)
 
+const headingOffsetFromViewportTop = (page: Page, index: number): Promise<number | null> =>
+  page.evaluate((idx) => {
+    const container = document.querySelector('.editor-component') as HTMLElement | null
+    const sel = '.mu-container > h1, .mu-container > h2, .mu-container > h3, .mu-container > h4, .mu-container > h5, .mu-container > h6'
+    const target = document.querySelectorAll(sel)[idx]
+    if (!container || !target) return null
+    return Math.round(
+      target.getBoundingClientRect().top - container.getBoundingClientRect().top
+    )
+  }, index)
+
+// `scrollToHeader` animates for ~300ms, so a heading passes through the
+// viewport before it stops. Poll until it rests at the 24px TOC gap (within
+// ±4px) instead of reading its offset once.
+const expectHeadingAtTocGap = (page: Page, index: number): Promise<void> =>
+  expect
+    .poll(() => headingOffsetFromViewportTop(page, index), { timeout: 8000 })
+    .toBeCloseTo(24, -1)
+
 // Locate a TOC tree node label by its EXACT text. Exact matching avoids the
 // substring trap where "Heading Number 1" also matches "Heading Number 18".
 const tocLabel = (page: Page, text: string) =>
@@ -89,10 +113,24 @@ test.describe('TOC sidebar click scrolls the live editor', () => {
     const launched = await launchWithMarkdown(buildLongDoc())
     app = launched.app
     page = launched.page
+    await makeRoomForOutline(app, page)
     await waitForEditor(page)
-    // Open the sidebar and switch its right column to the ToC (el-tree).
+    // Keep two files open so the editor viewport starts below the visible tab
+    // bar. The TOC target must align to that viewport, not to the window.
+    await sendIpcToRenderer(app, 'mt::new-untitled-tab', true, '')
+    await page.waitForFunction(
+      () => document.querySelectorAll('.tabs-container > li').length >= 2,
+      null,
+      { timeout: 5000 }
+    )
+    await expect(page.locator('.editor-tabs')).toBeVisible()
+    await sendIpcToRenderer(app, 'mt::switch-tab-by-index', 0)
+    await page.waitForFunction(
+      (count) => document.querySelectorAll('.mu-container > h1').length >= count,
+      HEADING_COUNT,
+      { timeout: 10000 }
+    )
     await showSidebar(app, page)
-    await clickMenuById(app, 'tocMenuItem')
     await page.waitForSelector('.side-bar-toc .el-tree', { state: 'visible', timeout: 10000 })
     // The TOC is seeded from `editor.getTOC()` on mount / json-change. Wait
     // until every heading has rendered a tree node before clicking.
@@ -112,7 +150,6 @@ test.describe('TOC sidebar click scrolls the live editor', () => {
     const targetIndex = await headingIndexByText(page, targetText)
     expect(targetIndex).toBeGreaterThanOrEqual(0)
 
-    // Start near the top so the click must scroll DOWN to reveal heading 18.
     await page.evaluate(() => {
       const el = document.querySelector('.editor-component') as HTMLElement | null
       if (el) el.scrollTop = 0
@@ -120,23 +157,24 @@ test.describe('TOC sidebar click scrolls the live editor', () => {
     await expect.poll(() => getScrollTop(page)).toBe(0)
     expect(await isHeadingInViewport(page, targetIndex)).toBe(false)
 
-    // Click the matching el-tree node label (the real user path: this fires the
-    // `scroll-to-header` bus event with the heading's slug).
     const label = tocLabel(page, targetText)
     await label.click()
 
     // The scroll is animated (~300ms). Poll until it settles above 0.
     await expect.poll(() => getScrollTop(page), { timeout: 8000 }).toBeGreaterThan(0)
-    // And the target heading must be in the viewport.
     await expect
       .poll(() => isHeadingInViewport(page, targetIndex), { timeout: 8000 })
       .toBe(true)
+    await expectHeadingAtTocGap(page, targetIndex)
   })
 
   test('clicking an earlier heading scrolls back up toward it', async() => {
-    // After the previous test the editor is scrolled down near heading 18.
+    await page.evaluate(() => {
+      const el = document.querySelector('.editor-component') as HTMLElement | null
+      if (el) el.scrollTop = el.scrollHeight
+    })
+    await expect.poll(() => getScrollTop(page)).toBeGreaterThan(0)
     const fromTop = await getScrollTop(page)
-    expect(fromTop).toBeGreaterThan(0)
 
     const targetText = 'Heading Number 3'
     const targetIndex = await headingIndexByText(page, targetText)
@@ -145,7 +183,6 @@ test.describe('TOC sidebar click scrolls the live editor', () => {
     const label = tocLabel(page, targetText)
     await label.click()
 
-    // Scrolling up to heading 3 must reduce scrollTop substantially.
     await expect
       .poll(() => getScrollTop(page), { timeout: 8000 })
       .toBeLessThan(fromTop)
@@ -161,12 +198,9 @@ test.describe('TOC sidebar click scrolls the live editor', () => {
 
     const label = tocLabel(page, targetText)
     await label.click()
-    await expect
-      .poll(() => isHeadingInViewport(page, targetIndex), { timeout: 8000 })
-      .toBe(true)
+    await expectHeadingAtTocGap(page, targetIndex)
     const firstScroll = await getScrollTop(page)
 
-    // Click again — should land on (essentially) the same scroll position.
     await label.click()
     await page.waitForTimeout(500)
     await expect

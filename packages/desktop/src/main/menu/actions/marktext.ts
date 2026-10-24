@@ -65,7 +65,6 @@ ipcMain.on('mt::check-for-update', (e) => {
   checkUpdates(senderWin)
 })
 
-// --------------------------------------------------------
 
 export const userSetting = (): void => {
   ipcMain.emit('app-create-settings-window')
@@ -98,7 +97,6 @@ export const osxShowAll = (): void => {
   }
 }
 
-// --- Commands -------------------------------------------------------------
 
 export const loadMarktextCommands = (commandManager: CommandManager): void => {
   commandManager.add(COMMANDS.MT_HIDE, osxHide)

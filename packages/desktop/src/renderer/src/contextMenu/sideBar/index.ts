@@ -7,6 +7,7 @@ import {
   getPASTE,
   getRENAME,
   getDELETE,
+  getCopyPath,
   getShowInFolder
 } from './menuItems'
 import { popupContextMenu, type ContextMenuItem } from '../popupMenu'
@@ -26,10 +27,10 @@ export const showContextMenu = (
     getRENAME(),
     getDELETE(),
     SEPARATOR,
+    getCopyPath(),
     getShowInFolder()
   ]
 
-  // PASTE entry (index 5) toggles based on the cached source path.
   contextItems[5].enabled = hasPathCache
 
   const items: ContextMenuItem[] = contextItems.map((item) => {

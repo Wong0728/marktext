@@ -3,7 +3,12 @@
     "counter": {
       "words": "字數",
       "characters": "字元數",
+      "charactersNoSpaces": "字元數（不含空格）",
+      "charactersWithSpaces": "字元數（含空格）",
       "paragraphs": "段落數",
+      "allCharacters": "總字元數",
+      "document": "文件",
+      "documentSelection": "文件 / 選取範圍",
       "selectedWords": "已選字數"
     },
     "file": {
@@ -22,13 +27,14 @@
       "export": "匯出",
       "exportHtml": "匯出為 HTML",
       "exportPdf": "匯出為 PDF",
-      "exportDocx": "匯出為 DOCX",
+      "convertWithPandoc": "使用 Pandoc 轉換",
       "import": "匯入",
       "print": "列印",
       "closeTab": "關閉標籤頁",
       "closeWindow": "關閉視窗",
       "quit": "退出",
-      "preferences": "偏好設定"
+      "preferences": "偏好設定",
+      "exportDocx": "匯出為 DOCX"
     },
     "edit": {
       "edit": "編輯",
@@ -68,6 +74,7 @@
       "table": "表格",
       "codeFences": "程式碼圍欄",
       "quoteBlock": "引用區塊",
+      "githubAlerts": "GitHub 提示區塊",
       "mathBlock": "數學區塊",
       "htmlBlock": "HTML 區塊",
       "orderedList": "有序清單",
@@ -82,6 +89,7 @@
       "minimize": "最小化",
       "zoomIn": "放大",
       "zoomOut": "縮小",
+      "resetZoom": "重置縮放",
       "fullScreen": "全螢幕",
       "bringAllToFront": "將全部移到前面",
       "alwaysOnTop": "總是在最上層"
@@ -118,7 +126,7 @@
       "sourceCodeMode": "原始碼模式",
       "typewriterMode": "打字機模式",
       "focusMode": "專注模式",
-      "toggleTableOfContents": "切換目錄",
+      "toggleTableOfContents": "顯示目錄",
       "reloadImages": "重新載入圖片",
       "showDeveloperTools": "顯示開發者工具",
       "reloadWindow": "重新載入視窗"
@@ -142,8 +150,8 @@
       "theme": "主題(&T)",
       "dark": "深色",
       "followThemDisabled": "跟隨系統主題時無法選擇主題",
-      "lightThemes": "— 淺色主題 —",
-      "darkThemes": "— 深色主題 —",
+      "lightThemes": "淺色主題",
+      "darkThemes": "深色主題",
       "ayuDark": "Ayu 深色",
       "ayuLight": "Ayu 淺色",
       "ayuMirage": "Ayu Mirage",
@@ -187,6 +195,7 @@
     "copyAsRich": "複製為富文本",
     "copyAsHtml": "複製為 HTML",
     "pasteAsPlainText": "貼上為純文字",
+    "lookUp": "查詢「{selection}」",
     "insertParagraphBefore": "在前面插入段落",
     "insertParagraphAfter": "在後面插入段落",
     "spelling": "拼字檢查…",
@@ -201,6 +210,7 @@
       "paste": "貼上",
       "rename": "重新命名",
       "moveToTrash": "移到垃圾桶",
+      "copyPath": "複製路徑",
       "showInFolder": "在資料夾中顯示"
     },
     "tabs": {
@@ -211,6 +221,7 @@
       "rename": "重新命名",
       "copyPath": "複製路徑",
       "showInFolder": "在資料夾中顯示",
+      "showInSideBar": "在側邊欄中顯示",
       "openInNewWindow": "在新視窗中開啟"
     }
   },
@@ -229,6 +240,7 @@
   },
   "sideBar": {
     "search": {
+      "backToFiles": "返回檔案",
       "searchInFolder": "在資料夾中搜尋…",
       "noFolderOpen": "沒有開啟的資料夾",
       "noResultsFound": "找不到結果。",
@@ -247,13 +259,33 @@
       "noMatchingFiles": "沒有符合的檔案"
     },
     "toc": {
-      "title": "目錄"
+      "expand": "展開目錄",
+      "collapse": "收起目錄",
+      "empty": "尚無標題",
+      "title": "目錄",
+      "expandAll": "全部展開",
+      "collapseAll": "全部折疊"
     },
     "icons": {
       "files": "檔案",
       "search": "搜尋",
-      "toc": "目錄",
-      "settings": "設定"
+      "settings": "設定",
+      "toc": "目錄"
+    }
+  },
+  "titleBar": {
+    "applicationMenu": "應用程式選單",
+    "minimize": "最小化",
+    "maximize": "最大化",
+    "restore": "向下還原",
+    "close": "關閉",
+    "documentStatistics": {
+      "title": "文件統計",
+      "fileInformation": "檔案資訊",
+      "created": "建立時間",
+      "lastModified": "修改時間",
+      "unavailable": "—",
+      "open": "開啟文件統計"
     }
   },
   "commandPalette": {
@@ -267,13 +299,9 @@
   "exportSettings": {
     "autoNumberingHeadings": "自動編號標題",
     "title": "匯出選項",
-    "info": {
-      "label": "資訊",
-      "description": "請自訂頁面外觀並點選「匯出」以繼續。"
-    },
     "page": {
       "label": "頁面",
-      "pageTitle": "頁面標題：",
+      "pageTitle": "頁面標題",
       "pageSize": "頁面大小：",
       "landscapeOrientation": "橫向方向：",
       "pageMargin": "頁面邊距（毫米）：",
@@ -310,15 +338,13 @@
       "description": "如果定義了頁首和/或頁尾，文字將出現在所有頁面上。"
     },
     "toc": {
-      "includeTopHeading": "包含頂層標題",
-      "includeTopHeadingDetail": "包含頂層標題詳細資訊",
+      "description": "若要在匯出文件中顯示目錄，請在正文中單獨一行輸入 [TOC]。目錄將產生在該位置。",
+      "includeTopHeading": "包含一級標題",
+      "includeTopHeadingDetail": "在目錄中包含所有一級（H1）標題。",
       "label": "目錄",
       "title": "目錄"
     },
-    "docxEngine": {
-      "description": "DOCX 引擎："
-    },
-    "export": "匯出…",
+    "export": "匯出",
     "options": {
       "pageSizes": {
         "a3": "A3",
@@ -349,6 +375,13 @@
         "pandoc": "Pandoc（原生數學公式）",
         "js": "內建 JS（表格更好，原生公式）"
       }
+    },
+    "info": {
+      "label": "資訊",
+      "description": "請自訂頁面外觀並點選「匯出」以繼續。"
+    },
+    "docxEngine": {
+      "description": "DOCX 引擎："
     }
   },
   "recent": {
@@ -361,6 +394,7 @@
   },
   "preferences": {
     "title": "偏好設定",
+    "learnMore": "了解更多：{name}",
     "search": {
       "placeholder": "搜尋偏好設定…",
       "categories": {
@@ -381,6 +415,7 @@
         "autoNormalizeLineEndings": "開啟檔案時自動將行尾標準化。停用時，檔案會以原樣開啟",
         "titleBarStyle": "標題欄樣式（僅限 Windows 和 Linux 系統）",
         "openFilesInNewWindow": "在新視窗中開啟檔案",
+        "openFilesInPreviewMode": "在預覽分頁中開啟側邊欄檔案",
         "openFolderInNewWindow": "透過選單在新視窗中開啟資料夾",
         "zoom": "縮放層級。介於 0.5 和 2.0 之間",
         "hideScrollbar": "是否隱藏捲軸",
@@ -396,8 +431,9 @@
         "wrapCodeBlocks": "在程式碼區塊內自動換行",
         "editorLineWidth": "定義編輯器區域的最大寬度。允許空字串或 ch（字元）、px（像素）或 %（百分比）後綴",
         "codeFontSize": "程式碼區塊中的字型大小，範圍是 12 ~ 18",
-        "codeFontFamily": "程式碼區塊中使用的字型系列",
+        "codeFontFamily": "程式碼字型：適用於行內程式碼和程式碼區塊。",
         "codeBlockLineNumbers": "是否顯示行號",
+        "sourceCodeLineNumbers": "在原始碼模式中顯示行號",
         "trimUnnecessaryCodeBlockEmptyLines": "修剪程式碼區塊開頭和結尾的空行",
         "autoPairBracket": "編輯時自動配對括號",
         "autoPairMarkdownSyntax": "自動完成 Markdown 語法",
@@ -419,8 +455,16 @@
         "frontmatterType": "前言類型",
         "superSubScript": "啟用 Pandoc 的 Markdown 擴充功能上標和下標",
         "footnote": "啟用 Pandoc 的 Markdown 擴充功能腳註",
+        "texMathDollars": "啟用 Pandoc 的 Markdown 擴充 tex_math_dollars",
+        "texMathGfm": "啟用 Pandoc 的 Markdown 擴充 tex_math_gfm",
+        "texMathSingleBackslash": "啟用 Pandoc 的 Markdown 擴充 tex_math_single_backslash",
+        "texMathDoubleBackslash": "啟用 Pandoc 的 Markdown 擴充 tex_math_double_backslash",
+        "highlightSyntax": "啟用非標準的 ==文字== 螢光標記語法",
+        "inlineDiff": "啟用非標準的行內差異語法 {+ … +} / [- … -]",
+        "multilineBlockquote": "啟用非標準的多行引用區塊語法 >>> … >>>",
+        "githubAlerts": "GitHub 提示區塊",
         "isHtmlEnabled": "啟用 HTML 轉譯",
-        "isGitlabCompatibilityEnabled": "啟用 GitLab 相容模式",
+        "softNewlineAsSpace": "將軟換行視為空格",
         "sequenceTheme": "序列圖主題",
         "plantumlServer": "PlantUML 伺服器 URL",
         "theme": "選擇 MarkText 中使用的主題",
@@ -436,7 +480,8 @@
         "imageRelativeDirectoryName": "相對圖片資料夾名稱",
         "fileSortOrder": "開啟資料夾中檔案的排序順序：遞增或遞減",
         "openedFilesInSidebar": "是否在側邊欄中顯示已開啟的檔案",
-        "softNewlineAsSpace": "將軟換行視為空格"
+        "showPandocConvert": "顯示 Pandoc 轉換選單。需要先安裝 Pandoc。",
+        "isGitlabCompatibilityEnabled": "啟用 GitLab 相容模式"
       }
     },
     "categories": {
@@ -480,10 +525,20 @@
         "selectFolder": "選擇資料夾",
         "openBlankPage": "開啟空白頁面"
       },
+      "pandoc": {
+        "title": "Pandoc 轉換",
+        "description": "顯示 Pandoc 轉換選單",
+        "detailedDescription": "需要先安裝 Pandoc",
+        "found": "已找到：{path}",
+        "notFound": "未找到",
+        "recheck": "重新檢測"
+      },
       "sidebar": {
         "title": "側邊欄",
         "wrapTextInToc": "在目錄中換行文字",
         "showOpenedFiles": "顯示已開啟的檔案",
+        "autoReveal": "在側邊欄中定位目前檔案",
+        "openFilesInPreviewMode": "按一下側邊欄檔案時重複使用預覽分頁；編輯或按兩下後保留該分頁",
         "excludePatterns": "排除模式",
         "excludePatternsNotes": "排除模式（備註）",
         "fileSortBy": {
@@ -512,8 +567,10 @@
           "german": "Deutsch",
           "japanese": "日本語",
           "korean": "한국어",
+          "dutch": "Nederlands",
           "portuguese": "Português",
-          "turkish": "Türkçe"
+          "turkish": "Türkçe",
+          "russian": "Русский"
         }
       }
     },
@@ -525,14 +582,17 @@
         "lineHeight": "行高",
         "fontFamily": "字型系列",
         "maxWidth": "最大寬度",
-        "maxWidthNotes": "編輯器內容的最大寬度"
+        "maxWidthNotes": "編輯器內容的最大寬度。數字後需帶單位 px、ch（字元數）或 %，例如 800px、80ch、60%。留空則使用預設寬度。",
+        "maxWidthInvalid": "請輸入數字並帶上單位 px、ch 或 %，例如 800px。",
+        "codeFontFamily": "程式碼字型",
+        "codeFontFamilyNotes": "適用於行內程式碼和程式碼區塊。"
       },
       "codeBlock": {
         "title": "程式碼區塊",
         "fontSize": "字型大小",
-        "fontFamily": "字型系列",
         "showLineNumbers": "顯示行號",
-        "removeEmptyLines": "移除空行"
+        "removeEmptyLines": "移除空行",
+        "fontFamily": "字型系列"
       },
       "writingBehavior": {
         "title": "寫作行為",
@@ -572,7 +632,8 @@
         "hideLinkPopup": "隱藏連結彈出視窗",
         "autoCheck": "自動檢查",
         "autoNormalizeLineEndings": "開啟時自動將行尾標準化為 LF",
-        "wrapCodeBlocks": "換行程式碼區塊"
+        "wrapCodeBlocks": "換行程式碼區塊",
+        "sourceCodeLineNumbers": "在原始碼模式中顯示行號"
       }
     },
     "image": {
@@ -596,7 +657,7 @@
       },
       "uploader": {
         "title": "圖片上傳器",
-        "currentUploader": "目前上傳器",
+        "currentUploader": "目前上傳器：{name}",
         "picgoNotInstalled": "PicGo 未安裝",
         "picgoInstalled": "PicGo 已安裝",
         "picgoDetectionFailed": "PicGo 偵測失敗",
@@ -642,6 +703,14 @@
         "superSubScript": "上標/下標",
         "footnote": "腳註",
         "footnoteNotes": "腳註備註",
+        "texMathDollars": "使用 $ 與 $$ 的 TeX 數學公式",
+        "texMathGfm": "GitHub 的 TeX 數學公式（$`…`$ 與 ```math）",
+        "texMathSingleBackslash": "使用單反斜線分隔符的 TeX 數學公式",
+        "texMathDoubleBackslash": "使用雙反斜線分隔符的 TeX 數學公式",
+        "highlightSyntax": "螢光標記 (==文字==)",
+        "inlineDiff": "行內差異 ({+ … +})",
+        "multilineBlockquote": "多行引用區塊 (>>>)",
+        "githubAlerts": "啟用 GitHub 提示區塊",
         "frontmatterType": {
           "jsonBrace": "JSON 大括號",
           "jsonSemicolon": "JSON 分號",
@@ -669,10 +738,10 @@
         "showHeadingNumbers": "在編輯器中顯示標題編號"
       },
       "compatibility": {
-        "enableGitlab": "啟用 GitLab 相容性",
         "enableHtml": "啟用 HTML 支援",
+        "softNewlineAsSpace": "將軟換行視為空格",
         "title": "相容性",
-        "softNewlineAsSpace": "將軟換行視為空格"
+        "enableGitlab": "啟用 GitLab 相容性"
       },
       "lists": {
         "bulletListMarker": "項目符號清單標記",
@@ -693,6 +762,7 @@
     "theme": {
       "title": "主題",
       "followSystemTheme": "跟隨系統主題",
+      "followSystemNote": "跟隨系統主題時，下方主題列表無法切換。關閉後即可自由切換。",
       "modeThemes": "主題選擇",
       "lightModeTheme": "淺色模式主題",
       "darkModeTheme": "深色模式主題",
@@ -718,7 +788,7 @@
       "online": "線上",
       "saveError": "儲存按鍵綁定時發生錯誤",
       "shortcutInUse": "快捷鍵使用中",
-      "shortcutInUseMessage": "此快捷鍵已指派給另一個命令",
+      "shortcutInUseMessage": "此快捷鍵已指派給 {accelerator}",
       "table": {
         "description": "描述",
         "edit": "編輯",
@@ -747,7 +817,7 @@
     }
   },
   "about": {
-    "copyright": "版權",
+    "copyright": "Copyright © Luo Ran 2017-{year}",
     "copyrightContributors": "版權貢獻者"
   },
   "commands": {
@@ -775,6 +845,7 @@
       "quit": "退出",
       "toggleAutoSave": "切換自動儲存",
       "importFile": "匯入檔案",
+      "revealInSideBar": "在側邊欄中顯示",
       "exportFile": "匯出檔案",
       "exportFilePdf": "匯出為 PDF",
       "zoom": "縮放",
@@ -895,20 +966,18 @@
     "ok": "確定"
   },
   "dialog": {
+    "moveToTrash": "確定要將「{name}」移到垃圾桶嗎？",
     "cancel": "取消",
     "changesWillBeLost": "變更將遺失",
     "close": "關閉",
     "dontSave": "不儲存",
-    "discard": "捨棄",
-    "recover": "復原",
-    "unsavedContentFound": "偵測到上次工作階段有未儲存的內容",
-    "unsavedContentFoundDetail": "MarkText 上次未正常結束。是否復原 {count} 個未儲存的分頁？捨棄後內容將無法復原。",
     "file": "檔案",
-    "fileExists": "檔案已存在",
+    "fileExists": "檔案已存在：{filename}",
     "files": "檔案",
     "importWarning": "匯入警告",
-    "installPandoc": "安裝 Pandoc",
-    "installPandocOrSwitchEngine": "找不到 Pandoc。安裝 pandoc 以取得原生 Word 數學公式，或在匯出選項中將 DOCX 引擎切換為「內建 JS」或「自動」以在沒有 pandoc 的情況下繼續。",
+    "installPandoc": "找不到 Pandoc。請先安裝，或將環境變數 MARKTEXT_PANDOC 設為 pandoc 執行檔的路徑後重新啟動 MarkText.",
+    "exportWarning": "匯出提示",
+    "exportWarningMore": "…另有 {count} 條",
     "keepOpen": "保持開啟",
     "replace": "取代",
     "save": "儲存",
@@ -918,18 +987,23 @@
     "unsafeFileMessage": "此連結將開啟一個可執行程式碼的檔案",
     "unsafeFileDetail": "「{name}」是可執行檔或指令碼檔案。開啟它可能會在你的電腦上執行程式。請僅在信任此文件時繼續。",
     "openAnyway": "仍要開啟",
+    "discard": "捨棄",
+    "recover": "復原",
+    "unsavedContentFound": "偵測到上次工作階段有未儲存的內容",
+    "unsavedContentFoundDetail": "MarkText 上次未正常結束。是否復原 {count} 個未儲存的分頁？捨棄後內容將無法復原。",
+    "installPandocOrSwitchEngine": "找不到 Pandoc。安裝 pandoc 以取得原生 Word 數學公式，或在匯出選項中將 DOCX 引擎切換為「內建 JS」或「自動」以在沒有 pandoc 的情況下繼續。",
     "windowNotResponding": "此視窗無回應",
     "windowNotRespondingDetail": "視窗已停止回應，MarkText 無法確認未儲存的變更。仍要關閉嗎？未儲存的變更可能會遺失。"
   },
   "error": {
     "configSchemaViolation": "設定結構違規",
     "copyError": "複製錯誤",
-    "initializationFailed": "初始化失敗",
+    "initializationFailed": "初始化失敗 {hint}",
     "otherInstanceDetected": "偵測到另一個 MarkText 實例正在執行",
     "report": "回報",
     "startupError": "啟動錯誤",
     "terminatedDueToError": "因錯誤而終止",
-    "unexpectedErrorWithMessage": "意外錯誤訊息",
+    "unexpectedErrorWithMessage": "意外錯誤：{message}",
     "unexpectedMainProcess": "意外的主程序錯誤",
     "unexpectedRendererProcess": "意外的渲染程序錯誤"
   },
@@ -941,7 +1015,7 @@
     "editor": {
       "anchorLinkCopied": "錨點連結已複製",
       "tabNotFound": "找不到標籤頁",
-      "tocItemNotFound": "找不到目錄項目",
+      "tocItemNotFound": "目錄項目 {key} 未找到",
       "errorLoadingTabTitle": "載入標籤頁發生錯誤",
       "errorLoadingTabMessage": "載入檔案變更時發生錯誤，因為找不到該標籤頁。",
       "mixedLineEndingsNormalized": "「{name}」含有混合換行字元，已自動正規化為 {lineEnding}。",
@@ -950,6 +1024,7 @@
       "errorWhileSaving": "儲存時發生錯誤：{msg}",
       "exportSuccessTitle": "匯出成功",
       "exportSuccessMessage": "已成功匯出「{name}」！",
+      "exportLinkedMediaMessage": "已匯出“{name}”。此格式以連結方式引用圖片而不內嵌，請讓圖片與檔案放在一起，分享時一併帶上整個資料夾。",
       "fileRemovedOnDisk": "「{name}」已在磁碟上被刪除。",
       "fileChangedOnDisk": "「{name}」已在磁碟上發生變更。是否重新載入？",
       "externalChangeMerged": "已將磁碟上的修改合併到「{name}」。復原即可回退本次合併。",
@@ -967,19 +1042,34 @@
   "editor": {
     "export": {
       "error": "匯出錯誤",
-      "errorExporting": "匯出檔案時發生錯誤",
-      "failed": "匯出失敗"
+      "errorExporting": "匯出 {type} 檔案時發生錯誤",
+      "failed": "{type} 匯出失敗"
     },
     "insertTable": {
       "title": "插入表格",
       "rows": "列",
       "columns": "欄"
     },
+    "mediaViewer": {
+      "title": "預覽",
+      "close": "關閉",
+      "zoomIn": "放大",
+      "zoomOut": "縮小",
+      "fit": "符合視窗",
+      "actualSize": "實際大小",
+      "saveTitle": "儲存圖表",
+      "saveSvg": "另存為 SVG",
+      "savePng": "另存為 PNG",
+      "copyImage": "複製圖片",
+      "copied": "圖片已複製到剪貼簿",
+      "saveFailed": "無法儲存圖片：{error}",
+      "copyFailed": "無法複製圖片：{error}"
+    },
     "notifications": {
       "notificationNotFound": "找不到通知"
     },
     "print": {
-      "error": "列印錯誤",
+      "error": "列印 \"{title}\" 時發生錯誤",
       "failed": "列印失敗"
     },
     "sourceCode": {
@@ -988,10 +1078,31 @@
     },
     "spellcheck": {
       "disabledError": "拼字檢查停用錯誤",
-      "errorSwitchingLanguage": "切換拼字檢查語言時發生錯誤",
-      "languageMissing": "拼字檢查語言遺失",
-      "switchError": "拼字檢查切換錯誤",
+      "errorSwitchingLanguage": "切換拼字檢查語言時發生錯誤 {languageCode}",
+      "languageMissing": "拼字檢查語言缺失 {languageCode}",
+      "switchError": "{languageCode} 拼字檢查切換錯誤，{error}",
       "title": "拼字檢查"
+    },
+    "tabs": {
+      "close": "關閉 {name}",
+      "preview": "{name}，預覽分頁"
     }
+  },
+  "readingMode": {
+    "title": "閱讀模式",
+    "edit": "編輯模式",
+    "lock": "進入閱讀模式",
+    "unlock": "切換至編輯模式",
+    "defaultMode": "開啟檔案時的預設模式",
+    "defaultNote": "僅套用至之後開啟的既有檔案；新建文件仍可編輯。",
+    "unsaved": "已進入閱讀模式，尚未儲存的變更已保留，自動儲存已暫停。",
+    "failed": "無法切換文件模式",
+    "closeSave": "切換至編輯模式並儲存",
+    "exportSource": "請選擇與來源檔案不同的匯出位置。",
+    "unavailable": "閱讀模式下無法使用",
+    "skipped": "已略過有未儲存變更的唯讀文件。",
+    "viewImage": "檢視圖片",
+    "copyLink": "複製連結位址",
+    "resumed": "已切換至編輯模式，自動儲存已恢復。"
   }
 }

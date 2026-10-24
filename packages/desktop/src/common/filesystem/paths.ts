@@ -3,8 +3,6 @@ import path from 'path'
 import { isFile, isFile2, isSymbolicLink } from './index'
 import { minimatch } from 'minimatch'
 
-const isOsx = process.platform === 'darwin'
-
 export const MARKDOWN_EXTENSIONS: readonly string[] = Object.freeze([
   'markdown',
   'mdown',
@@ -100,17 +98,11 @@ export const isDangerousExecutableFile = (filepath: string): boolean => {
   return !!ext && DANGEROUS_EXECUTABLE_EXTENSIONS.includes(ext)
 }
 
-/**
- * Returns true if the filename matches one of the markdown extensions.
- */
 export const hasMarkdownExtension = (filename: string): boolean => {
   if (!filename || typeof filename !== 'string') return false
   return MARKDOWN_EXTENSIONS.some((ext) => filename.toLowerCase().endsWith(`.${ext}`))
 }
 
-/**
- * Returns true if the path is an image file.
- */
 export const isImageFile = (filepath: string): boolean => {
   const ext = path.extname(filepath).slice(1).toLowerCase()
   return !!ext && IMAGE_EXTENSIONS.includes(ext) && isFile(filepath)
@@ -129,9 +121,6 @@ export const isMarkdownFile = (filepath: string): boolean => {
   return hasMarkdownExtension(filepath)
 }
 
-/**
- * Check if the both paths point to the same file.
- */
 export const isSamePathSync = (
   pathA: string,
   pathB: string,
@@ -156,32 +145,12 @@ export const isSamePathSync = (
   return false
 }
 
-/**
- * Check whether a file or directory is a child of the given directory.
- */
 export const isChildOfDirectory = (dir: string, child: string): boolean => {
   if (!dir || !child) return false
   const relative = path.relative(dir, child)
   return !!relative && !relative.startsWith('..') && !path.isAbsolute(relative)
 }
 
-export const getResourcesPath = (): string => {
-  let resPath = process.resourcesPath
-  if (process.env.NODE_ENV === 'development') {
-    // Default locations:
-    //   Linux/Windows: node_modules/electron/dist/resources/
-    //   macOS: node_modules/electron/dist/Electron.app/Contents/Resources
-    if (isOsx) {
-      resPath = path.join(resPath, '../..')
-    }
-    resPath = path.join(resPath, '../../../../resources')
-  }
-  return resPath
-}
-
-/**
- * Returns true if the pathname matches one of the exclude patterns.
- */
 export const checkPathExcludePattern = (pathname: string, patterns: readonly string[]): boolean => {
   if (!pathname || typeof pathname !== 'string') return false
   for (const pattern of patterns) {

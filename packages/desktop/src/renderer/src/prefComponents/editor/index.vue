@@ -30,11 +30,20 @@
           :value="editorFontFamily"
           :on-change="(value) => onSelectChange('editorFontFamily', value)"
         />
+        <font-text-box
+          :description="t('preferences.editor.textEditor.codeFontFamily')"
+          :notes="t('preferences.editor.textEditor.codeFontFamilyNotes')"
+          :only-monospace="true"
+          :value="codeFontFamily"
+          :on-change="(value) => onSelectChange('codeFontFamily', value)"
+        />
         <text-box
           :description="t('preferences.editor.textEditor.maxWidth')"
           :notes="t('preferences.editor.textEditor.maxWidthNotes')"
           :input="editorLineWidth"
+          default-value="800px / 80ch / 60%"
           :regex-validator="/^(?:$|[0-9]+(?:ch|px|%)$)/"
+          :error-message="t('preferences.editor.textEditor.maxWidthInvalid')"
           :on-change="(value) => onSelectChange('editorLineWidth', value)"
         />
       </template>
@@ -55,12 +64,6 @@
           unit="px"
           :step="1"
           :on-change="(value) => onSelectChange('codeFontSize', value)"
-        />
-        <font-text-box
-          :description="t('preferences.editor.codeBlock.fontFamily')"
-          :only-monospace="true"
-          :value="codeFontFamily"
-          :on-change="(value) => onSelectChange('codeFontFamily', value)"
         />
         <bool
           :description="t('preferences.editor.codeBlock.showLineNumbers')"
@@ -189,6 +192,11 @@
           :bool="autoCheck"
           :on-change="(value) => onSelectChange('autoCheck', value)"
         />
+        <bool
+          :description="t('preferences.editor.misc.sourceCodeLineNumbers')"
+          :bool="sourceCodeLineNumbers"
+          :on-change="(value) => onSelectChange('sourceCodeLineNumbers', value)"
+        />
       </template>
     </compound>
   </div>
@@ -235,6 +243,7 @@ const {
   hideQuickInsertHint,
   hideLinkPopup,
   autoCheck,
+  sourceCodeLineNumbers,
   autoNormalizeLineEndings,
   vimMode,
   writingTarget,

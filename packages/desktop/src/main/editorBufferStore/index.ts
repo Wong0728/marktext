@@ -15,6 +15,8 @@ export interface SnapshotTab {
   filename?: string
   markdown?: string
   isSaved?: boolean
+  /** Upstream flag: created in-app, the file does not exist on disk yet. */
+  isPendingCreation?: boolean
   [key: string]: unknown
 }
 
@@ -68,7 +70,12 @@ class EditorBufferStore extends TypedEmitter<EditorBufferStoreEvents> {
         const snapshot = this._readSnapshotFile(filePath)
         for (const tab of snapshot.tabs) {
           const markdown = typeof tab.markdown === 'string' ? tab.markdown : ''
-          const isRecoverable = !tab.isSaved && (tab.pathname || markdown.trim().length > 0)
+          // Upstream treats a `isPendingCreation` tab as not safe to drop even
+          // when `isSaved` is set: the file never reached the disk, so the
+          // crash would lose it (#isPendingCreation semantics from v0.23.0).
+          const isRecoverable =
+            (!tab.isSaved || tab.isPendingCreation === true) &&
+            (!!tab.pathname || markdown.trim().length > 0)
           if (isRecoverable) {
             tabs.push(tab)
           }

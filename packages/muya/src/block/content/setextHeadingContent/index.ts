@@ -35,7 +35,7 @@ class SetextHeadingContent extends Format {
             return;
         }
 
-        if (event.shiftKey) {
+        if (event.shiftKey && !this.dropSoftBreakBeforeCursor()) {
             event.preventDefault();
             event.stopPropagation();
 
@@ -75,10 +75,13 @@ class SetextHeadingContent extends Format {
 
     override backspaceHandler(event: Event) {
         const { start, end } = this.getCursor()!;
-        if (start.offset === 0 && end.offset === 0)
+        if (start.offset === 0 && end.offset === 0) {
+            event.preventDefault();
             this.convertToParagraph(true);
-        else
+        }
+        else {
             super.backspaceHandler(event);
+        }
     }
 }
 

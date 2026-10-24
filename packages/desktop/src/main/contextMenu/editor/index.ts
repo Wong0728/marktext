@@ -6,15 +6,15 @@ import {
   getCopyAsRich,
   getCopyAsHtml,
   getPasteAsPlainText,
+  getLookUp,
   SEPARATOR,
   getInsertBefore,
   getInsertAfter
 } from './menuItems'
 import spellcheckMenuBuilder from './spellcheck'
 import { t } from '../../i18n'
+import { isOsx } from '../../config'
 
-// Electron's ContextMenuParams shape we rely on. Kept narrow — the renderer
-// supplies the full surface so we only annotate the fields we use.
 interface ContextMenuParams {
   isEditable: boolean
   hasImageContents?: boolean
@@ -34,15 +34,11 @@ interface ContextMenuParams {
   y: number
 }
 
-// Electron `webContents.on('context-menu', (event, params) => ...)` provides
-// a simple event object with preventDefault — nothing on it is consumed by
-// this function, so we keep the type minimal.
 type ContextMenuEvent = {
   preventDefault?: () => void
   readonly defaultPrevented?: boolean
 }
 
-// Dynamically fetch menu items to ensure correct translation
 const getContextItems = (): MenuItemConstructorOptions[] => [
   getInsertBefore(),
   getInsertAfter(),
@@ -80,14 +76,17 @@ export const showEditorContextMenu = (
   // NOTE: We have to get the word suggestions from this event because `webFrame.getWordSuggestions` and
   //       `webFrame.isWordMisspelled` doesn't work on Windows (Electron#28684).
 
-  // Make sure that the request comes from a contenteditable inside the editor container.
   if (isInsideEditor(params) && !hasImageContents) {
     const hasText = selectionText.trim().length > 0
     const canCopy = hasText && editFlags.canCut && editFlags.canCopy
-    // const canPaste = hasText && editFlags.canPaste
     const isMisspelled = isEditable && !!selectionText && !!misspelledWord
 
     const menu = new Menu()
+    if (isOsx && hasText) {
+      menu.append(new MenuItem(getLookUp(selectionText)))
+      menu.append(new MenuItem(SEPARATOR))
+    }
+
     if (isSpellcheckerEnabled) {
       const spellingSubmenu = spellcheckMenuBuilder(
         isMisspelled,
@@ -104,11 +103,16 @@ export const showEditorContextMenu = (
     }
 
     const contextItems = getContextItems()
-    const copyItems = [contextItems[3], contextItems[4], contextItems[8], contextItems[7]] // CUT, COPY, COPY_AS_HTML, COPY_AS_RICH
-    copyItems.forEach((item) => {
-      if (item) item.enabled = canCopy
-    })
+    const copyItemIds = new Set([
+      'cutMenuItem',
+      'copyMenuItem',
+      'copyAsHtmlMenuItem',
+      'copyAsRichMenuItem'
+    ])
     contextItems.forEach((item) => {
+      if (item.id && copyItemIds.has(item.id)) {
+        item.enabled = canCopy
+      }
       menu.append(new MenuItem(item))
     })
     // The original JS passes an array literal here, which Electron treats as

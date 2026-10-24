@@ -15,6 +15,7 @@ temp/
 logs/
 test-results/
 playwright-report/
+.playwright-mcp/
 *.min.json
 __pycache__/
 *.pyc
@@ -23,5 +24,6 @@ tmp_gather_*
 latex-test.md
 .claude/settings.local.json
 .claude/
+.codex/
 .agents/
 .agent/

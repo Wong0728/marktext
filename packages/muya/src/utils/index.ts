@@ -10,9 +10,7 @@ interface IUnion {
     active?: boolean;
 }
 
-// `never[]` in the contravariant arg-tuple position lets the @methodMixins
-// decorator accept any concrete class constructor (`new (muya: Muya, …)`),
-// without dragging the loosely-typed `any[]` back in.
+// A contravariant never[] tuple accepts concrete constructor signatures without any[].
 type Constructor = new (...args: never[]) => object;
 
 interface IDefer<T> {
@@ -51,16 +49,32 @@ export function snakeToCamel(name: string) {
     return name.replace(/_([a-z])/g, (_p0, p1) => p1.toUpperCase());
 }
 
-// The fenced code block info string's first non-whitespace run is the
-// "language" used for syntax highlighting and the `language-*` class
-// (CommonMark §4.5). The rest of the info string is preserved as-is on the
-// block so the fence round-trips.
+// Highlight only the first non-whitespace word; preserve the full fence info string elsewhere.
 export function firstWordOfInfo(info: string): string {
-    return info.match(/\S*/)?.[0] ?? '';
+    return info.trimStart().match(/\S*/)?.[0] ?? '';
 }
-/**
- *  Are two arrays have intersection
- */
+
+export interface IFenceLine {
+    fenceChar: '`' | '~';
+    fenceLength: number;
+    info: string;
+}
+
+const FENCE_LINE_REG = /^ {0,3}(`{3,}|~{3,})([^\n]*)/;
+
+// Return null for invalid opening fences. Backtick info strings cannot contain backticks; tilde info can.
+export function parseFenceLine(text: string): IFenceLine | null {
+    const match = FENCE_LINE_REG.exec(text);
+    if (!match)
+        return null;
+
+    const fence = match[1];
+    const info = match[2];
+    if (fence[0] === '`' && info.includes('`'))
+        return null;
+
+    return { fenceChar: fence[0] as '`' | '~', fenceLength: fence.length, info };
+}
 export function conflict(arr1: [number, number], arr2: [number, number]) {
     return !(arr1[1] < arr2[0] || arr2[1] < arr1[0]);
 }
@@ -86,8 +100,7 @@ export function union({ start: tStart, end: tEnd }: IUnion, { start: lStart, end
     return null;
 }
 
-// https://github.com/jashkenas/underscore
-// TODO: @jocs rewrite in the future.
+// Adapted from https://github.com/jashkenas/underscore.
 export function throttle<TArgs extends unknown[], TReturn>(
     func: (...args: TArgs) => TReturn,
     wait = 50,
@@ -139,8 +152,46 @@ export function throttle<TArgs extends unknown[], TReturn>(
     };
 }
 
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+    if (typeof value !== 'object' || value === null)
+        return false;
+    const proto = Object.getPrototypeOf(value);
+    return proto === Object.prototype || proto === null;
+}
+
+// Clone arrays and plain objects iteratively to support deeply nested Markdown (#4747).
+// Preserve shared references; use structuredClone for other object types.
 export function deepClone<T>(value: T): T {
-    return structuredClone(value);
+    if (!Array.isArray(value) && !isPlainObject(value))
+        return structuredClone(value);
+
+    const copies = new Map<object, object>();
+    const stack: object[] = [];
+
+    const copyOf = (source: unknown): unknown => {
+        if (!Array.isArray(source) && !isPlainObject(source)) {
+            return typeof source === 'object' && source !== null
+                ? structuredClone(source)
+                : source;
+        }
+        let copy = copies.get(source);
+        if (copy === undefined) {
+            copy = Array.isArray(source) ? [] : {};
+            copies.set(source, copy);
+            stack.push(source);
+        }
+        return copy;
+    };
+
+    const root = copyOf(value) as T;
+    while (stack.length) {
+        const source = stack.pop() as Record<string, unknown>;
+        const target = copies.get(source) as Record<string, unknown>;
+        for (const key of Object.keys(source))
+            target[key] = copyOf(source[key]);
+    }
+
+    return root;
 }
 
 export function escapeHTML(str: string) {
@@ -203,12 +254,6 @@ export function sanitize(html: string, purifyOptions: Config, disableHtml: boole
         return runSanitize(escapeInBlockHtml(html), purifyOptions);
 }
 
-/**
- * TODO: @jocs remove in the future, because it's not used.
- * @param ele
- * @param id
- * @returns A floating-ui-compatible virtual reference positioned at the element's bounding rect.
- */
 export function getParagraphReference(ele: HTMLElement, id: string) {
     const { x, y, left, top, bottom, height } = ele.getBoundingClientRect();
 
@@ -222,16 +267,79 @@ export function getParagraphReference(ele: HTMLElement, id: string) {
     };
 }
 
-function visibleLength(str: string) {
-    return [...new Intl.Segmenter().segment(str)].length;
+// ot-text-unicode measures positions in code points, not grapheme clusters.
+// Unchanged diff spans must use the same units or subsequent operations corrupt state (#4926).
+function codePointLength(str: string) {
+    let length = 0;
+    for (let i = 0; i < str.length; i++) {
+        const code = str.charCodeAt(i);
+        if (code >= 0xD800 && code <= 0xDFFF)
+            i++; // Count a surrogate pair as the single code point it encodes.
+
+        length++;
+    }
+
+    return length;
+}
+
+// Visible characters can span multiple code points; caret movement and deletion
+// use grapheme boundaries to match browser behavior (UAX #29).
+
+export interface IGraphemeCluster {
+    /** Offset of the cluster's first UTF-16 code unit. */
+    start: number;
+    /** Offset just past the cluster's last UTF-16 code unit. */
+    end: number;
+}
+
+let graphemeSegmenter: Intl.Segmenter | null | undefined;
+
+function getGraphemeSegmenter(): Intl.Segmenter | null {
+    if (graphemeSegmenter === undefined) {
+        graphemeSegmenter
+            = typeof Intl.Segmenter === 'function'
+                ? new Intl.Segmenter(undefined, { granularity: 'grapheme' })
+                : null;
+    }
+
+    return graphemeSegmenter;
+}
+
+// Yield [start, end) UTF-16 ranges. Without Intl.Segmenter, fall back to whole code points.
+export function* graphemeClusters(text: string): Generator<IGraphemeCluster> {
+    const segmenter = getGraphemeSegmenter();
+    if (segmenter) {
+        for (const { segment, index } of segmenter.segment(text))
+            yield { start: index, end: index + segment.length };
+
+        return;
+    }
+
+    for (let i = 0; i < text.length;) {
+        const end = i + (text.codePointAt(i)! > 0xFFFF ? 2 : 1);
+        yield { start: i, end };
+        i = end;
+    }
+}
+
+// UTF-16 length of the first grapheme cluster.
+export function firstGraphemeLength(text: string): number {
+    const [first] = graphemeClusters(text);
+
+    return first ? first.end - first.start : 0;
+}
+
+// UTF-16 length of the last grapheme cluster.
+export function lastGraphemeLength(text: string): number {
+    let length = 0;
+    for (const cluster of graphemeClusters(text))
+        length = cluster.end - cluster.start;
+
+    return length;
 }
 
 export type TDiff = (string | number | { d: string });
 
-/**
- * transform diff to text-unicode op
- * @param {Array} diffs
- */
 export function diffToTextOp(diffs: Diff[]) {
     const op: TDiff[] = [];
 
@@ -242,7 +350,7 @@ export function diffToTextOp(diffs: Diff[]) {
                 break;
 
             case 0:
-                op.push(visibleLength(diff[1]));
+                op.push(codePointLength(diff[1]));
                 break;
 
             case 1:
@@ -261,6 +369,13 @@ export function diffToTextOp(diffs: Diff[]) {
     }
 
     return op;
+}
+
+export function lineBounds(text: string, offset: number): [number, number] {
+    const start = text.lastIndexOf('\n', offset - 1) + 1;
+    const end = text.indexOf('\n', start);
+
+    return [start, end === -1 ? text.length : end];
 }
 
 // If the next block is header, put cursor after the `#{1,6} *`
@@ -284,12 +399,6 @@ export function verticalPositionInRect(event: MouseEvent, rect: DOMRect) {
     return clientY - top > height / 2 ? 'down' : 'up';
 }
 
-// `hasPick` is called by editor.updateContents on each element of an
-// ot-json1 op descent. The element shape is one of (number | string |
-// JSONOpComponent | JSONOpList) — only the component case (`{p?, r?, ...}`)
-// is interesting. Accept the structural subset we actually read instead of
-// dragging in the whole union (most callers pass an already-narrowed
-// object).
 export function hasPick(c: { p?: number; r?: unknown } | null | undefined): boolean {
     return !!c && (c.p != null || c.r !== undefined);
 }
@@ -328,7 +437,6 @@ export function mixins(...constructors: Constructor[]) {
     return (derivedCtor: Constructor) => {
         constructors.forEach((baseCtor) => {
             Object.getOwnPropertyNames(baseCtor.prototype).forEach((name) => {
-                // Do not rewrite the constructor of derivedCtor.
                 if (name === 'constructor')
                     return;
 
@@ -343,12 +451,10 @@ export function mixins(...constructors: Constructor[]) {
     };
 }
 
-// narrowing Event type to KeyboardEvent.
 export function isKeyboardEvent(event: Event): event is KeyboardEvent {
     return 'key' in event;
 }
 
-// narrowing Event type to MouseEvent.
 export function isMouseEvent(event: Event): event is MouseEvent {
     return 'x' in event;
 }
@@ -357,7 +463,11 @@ export function isInputEvent(event: Event): event is InputEvent {
     return 'inputType' in event;
 }
 
-// narrowing Note type to Element.
+// IME compositionend carries committed data without the inputType required by isInputEvent.
+export function isCompositionEndEvent(event: Event): event is CompositionEvent {
+    return event.type === 'compositionend';
+}
+
 export function isElement(node: Node): node is Element {
     return node.nodeType === Node.ELEMENT_NODE;
 }

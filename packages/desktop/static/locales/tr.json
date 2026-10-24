@@ -3,7 +3,12 @@
     "counter": {
       "words": "Sözcükler",
       "characters": "Karakterler",
+      "charactersNoSpaces": "Karakterler (boşluksuz)",
+      "charactersWithSpaces": "Karakterler (boşluklu)",
       "paragraphs": "Paragraflar",
+      "allCharacters": "Tüm karakterler",
+      "document": "Belge",
+      "documentSelection": "Belge / Seçim",
       "selectedWords": "Seçili kelimeler"
     },
     "file": {
@@ -22,13 +27,14 @@
       "export": "Dışa Aktar",
       "exportHtml": "HTML Olarak Dışa Aktar",
       "exportPdf": "PDF Olarak Dışa Aktar",
-      "exportDocx": "DOCX Olarak Dışa Aktar",
+      "convertWithPandoc": "Pandoc ile dönüştür",
       "import": "İçe Aktar",
       "print": "Yazdır",
       "closeTab": "Sekmeyi Kapat",
       "closeWindow": "Pencereyi Kapat",
       "quit": "Çıkış",
-      "preferences": "Tercihler"
+      "preferences": "Tercihler",
+      "exportDocx": "DOCX Olarak Dışa Aktar"
     },
     "edit": {
       "edit": "Düzen",
@@ -68,6 +74,7 @@
       "table": "Tablo",
       "codeFences": "Kod Blokları",
       "quoteBlock": "Alıntı Bloğu",
+      "githubAlerts": "GitHub uyarıları",
       "mathBlock": "Matematik Bloğu",
       "htmlBlock": "HTML Bloğu",
       "orderedList": "Sıralı Liste",
@@ -82,6 +89,7 @@
       "minimize": "Simge Durumuna Küçült",
       "zoomIn": "Yakınlaştır",
       "zoomOut": "Uzaklaştır",
+      "resetZoom": "Yakınlaştırmayı Sıfırla",
       "fullScreen": "Tam Ekran",
       "bringAllToFront": "Tümünü Öne Getir",
       "alwaysOnTop": "Her Zaman Üstte"
@@ -118,7 +126,7 @@
       "sourceCodeMode": "Kaynak Kod Modu",
       "typewriterMode": "Daktilo Modu",
       "focusMode": "Odak Modu",
-      "toggleTableOfContents": "İçindekileri Aç/Kapat",
+      "toggleTableOfContents": "İçindekileri göster",
       "reloadImages": "Görselleri Yeniden Yükle",
       "showDeveloperTools": "Geliştirici Araçlarını Göster",
       "reloadWindow": "Pencereyi Yeniden Yükle"
@@ -142,8 +150,8 @@
       "theme": "&Tema",
       "dark": "Koyu",
       "followThemDisabled": "Sistem temasını takip ederken tema seçimi devre dışı",
-      "lightThemes": "— Açık Temalar —",
-      "darkThemes": "— Koyu Temalar —",
+      "lightThemes": "Açık Temalar",
+      "darkThemes": "Koyu Temalar",
       "ayuDark": "Ayu Dark",
       "ayuLight": "Ayu Light",
       "ayuMirage": "Ayu Mirage",
@@ -187,6 +195,7 @@
     "copyAsRich": "Zengin Metin Olarak Kopyala",
     "copyAsHtml": "HTML Olarak Kopyala",
     "pasteAsPlainText": "Düz Metin Olarak Yapıştır",
+    "lookUp": "\"{selection}\" Ara",
     "insertParagraphBefore": "Önüne Paragraf Ekle",
     "insertParagraphAfter": "Arkasına Paragraf Ekle",
     "spelling": "Yazım...",
@@ -201,6 +210,7 @@
       "paste": "Yapıştır",
       "rename": "Yeniden Adlandır",
       "moveToTrash": "Çöp Kutusuna Taşı",
+      "copyPath": "Yolu Kopyala",
       "showInFolder": "Klasörde Göster"
     },
     "tabs": {
@@ -211,6 +221,7 @@
       "rename": "Yeniden Adlandır",
       "copyPath": "Yolu kopyala",
       "showInFolder": "Klasörde göster",
+      "showInSideBar": "Kenar çubuğunda göster",
       "openInNewWindow": "Yeni pencerede aç"
     }
   },
@@ -229,6 +240,7 @@
   },
   "sideBar": {
     "search": {
+      "backToFiles": "Dosyalara dön",
       "searchInFolder": "Klasörde ara...",
       "noFolderOpen": "Açık klasör yok",
       "noResultsFound": "Sonuç bulunamadı.",
@@ -247,13 +259,33 @@
       "noMatchingFiles": "Eşleşen dosya yok"
     },
     "toc": {
-      "title": "İçindekiler"
+      "expand": "İçindekileri genişlet",
+      "collapse": "İçindekileri daralt",
+      "empty": "Başlık yok",
+      "title": "İçindekiler",
+      "expandAll": "Tümünü genişlet",
+      "collapseAll": "Tümünü daralt"
     },
     "icons": {
       "files": "Dosyalar",
       "search": "Ara",
-      "toc": "İçindekiler",
-      "settings": "Ayarlar"
+      "settings": "Ayarlar",
+      "toc": "İçindekiler"
+    }
+  },
+  "titleBar": {
+    "applicationMenu": "Uygulama Menüsü",
+    "minimize": "Simge Durumuna Küçült",
+    "maximize": "Ekranı Kapla",
+    "restore": "Önceki Boyut",
+    "close": "Kapat",
+    "documentStatistics": {
+      "title": "Belge istatistikleri",
+      "fileInformation": "Dosya bilgileri",
+      "created": "Oluşturulma",
+      "lastModified": "Değişti",
+      "unavailable": "—",
+      "open": "Belge istatistiklerini aç"
     }
   },
   "commandPalette": {
@@ -267,13 +299,9 @@
   "exportSettings": {
     "autoNumberingHeadings": "Başlıkları otomatik numaralandır",
     "title": "Dışa Aktarma Seçenekleri",
-    "info": {
-      "label": "Bilgi",
-      "description": "Lütfen sayfa görünümünü özelleştirin ve devam etmek için \"dışa aktar\"a tıklayın."
-    },
     "page": {
       "label": "Sayfa",
-      "pageTitle": "Sayfa başlığı:",
+      "pageTitle": "Sayfa başlığı",
       "pageSize": "Sayfa boyutu:",
       "landscapeOrientation": "Yatay yönlendirme:",
       "pageMargin": "mm cinsinden sayfa kenar boşluğu:",
@@ -310,12 +338,13 @@
       "description": "Üst bilgi ve/veya alt bilgi tanımlanmışsa metin tüm sayfalarda görünür."
     },
     "toc": {
-      "includeTopHeading": "En üst başlığı dahil et",
-      "includeTopHeadingDetail": "En üst başlık ayrıntısını dahil et",
+      "description": "Dışa aktarılan belgede içindekiler tablosunu göstermek için belgenin gövdesinde ayrı bir satıra [TOC] yazın. İçindekiler tablosu bu konumda görünecektir.",
+      "includeTopHeading": "1. düzey başlıkları dahil et",
+      "includeTopHeadingDetail": "İçindekiler tablosuna tüm 1. düzey (H1) başlıkları dahil et.",
       "label": "İçindekiler",
       "title": "İçindekiler"
     },
-    "export": "Dışa Aktar...",
+    "export": "Dışa Aktar",
     "options": {
       "pageSizes": {
         "a3": "A3 (297mm x 420mm)",
@@ -341,6 +370,10 @@
         "default": "GitHub (Varsayılan)",
         "liber": "Liber"
       }
+    },
+    "info": {
+      "label": "Bilgi",
+      "description": "Lütfen sayfa görünümünü özelleştirin ve devam etmek için \"dışa aktar\"a tıklayın."
     }
   },
   "recent": {
@@ -353,6 +386,7 @@
   },
   "preferences": {
     "title": "Tercihler",
+    "learnMore": "Daha fazla bilgi: {name}",
     "search": {
       "placeholder": "Tercihlerde ara...",
       "categories": {
@@ -372,6 +406,7 @@
         "autoSaveDelay": "Bir değişiklikten sonra dosyanın kaydedileceği süre (ms)",
         "titleBarStyle": "Başlık çubuğu stili (yalnızca Windows ve Linux)",
         "openFilesInNewWindow": "Dosyaları yeni pencerede aç",
+        "openFilesInPreviewMode": "Kenar çubuğu dosyalarını önizleme sekmelerinde aç",
         "openFolderInNewWindow": "Klasörü menü aracılığıyla yeni pencerede aç",
         "zoom": "Yakınlaştırma düzeyi. 0.5 ile 2.0 arasında (dahil)",
         "hideScrollbar": "Kaydırma çubuklarının gizlenip gizlenmeyeceği",
@@ -387,8 +422,9 @@
         "wrapCodeBlocks": "Kod bloklarındaki metni kaydır",
         "editorLineWidth": "Maksimum düzenleyici alanı genişliğini tanımlar. Boş bir dize veya ch (karakter), px (piksel) ya da % (yüzde) son ekleri kullanılabilir",
         "codeFontSize": "Kod bloğundaki yazı tipi boyutu, aralık 12 ~ 18",
-        "codeFontFamily": "Kod bloğunda kullanılan yazı tipi ailesi",
+        "codeFontFamily": "Kod yazı tipi. Satır içi kod ve kod blokları için geçerlidir.",
         "codeBlockLineNumbers": "Satır numaralarının gösterilip gösterilmeyeceği",
+        "sourceCodeLineNumbers": "Kaynak kod modunda satır numaralarını göster",
         "trimUnnecessaryCodeBlockEmptyLines": "Kod bloğundaki baştaki ve sondaki boş satırları kırp",
         "autoPairBracket": "Düzenlerken parantezleri otomatik tamamla",
         "autoPairMarkdownSyntax": "Markdown söz dizimini otomatik tamamla",
@@ -410,8 +446,16 @@
         "frontmatterType": "Ön bilgi türü",
         "superSubScript": "Pandoc'un markdown uzantısı üst simge ve alt simgeyi etkinleştir",
         "footnote": "Pandoc'un markdown uzantısı dipnotu etkinleştir",
+        "texMathDollars": "Pandoc'un markdown uzantısı tex_math_dollars'ı etkinleştir",
+        "texMathGfm": "Pandoc'un markdown uzantısı tex_math_gfm'i etkinleştir",
+        "texMathSingleBackslash": "Pandoc'un markdown uzantısı tex_math_single_backslash'i etkinleştir",
+        "texMathDoubleBackslash": "Pandoc'un markdown uzantısı tex_math_double_backslash'i etkinleştir",
+        "highlightSyntax": "Standart olmayan ==metin== vurgu söz dizimini etkinleştir",
+        "inlineDiff": "Standart olmayan satır içi fark söz dizimini {+ … +} / [- … -] etkinleştir",
+        "multilineBlockquote": "Standart olmayan çok satırlı alıntı söz dizimini >>> … >>> etkinleştir",
+        "githubAlerts": "GitHub uyarıları",
         "isHtmlEnabled": "HTML işlemeyi etkinleştir",
-        "isGitlabCompatibilityEnabled": "GitLab uyumluluk modunu etkinleştir",
+        "softNewlineAsSpace": "Yumuşak satır sonlarını boşluk olarak değerlendir",
         "sequenceTheme": "Dizi diyagramı teması",
         "theme": "MarkText'te kullanılan temayı seçin",
         "followSystemTheme": "Sistem Temasını Takip Et",
@@ -428,7 +472,8 @@
         "autoNormalizeLineEndings": "Dosyaları açarken yeni satır karakterlerini otomatik olarak normalleştir. Devre dışı bırakıldığında dosyalar olduğu gibi açılır.",
         "fileSortOrder": "Açık klasörlerdeki dosyaların sıralama düzeni: artan veya azalan.",
         "openedFilesInSidebar": "Açık dosyaların kenar çubuğunda gösterilip gösterilmeyeceği.",
-        "softNewlineAsSpace": "Yumuşak satır sonlarını boşluk olarak değerlendir"
+        "showPandocConvert": "Pandoc dönüştürme menüsünü gösterir. Pandoc kurulu olmalıdır.",
+        "isGitlabCompatibilityEnabled": "GitLab uyumluluk modunu etkinleştir"
       }
     },
     "categories": {
@@ -472,10 +517,20 @@
         "selectFolder": "Klasör Seç",
         "openBlankPage": "Boş sayfa aç"
       },
+      "pandoc": {
+        "title": "Pandoc Dönüştürme",
+        "description": "Pandoc dönüştürme menüsünü göster",
+        "detailedDescription": "Pandoc kurulu olmalıdır",
+        "found": "Bulundu: {path}",
+        "notFound": "Bulunamadı",
+        "recheck": "Yeniden Denetle"
+      },
       "sidebar": {
         "title": "Kenar Çubuğu",
         "wrapTextInToc": "İçindekilerde metni kaydır",
         "showOpenedFiles": "Açık dosyaları göster",
+        "autoReveal": "Etkin dosyayı kenar çubuğunda göster",
+        "openFilesInPreviewMode": "Kenar çubuğu dosyalarını önizleme sekmelerinde açar. Düzenleme veya çift tıklama sekmeyi korur.",
         "excludePatterns": "Hariç tutma desenleri",
         "excludePatternsNotes": "Hariç tutma desenleri (Notlar)",
         "fileSortBy": {
@@ -504,8 +559,10 @@
           "german": "Deutsch",
           "japanese": "日本語",
           "korean": "한국어",
+          "dutch": "Nederlands",
           "portuguese": "Português",
-          "turkish": "Türkçe"
+          "turkish": "Türkçe",
+          "russian": "Русский"
         }
       }
     },
@@ -517,14 +574,17 @@
         "lineHeight": "Satır yüksekliği",
         "fontFamily": "Yazı tipi ailesi",
         "maxWidth": "Maksimum genişlik",
-        "maxWidthNotes": "Düzenleyici içeriğinin maksimum genişliği"
+        "maxWidthNotes": "Düzenleyici içeriğinin maksimum genişliği. Bir sayının ardından px, ch (karakter) veya % girin, örneğin 800px, 80ch veya 60%. Varsayılan genişliği kullanmak için boş bırakın.",
+        "maxWidthInvalid": "Bir sayının ardından px, ch veya % girin, örneğin 800px.",
+        "codeFontFamily": "Kod yazı tipi",
+        "codeFontFamilyNotes": "Satır içi kod ve kod blokları için geçerlidir."
       },
       "codeBlock": {
         "title": "Kod Bloğu",
         "fontSize": "Yazı tipi boyutu",
-        "fontFamily": "Yazı tipi ailesi",
         "showLineNumbers": "Satır numaralarını göster",
-        "removeEmptyLines": "Boş satırları kaldır"
+        "removeEmptyLines": "Boş satırları kaldır",
+        "fontFamily": "Yazı tipi ailesi"
       },
       "writingBehavior": {
         "title": "Yazma Davranışı",
@@ -564,7 +624,8 @@
         "hideLinkPopup": "Bağlantı açılır penceresini gizle",
         "autoCheck": "Otomatik işaretle",
         "autoNormalizeLineEndings": "Açılışta satır sonlarını LF'ye otomatik normalleştir",
-        "wrapCodeBlocks": "Kod bloklarını kaydır"
+        "wrapCodeBlocks": "Kod bloklarını kaydır",
+        "sourceCodeLineNumbers": "Kaynak kod modunda satır numaralarını göster"
       }
     },
     "image": {
@@ -634,6 +695,14 @@
         "superSubScript": "Üst/Alt Simge",
         "footnote": "Dipnot",
         "footnoteNotes": "Dipnot notları",
+        "texMathDollars": "$ ve $$ ile TeX matematiği",
+        "texMathGfm": "GitHub TeX matematiği ($`…`$ ve ```math)",
+        "texMathSingleBackslash": "Tek ters eğik çizgili TeX matematiği",
+        "texMathDoubleBackslash": "Çift ters eğik çizgili TeX matematiği",
+        "highlightSyntax": "Vurgu (==metin==)",
+        "inlineDiff": "Satır içi fark ({+ … +})",
+        "multilineBlockquote": "Çok satırlı alıntı (>>>)",
+        "githubAlerts": "GitHub uyarılarını etkinleştir",
         "frontmatterType": {
           "jsonBrace": "Süslü Parantezli JSON",
           "jsonSemicolon": "Noktalı Virgüllü JSON",
@@ -661,10 +730,10 @@
         "showHeadingNumbers": "Düzenleyicide başlık numaralarını göster"
       },
       "compatibility": {
-        "enableGitlab": "GitLab uyumluluğunu etkinleştir",
         "enableHtml": "HTML desteğini etkinleştir",
+        "softNewlineAsSpace": "Yumuşak satır sonlarını boşluk olarak değerlendir",
         "title": "Uyumluluk",
-        "softNewlineAsSpace": "Yumuşak satır sonlarını boşluk olarak değerlendir"
+        "enableGitlab": "GitLab uyumluluğunu etkinleştir"
       },
       "lists": {
         "bulletListMarker": "Sırasız liste işareti",
@@ -685,6 +754,7 @@
     "theme": {
       "title": "Tema",
       "followSystemTheme": "Sistem Temasını Takip Et",
+      "followSystemNote": "Sistem temasını izlemek aşağıdaki tema listesini kilitler. Serbestçe tema değiştirmek için bunu kapatın.",
       "modeThemes": "Tema Seçimi",
       "lightModeTheme": "Açık mod teması",
       "darkModeTheme": "Koyu mod teması",
@@ -767,6 +837,7 @@
       "quit": "Çıkış",
       "toggleAutoSave": "Otomatik Kaydetmeyi Aç/Kapat",
       "importFile": "Dosya İçe Aktar",
+      "revealInSideBar": "Kenar çubuğunda göster",
       "exportFile": "Dosya Dışa Aktar",
       "exportFilePdf": "PDF Olarak Dışa Aktar",
       "zoom": "Yakınlaştırma",
@@ -887,19 +958,18 @@
     "ok": "Tamam"
   },
   "dialog": {
+    "moveToTrash": "\"{name}\" öğesini çöp kutusuna taşımak istediğinizden emin misiniz?",
     "cancel": "İptal",
     "changesWillBeLost": "Değişiklikler kaybolacak",
     "close": "Kapat",
     "dontSave": "Kaydetme",
-    "discard": "At",
-    "recover": "Kurtar",
-    "unsavedContentFound": "Son oturumdan kaydedilmemiş içerik bulundu",
-    "unsavedContentFoundDetail": "MarkText son seferinde düzgün kapanmadı. {count} kaydedilmemiş sekme kurtarılsın mı? Atarsanız kalıcı olarak silinir.",
     "file": "Dosya",
     "fileExists": "Dosya zaten var: {filename}",
     "files": "Dosyalar",
     "importWarning": "İçe aktarma uyarısı",
-    "installPandoc": "Pandoc'u Yükle",
+    "installPandoc": "Pandoc bulunamadı. Yükleyin veya MARKTEXT_PANDOC ortam değişkenini pandoc çalıştırılabilir dosyasının yolu olarak ayarlayıp MarkText'i yeniden başlatın.",
+    "exportWarning": "Dışa aktarma uyarısı",
+    "exportWarningMore": "…ve {count} tane daha",
     "keepOpen": "Açık tut",
     "replace": "Değiştir",
     "save": "Kaydet",
@@ -908,7 +978,11 @@
     "unsafeFileTitle": "Güvenli olmayabilecek dosya",
     "unsafeFileMessage": "Bu bağlantı, kod çalıştırabilen bir dosyayı açar",
     "unsafeFileDetail": "\"{name}\" bir yürütülebilir veya betik dosyasıdır. Açmak, bilgisayarınızda program çalıştırabilir. Yalnızca bu belgeye güveniyorsanız devam edin.",
-    "openAnyway": "Yine de aç"
+    "openAnyway": "Yine de aç",
+    "discard": "At",
+    "recover": "Kurtar",
+    "unsavedContentFound": "Son oturumdan kaydedilmemiş içerik bulundu",
+    "unsavedContentFoundDetail": "MarkText son seferinde düzgün kapanmadı. {count} kaydedilmemiş sekme kurtarılsın mı? Atarsanız kalıcı olarak silinir."
   },
   "error": {
     "configSchemaViolation": "Yapılandırma şeması ihlali",
@@ -939,6 +1013,7 @@
       "errorWhileSaving": "Kaydedilirken bir hata oluştu: {msg}",
       "exportSuccessTitle": "Başarıyla dışa aktarıldı",
       "exportSuccessMessage": "\"{name}\" başarıyla dışa aktarıldı!",
+      "exportLinkedMediaMessage": "\"{name}\" dışa aktarıldı. Bu biçim görselleri gömmez, dosya bağlantısı olarak bırakır — görselleri dosyanın yanında tutun ve klasörün tamamını paylaşın.",
       "fileRemovedOnDisk": "\"{name}\" diskten kaldırıldı.",
       "fileChangedOnDisk": "\"{name}\" dosyasında değişiklikler var, yeniden yüklensin mi?",
       "externalChangeMerged": "Diskteki dış değişiklikler \"{name}\" ile birleştirildi. Geri al, birleştirmeyi geri alır.",
@@ -964,6 +1039,21 @@
       "rows": "Satırlar",
       "columns": "Sütunlar"
     },
+    "mediaViewer": {
+      "title": "Önizleme",
+      "close": "Kapat",
+      "zoomIn": "Yakınlaştır",
+      "zoomOut": "Uzaklaştır",
+      "fit": "Pencereye sığdır",
+      "actualSize": "Gerçek boyut",
+      "saveTitle": "Diyagramı kaydet",
+      "saveSvg": "SVG olarak kaydet",
+      "savePng": "PNG olarak kaydet",
+      "copyImage": "Görseli kopyala",
+      "copied": "Görsel panoya kopyalandı",
+      "saveFailed": "Görsel kaydedilemedi: {error}",
+      "copyFailed": "Görsel kopyalanamadı: {error}"
+    },
     "notifications": {
       "notificationNotFound": "Bildirim bulunamadı"
     },
@@ -981,6 +1071,27 @@
       "languageMissing": "Yazım denetimi dili eksik {languageCode}",
       "switchError": "{languageCode} için yazım denetimi değiştirme hatası, {error}",
       "title": "Yazım Denetimi"
+    },
+    "tabs": {
+      "close": "Kapat: {name}",
+      "preview": "{name}, önizleme sekmesi"
     }
+  },
+  "readingMode": {
+    "title": "Okuma Modu",
+    "edit": "Düzenleme Modu",
+    "lock": "Okuma Moduna Geç",
+    "unlock": "Düzenleme Moduna Geç",
+    "defaultMode": "Dosyalar açılırken kullanılacak varsayılan mod",
+    "defaultNote": "Bundan sonra açılacak mevcut dosyalar için geçerlidir. Yeni belgeler düzenlenebilir kalır.",
+    "unsaved": "Okuma Modu açık. Kaydedilmemiş değişiklikler korunuyor ve otomatik kaydetme duraklatıldı.",
+    "failed": "Belge modu değiştirilemedi",
+    "closeSave": "Düzenleme Moduna Geç ve Kaydet",
+    "exportSource": "Dışa aktarma için kaynak dosyadan farklı bir hedef seçin.",
+    "unavailable": "Okuma Modunda kullanılamaz",
+    "skipped": "Kaydedilmemiş değişiklikleri olan salt okunur belgeler atlandı.",
+    "viewImage": "Görseli Görüntüle",
+    "copyLink": "Bağlantı Adresini Kopyala",
+    "resumed": "Düzenleme Modu açık. Otomatik kaydetme devam ediyor."
   }
 }

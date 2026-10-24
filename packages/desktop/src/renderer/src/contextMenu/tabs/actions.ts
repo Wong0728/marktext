@@ -31,3 +31,8 @@ export const showInFolder = (tabId: string): void => {
 export const openInNewWindow = (tabId: string): void => {
   bus.emit('TABS::open-in-new-window', tabId)
 }
+
+export const showInSideBar = (pathname?: string | null): void => {
+  if (!pathname) return
+  bus.emit('SIDEBAR::reveal-file', pathname)
+}

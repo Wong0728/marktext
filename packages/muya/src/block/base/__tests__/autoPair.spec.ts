@@ -1,17 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import Content from '../content';
 
-// Regression suite for marktext muya auto-pair commits being migrated as
-// part of PR-3b. Auto-pairing is the input-handler logic that decides
-// whether typing `(`, `*`, `"` etc. should also insert the matching
-// closing character.  In the new architecture the logic lives in
-// `Content.autoPair` (packages/core/src/block/base/content.ts).
-//
-// `autoPair` only relies on `this.text`, `this.selection.{anchor,focus}`
-// and `this.muya.options.{autoPairQuote,autoPairBracket,autoPairMarkdownSyntax}`,
-// so we can drive it directly off the prototype with a structurally-typed
-// fake `this` and avoid the full Muya bootstrap (which needs a real DOM).
-
 interface IFakeThisOptions {
     autoPairQuote?: boolean;
     autoPairBracket?: boolean;
@@ -107,8 +96,6 @@ describe('autoPair — 358fa83d quote/bracket gate on postInputChar', () => {
     });
 
     it('still pairs `"` when typed at the end of the line', () => {
-        // Empty postInputChar -> the gate should still allow pairing,
-        // otherwise users lose the feature entirely.
         const fakeThis = makeFakeThis('foo', 3);
         const event = makeInputEvent('insertText', '"');
         const { text, needRender } = invokeAutoPair(fakeThis, event, 'foo"', 4);
@@ -127,10 +114,6 @@ describe('autoPair — 358fa83d quote/bracket gate on postInputChar', () => {
     });
 });
 
-// ── marktext 3fa8a9ae "no need to auto pair in inline code" (#1423) ───────
-// Already covered by the `isInInlineCode` parameter on `autoPair`.
-// Defensive test pins the behaviour so future refactors of `format.ts`
-// (which computes the flag via `_checkCursorInTokenType`) don't regress.
 describe('autoPair — 3fa8a9ae no markdown-syntax pairing inside inline code', () => {
     it('does not auto-pair `*` inside inline code', () => {
         const fakeThis = makeFakeThis('``foo``', 2);
@@ -157,8 +140,6 @@ describe('autoPair — 3fa8a9ae no markdown-syntax pairing inside inline code', 
     });
 });
 
-// ── marktext 4278362f "disable autocompletion in inline math" (#715) ─────
-// Same shape as 3fa8a9ae but gated on `isInInlineMath`.
 describe('autoPair — 4278362f no markdown-syntax pairing inside inline math', () => {
     it('does not auto-pair `*` inside inline math', () => {
         const fakeThis = makeFakeThis('$x$', 1);
@@ -222,10 +203,12 @@ describe('autoPair — 701fb9ae soft-line preservation (in-block branches)', () 
 describe('autoPair — 67e18176 soft-line completion on compositionend', () => {
     it('appends composed text after a trailing \\n when compositionend fires', () => {
         const fakeThis = makeFakeThis('a\n', 2);
-        // compositionend has no inputType; only event.type matches.
+        // No `inputType` key at all — a real CompositionEvent has none, and
+        // `autoPair`'s entry guard branches on exactly that. Stubbing one in
+        // (even as `''`) satisfies `isInputEvent`'s `'inputType' in event`
+        // and makes this test pass while the production path is dead (#5279).
         const event = {
             type: 'compositionend',
-            inputType: '',
             data: '你',
         } as unknown as Event;
 
@@ -235,9 +218,6 @@ describe('autoPair — 67e18176 soft-line completion on compositionend', () => {
     });
 });
 
-// ── marktext bbea7eca "do not auto-pair after alphanumeric" (#2843) ──────
-// Already covered by `!/[a-z0-9]/i.test(preInputChar)` in the
-// markdown-syntax branch. Defensive test.
 describe('autoPair — bbea7eca skip when preInputChar is alphanumeric', () => {
     it('still auto-pairs `*` after whitespace (the negative control)', () => {
         // Counter-test to anchor the boundary: after `foo `, the
@@ -272,12 +252,6 @@ describe('autoPair — bbea7eca skip when preInputChar is alphanumeric', () => {
     });
 });
 
-// ── option toggles disable the individual auto-pair behaviours ────────────
-// Each of `autoPairBracket`, `autoPairMarkdownSyntax`, `autoPairQuote`
-// gates exactly one branch in `autoPair`. When the option is `false` the
-// branch must NOT fire: the typed character is left as-is with no inserted
-// closer and `needRender` stays `false`. These pin the per-option opt-out
-// so a future refactor can't silently re-enable a disabled behaviour.
 describe('autoPair — per-option opt-out', () => {
     it('does not pair `(` when autoPairBracket is false', () => {
         const fakeThis = makeFakeThis('foo', 3, { autoPairBracket: false });

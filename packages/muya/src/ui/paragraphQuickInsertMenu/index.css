@@ -39,7 +39,11 @@
     background-color: var(--float-hover-color);
 }
 
-.mu-quick-insert:hover .active {
+.mu-quick-insert:not(.mu-keyboard-navigation):hover .active:not(:hover) {
+    background: transparent;
+}
+
+.mu-quick-insert.mu-keyboard-navigation div.item:hover:not(.active) {
     background: transparent;
 }
 
@@ -54,6 +58,7 @@
 
 .mu-quick-insert .icon-container {
     display: flex;
+    flex-shrink: 0;
     align-items: center;
     justify-content: space-around;
     box-sizing: border-box;
@@ -91,6 +96,8 @@
 
 .mu-quick-insert .description {
     flex: 1;
+    min-width: 0;
+    margin-right: 12px;
 }
 
 .mu-quick-insert .short-cut {
@@ -107,8 +114,12 @@
 }
 
 .mu-quick-insert .big-title {
+    overflow: hidden;
+
     color: var(--editor-color);
     font-size: 13px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
 .mu-quick-insert .hide {

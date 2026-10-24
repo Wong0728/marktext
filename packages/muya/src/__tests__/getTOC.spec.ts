@@ -18,9 +18,9 @@ import { Muya } from '../muya';
 //    same slug across multiple invocations on the same document); duplicate
 //    headings keep distinct slugs but share `githubSlug`. The marktext
 //    fix didn't dedupe and we don't either — that is the caller's call.
-//  - `generateGithubSlug` mirrors marktext url.js literally: ASCII `\w`
-//    only, so CJK / emoji collapse to hyphens. Future Unicode-aware
-//    slugging is a separate change.
+//  - `generateGithubSlug` keeps Unicode letters, marks and numbers the way
+//    GitHub does, so `[jump](#中文标题)` resolves (#5292); emoji and
+//    punctuation are stripped.
 
 const bootedHosts: HTMLElement[] = [];
 let originalVersion: string | undefined;
@@ -100,6 +100,84 @@ describe('muya.getTOC()', () => {
         expect(toc[0].content).toBe('bold and link');
     });
 
+    it('renders inline markdown to HTML in `contentHtml` (#3110)', () => {
+        const md = '## **bold** *italic* `code` ~~del~~ ^sup^ ~sub~ :ok:';
+        const muya = bootMuya(md);
+        const toc = muya.getTOC();
+        expect(toc).toHaveLength(1);
+        expect(toc[0].contentHtml).toBe(
+            '<strong>bold</strong> <em>italic</em> <code>code</code> <del>del</del> <sup>sup</sup> <sub>sub</sub> 🆗',
+        );
+    });
+
+    it('renders ==highlight== in `contentHtml` when highlightSyntax is on', () => {
+        const host = document.createElement('div');
+        document.body.appendChild(host);
+        const muya = new Muya(host, {
+            markdown: '## ==hi==',
+            highlightSyntax: true,
+        } as ConstructorParameters<typeof Muya>[1]);
+        muya.init();
+        bootedHosts.push(muya.domNode);
+        expect(muya.getTOC()[0].contentHtml).toBe('<mark>hi</mark>');
+    });
+
+    it('keeps `contentHtml` textContent equal to `content`', () => {
+        // The outline key and slug derive from `content`, so it must not diverge.
+        const samples = [
+            '## **bold** and [link](https://example.com)',
+            '## ![Logo](https://example.com/logo.png) Title',
+            '## a `code` and :ok: with ~~del~~',
+            '## escaped \\* and bread & butter',
+            '## <b>raw</b> tag',
+        ];
+        for (const md of samples) {
+            const muya = bootMuya(md);
+            const [item] = muya.getTOC();
+            const container = document.createElement('div');
+            container.innerHTML = item.contentHtml;
+            expect(container.textContent).toBe(item.content);
+        }
+    });
+
+    it('renders an emoji shortcode as its glyph and slugs the rendered text (#3110)', () => {
+        // The export slugs the same rendered text, so the TOC must show the
+        // glyph rather than the shortcode to keep their anchor ids aligned.
+        const muya = bootMuya('## :ok: Done');
+        const toc = muya.getTOC();
+        expect(toc[0].content).toBe('🆗 Done');
+        expect(toc[0].contentHtml).toBe('🆗 Done');
+        // `generateGithubSlug` drops the emoji, leaving the space before "Done".
+        expect(toc[0].githubSlug).toBe('-done');
+    });
+
+    it('flattens links and images to text in `contentHtml` (no anchors/images)', () => {
+        const md = `## a [link](https://example.com) and ![alt](https://example.com/i.png)`;
+        const muya = bootMuya(md);
+        const toc = muya.getTOC();
+        expect(toc[0].contentHtml).toBe('a link and alt');
+        expect(toc[0].contentHtml).not.toContain('<a');
+        expect(toc[0].contentHtml).not.toContain('<img');
+    });
+
+    it('resolves reference-style links and images against the document definitions', () => {
+        const md = [
+            '## [Title][ref] and ![Alt][img]',
+            '',
+            '[ref]: https://example.com',
+            '[img]: https://example.com/i.png',
+        ].join('\n');
+        const muya = bootMuya(md);
+        const toc = muya.getTOC();
+        expect(toc[0].content).toBe('Title and Alt');
+        expect(toc[0].contentHtml).toBe('Title and Alt');
+    });
+
+    it('escapes raw text in `contentHtml`', () => {
+        const muya = bootMuya('## a < b & c');
+        expect(muya.getTOC()[0].contentHtml).toBe('a &lt; b &amp; c');
+    });
+
     it('renders an image heading as its alt text, not the raw `![]()`', () => {
         const md = `## ![Logo](https://example.com/logo.png) Title`;
         const muya = bootMuya(md);
@@ -134,16 +212,14 @@ describe('muya.getTOC()', () => {
         expect(toc[0].content).toBe('Tabbed heading');
     });
 
-    it('githubSlug strips non-ASCII letters and emoji and collapses whitespace', () => {
-        // marktext url.js literal behavior: `[^\w\s-]/g` removes CJK and
-        // emoji because JS `\w` is ASCII-only without the `/u` flag.
-        // Future Unicode-aware slugging would be a separate change; this
-        // test locks the marktext-faithful output in place.
-        const md = `# 你好 World 🎉\n\n# API & Usage Examples!`;
+    it('githubSlug keeps non-ASCII letters, strips emoji and punctuation, collapses whitespace', () => {
+        const md = `# 你好 World 🎉\n\n# API & Usage Examples!\n\n## 中文标题\n\n## Café Résumé`;
         const muya = bootMuya(md);
         const toc = muya.getTOC();
-        expect(toc[0].githubSlug).toBe('-world-');
+        expect(toc[0].githubSlug).toBe('你好-world-');
         expect(toc[1].githubSlug).toBe('api-usage-examples');
+        expect(toc[2].githubSlug).toBe('中文标题');
+        expect(toc[3].githubSlug).toBe('café-résumé');
     });
 
     it('duplicate headings share githubSlug but get distinct stable slugs', () => {

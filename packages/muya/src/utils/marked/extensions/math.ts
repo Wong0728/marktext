@@ -1,11 +1,37 @@
+import type { Token } from 'marked';
+// mhchem and the KaTeX stylesheet load in utils/katex, which every render
+// below goes through (renderMath / renderMathToMathML).
 import { renderMath, renderMathToMathML } from '../../katex';
 
+// Each inline math tokenizer must emit its registered extension name; shared types shadow other extensions.
+export type TInlineMathType
+    = | 'inlineMath'
+        | 'inlineMathGfm'
+        | 'inlineMathSingleBackslash'
+        | 'displayMathSingleBackslash'
+        | 'inlineMathDoubleBackslash'
+        | 'displayMathDoubleBackslash';
+
+const INLINE_MATH_TYPES = new Set<string>([
+    'inlineMath',
+    'inlineMathGfm',
+    'inlineMathSingleBackslash',
+    'displayMathSingleBackslash',
+    'inlineMathDoubleBackslash',
+    'displayMathDoubleBackslash',
+]);
+
+const DISPLAY_MATH_MARKERS = new Set(['$$', '\\[', '\\\\[']);
+
 export interface IMathToken {
-    type: 'inlineMath' | 'multiplemath';
+    type: TInlineMathType | 'multiplemath';
     raw: string;
     text: string;
     displayMode: boolean;
-    mathStyle?: '' | 'gitlab';
+    marker?: string;
+    // Only `` $`…`$ `` needs this: every other form closes on its own marker.
+    closeMarker?: string;
+    mathStyle?: '' | 'gfm';
 }
 
 interface IOptions {
@@ -16,47 +42,39 @@ interface IOptions {
     mathOutput?: 'html' | 'mathml';
 }
 
-// A `$` may open inline math. `(?!\s)` keeps `$ 100` out; a leading digit is
-// allowed here and filtered in `start()`, because banning all digits also bans
-// real math such as `$0.1^\circ$`.
-const inlineStartRule = /(^|[^a-zA-Z0-9_])\${1,2}(?!\$)(?!\s)/;
-// A currency span: `$<digit>` whose content has whitespace but no LaTeX syntax
-// at all (`The price is $5 and $ 100.`). Anything else digit-initial — `$2$`,
-// `$0.976$`, `$10\text{ m}$` — is treated as math, matching the editor's own
-// inline renderer, which has no digit ban.
-const CURRENCY_CONTENT_REG = /^\s*[0-9][0-9.,]*\s/;
+// Kept in lockstep with the editor's `inline_math` rule
+// (inlineRenderer/rules.ts) so that a document reads the same while editing and
+// on export (#5446). Same shape, minus bare newlines: math never spans a line
+// on this path. A `$` may open a span mid-word, as pandoc and the editor both
+// allow, so the start hint carries no flanking requirement of its own.
+const inlineStartRule = /\${1,2}(?!\$)/g;
 const inlineRule
-    = /^(\${1,2})(?!\$)((?:\\.|[^\\\n])*?(?:\\.|[^\\\n$]))\1(?=[\s?!.,:，。、；：？！…—～（）()【】\[\]《》""''「」]|$)/;
-const blockSingleLineRule = /^(\${2})(?!\$)((?:\\.|[^\\\n])+?)\1[ \t]*(?:\r?\n|$)/;
-// Block math requires $$ (double dollar) as the delimiter. Single $ is for
-// inline math only. Accepting single $ as a block delimiter causes cascading
-// failures with malformed input like "$\n$\bigcup...\n$\n$" — the orphan $
-// gets treated as a block opener and consumes subsequent formulas' $$
-// delimiters, breaking everything after it.
-const blockRule = /^(\${2})\r?\n((?:\\[\s\S]|[^\\])+?)(?:\r?\n\1|\1)[ \t]*(?:\r?\n|$)/;
-// Allow the opening $$ to share its line with the first line of math:
-// $$\begin{aligned}
-//   ...
-// \end{aligned}
-// $$
-// The closing $$ may either be on its own line or share the last line
-// (e.g. \end{aligned}$$).
-// Also allow the opening $$ to sit on its own line (group 2 may be empty).
-const blockSameLineRule = /^(\$\$)(?!\$)((?:\\.|[^\\\n])*)\r?\n((?:\\[\s\S]|[^\\])+?)(?:\r?\n\1|\1)[ \t]*(?:\r?\n|$)/;
+    = /^(?!\$(?!\$)(?:[^$\\\n]|\\.)*(?:\s\$|\$\d))(\$\$(?!\$)|\$(?=\S))((?:(?!\1)[^\\\n]|\\.)+)\1(?!\1)/;
+const blockRule = /^(\${1,2})\n((?:\\[\s\S]|[^\\])+?)\n\1[ \t]*(?:\n|$)/;
 
-// LaTeX `\(...\)` inline and `\[...\]` block delimiters. The `$`/`$$` rules
-// above are unchanged; these mirror them so documents authored with the
-// backslash delimiters render too.
-//
-// Start rules look for the delimiter while ignoring an escaped delimiter (an
-// odd number of preceding backslashes), matching the inline renderer's
-// `isLengthEven` check.
-const inlineParenStartRule = /(?:^|[^\\])(?:\\\\)*\\\(/;
-const inlineParenRule = /^\\\(((?:\\.|[^\\\n])+?)\\\)/;
-const inlineBracketStartRule = /(?:^|[^\\])(?:\\\\)*\\\[/;
-const inlineBracketRule = /^\\\[((?:\\.|[^\\\n])+?)\\\]/;
-const blockBracketRule
-    = /^\\\[ *\r?\n((?:\\[\s\S]|[^\\])+?)\r?\n *\\\][ \t]*(?:\r?\n|$)/;
+// GitHub's inline math, pandoc's `tex_math_gfm` — mirrors the editor's
+// `inline_math_gfm` rule.
+const gfmStartRule = /\$`/g;
+const gfmRule = /^(\$`)((?:[^`\\\n]|\\.)+)`\$/;
+
+// pandoc's `tex_math_single_backslash` — mirrors the editor's
+// `inline_math_single_backslash` / `display_math_single_backslash` rules.
+// Unlike the dollar rules these admit newlines: `\[` and `\]` on their own
+// lines is the ordinary spelling of a display formula, and pandoc reads a soft
+// line break inside `\(…\)` too. A blank line still ends the span, because
+// marked has already cut the paragraph by the time the rule runs.
+const singleInlineStartRule = /\\\(/g;
+const singleInlineRule = /^(\\\()((?:[^\\]|\\[^)])+)\\\)/;
+const singleDisplayStartRule = /\\\[/g;
+const singleDisplayRule = /^(\\\[)((?:[^\\]|\\[^\]])+)\\\]/;
+
+// pandoc's `tex_math_double_backslash`. The closer is taken literally, with
+// none of the escape rule above: pandoc ends the span at the first `\\)` it
+// sees, so `\\(a\\)b\\)` holds `a` rather than running on.
+const doubleInlineStartRule = /\\\\\(/g;
+const doubleInlineRule = /^(\\\\\()((?:(?!\\\\\))[\s\S])+)\\\\\)/;
+const doubleDisplayStartRule = /\\\\\[/g;
+const doubleDisplayRule = /^(\\\\\[)((?:(?!\\\\\])[\s\S])+)\\\\\]/;
 
 const DEFAULT_OPTIONS = {
     throwOnError: false,
@@ -69,17 +87,106 @@ export default function (options: IOptions = {}) {
     return {
         extensions: [
             inlineKatex(createRenderer(opts, false)),
-            inlineKatexParen(createRenderer(opts, false)),
-            inlineKatexBracket(createRenderer(opts, false)),
             blockKatex(createRenderer(opts, true)),
         ],
+        walkTokens: markDisplayMath,
     };
+}
+
+// Registered separately, and after the dollar extension: `Marked.use` unshifts,
+// so the later registration is tried first and `` $`…`$ `` is claimed before
+// `$…$` can take it with the backticks inside.
+export function gfmMathExtension(options: IOptions = {}) {
+    const opts = Object.assign({}, DEFAULT_OPTIONS, options);
+
+    return {
+        extensions: [inlineGfmKatex(createRenderer(opts, false))],
+    };
+}
+
+// Each backslash extension supplies display classification even when dollar math is disabled.
+export function singleBackslashMathExtension(options: IOptions = {}) {
+    const opts = Object.assign({}, DEFAULT_OPTIONS, options);
+
+    return {
+        extensions: [
+            backslashKatex(
+                'inlineMathSingleBackslash',
+                singleInlineStartRule,
+                singleInlineRule,
+                '\\)',
+                createRenderer(opts, false),
+            ),
+            backslashKatex(
+                'displayMathSingleBackslash',
+                singleDisplayStartRule,
+                singleDisplayRule,
+                '\\]',
+                createRenderer(opts, false),
+            ),
+        ],
+        walkTokens: markDisplayMath,
+    };
+}
+
+export function doubleBackslashMathExtension(options: IOptions = {}) {
+    const opts = Object.assign({}, DEFAULT_OPTIONS, options);
+
+    return {
+        extensions: [
+            backslashKatex(
+                'inlineMathDoubleBackslash',
+                doubleInlineStartRule,
+                doubleInlineRule,
+                '\\\\)',
+                createRenderer(opts, false),
+            ),
+            backslashKatex(
+                'displayMathDoubleBackslash',
+                doubleDisplayStartRule,
+                doubleDisplayRule,
+                '\\\\]',
+                createRenderer(opts, false),
+            ),
+        ],
+        walkTokens: markDisplayMath,
+    };
+}
+
+function isDisplayMathSpan(token: Token): token is Token & IMathToken {
+    const { marker } = token as Partial<IMathToken>;
+
+    return INLINE_MATH_TYPES.has(token.type) && marker !== undefined && DISPLAY_MATH_MARKERS.has(marker);
+}
+
+// Same rule as the editor: a display formula is display math only in a
+// paragraph that holds nothing but such formulas. A tight list item's paragraph
+// comes as a block-level `text` token; inline `text` tokens carry no `tokens`.
+function markDisplayMath(token: Token) {
+    const children = token.type === 'paragraph' || token.type === 'text' ? token.tokens : undefined;
+    if (!children)
+        return;
+
+    const onlyMath = children.some(isDisplayMathSpan)
+        && children.every(child =>
+            isDisplayMathSpan(child)
+            || child.type === 'br'
+            || (child.type === 'text' && child.raw.trim() === ''),
+        );
+
+    if (!onlyMath)
+        return;
+
+    for (const child of children) {
+        if (isDisplayMathSpan(child))
+            child.displayMode = true;
+    }
 }
 
 function createRenderer(options: IOptions, newlineAfter: boolean) {
     return (token: IMathToken) => {
         const { useKatexRender, throwOnError, mathOutput = 'html' } = options;
-        const { type, text, displayMode, mathStyle } = token;
+        const { type, text, displayMode, marker = '$', closeMarker = marker, mathStyle } = token;
         if (useKatexRender && mathOutput === 'mathml') {
             const mathText = text.replace(/\\n/g, '\n');
             return renderMathToMathML(mathText, { displayMode }) + (newlineAfter ? '\n' : '');
@@ -100,72 +207,37 @@ function createRenderer(options: IOptions, newlineAfter: boolean) {
             );
         }
         else {
-            return type === 'inlineMath'
-                ? `$${text}$`
-                : `<pre class="multiple-math" data-math-style="${mathStyle}">${text}</pre>\n`;
+            return type === 'multiplemath'
+                ? `<pre class="multiple-math" data-math-style="${mathStyle}">${text}</pre>\n`
+                : `${marker}${text}${closeMarker}`;
         }
     };
 }
 
-function inlineKatex(renderer: (token: IMathToken) => string) {
+function inlineGfmKatex(renderer: (token: IMathToken) => string) {
     return {
-        name: 'inlineMath',
+        name: 'inlineMathGfm',
         level: 'inline' as const,
         start(src: string) {
-            const match = src.match(inlineStartRule);
-            if (!match)
-                return;
-
-            const index = (match.index || 0) + match[1].length;
-            const possibleKatex = src.substring(index);
-            const math = possibleKatex.match(inlineRule);
-            if (!math)
-                return;
-            // Returning nothing here is not a neutral outcome: Marked's text
-            // rule only stops where an extension reports a start, so a missed
-            // candidate swallows the rest of the paragraph as plain text and
-            // every formula after it leaks as literal `$…$`.
-            if (CURRENCY_CONTENT_REG.test(math[2]))
-                return;
-            return index;
-        },
-        tokenizer(src: string) {
-            const match = src.match(inlineRule);
-            if (match) {
-                return {
-                    type: 'inlineMath',
-                    raw: match[0],
-                    text: match[2].trim(),
-                    displayMode: match[1].length === 2,
-                };
+            gfmStartRule.lastIndex = 0;
+            for (
+                let match = gfmStartRule.exec(src);
+                match;
+                match = gfmStartRule.exec(src)
+            ) {
+                if (gfmRule.test(src.substring(match.index)))
+                    return match.index;
             }
         },
-        renderer,
-    };
-}
-
-function inlineKatexParen(renderer: (token: IMathToken) => string) {
-    return {
-        name: 'inlineMathParen',
-        level: 'inline' as const,
-        start(src: string) {
-            const match = src.match(inlineParenStartRule);
-            if (!match)
-                return;
-
-            const index = (match.index || 0) + match[0].length - 2;
-            const possibleKatex = src.substring(index);
-
-            if (inlineParenRule.test(possibleKatex))
-                return index;
-        },
         tokenizer(src: string) {
-            const match = src.match(inlineParenRule);
+            const match = src.match(gfmRule);
             if (match) {
                 return {
-                    type: 'inlineMath',
+                    type: 'inlineMathGfm',
                     raw: match[0],
-                    text: match[1].trim(),
+                    text: match[2].trim(),
+                    marker: match[1],
+                    closeMarker: '`$',
                     displayMode: false,
                 };
             }
@@ -174,29 +246,75 @@ function inlineKatexParen(renderer: (token: IMathToken) => string) {
     };
 }
 
-function inlineKatexBracket(renderer: (token: IMathToken) => string) {
+function backslashKatex(
+    name: TInlineMathType,
+    startRule: RegExp,
+    rule: RegExp,
+    closeMarker: string,
+    renderer: (token: IMathToken) => string,
+) {
     return {
-        name: 'inlineMathBracket',
+        name,
         level: 'inline' as const,
+        // Every opener is a candidate, not just the first: marked ends the
+        // surrounding text token here, so bailing out on one that turns out not
+        // to open a formula would hide every later formula on the line.
         start(src: string) {
-            const match = src.match(inlineBracketStartRule);
-            if (!match)
-                return;
-
-            const index = (match.index || 0) + match[0].length - 2;
-            const possibleKatex = src.substring(index);
-
-            if (inlineBracketRule.test(possibleKatex))
-                return index;
+            startRule.lastIndex = 0;
+            for (
+                let match = startRule.exec(src);
+                match;
+                match = startRule.exec(src)
+            ) {
+                if (rule.test(src.substring(match.index)))
+                    return match.index;
+            }
         },
         tokenizer(src: string) {
-            const match = src.match(inlineBracketRule);
+            const match = src.match(rule);
+            if (match) {
+                return {
+                    type: name,
+                    raw: match[0],
+                    text: match[2].trim(),
+                    marker: match[1],
+                    closeMarker,
+                    displayMode: false,
+                };
+            }
+        },
+        renderer,
+    };
+}
+
+function inlineKatex(renderer: (token: IMathToken) => string) {
+    return {
+        name: 'inlineMath',
+        level: 'inline' as const,
+        // Every `$` is a candidate, not just the first one: marked stops the
+        // surrounding text token here, so returning early on a `$` that turns
+        // out not to open a formula would hide every later formula on the line
+        // — "from $13B to $24B and $x+y$" must still find `$x+y$` (#5446).
+        start(src: string) {
+            inlineStartRule.lastIndex = 0;
+            for (
+                let match = inlineStartRule.exec(src);
+                match;
+                match = inlineStartRule.exec(src)
+            ) {
+                if (inlineRule.test(src.substring(match.index)))
+                    return match.index;
+            }
+        },
+        tokenizer(src: string) {
+            const match = src.match(inlineRule);
             if (match) {
                 return {
                     type: 'inlineMath',
                     raw: match[0],
-                    text: match[1].trim(),
-                    displayMode: true,
+                    text: match[2].trim(),
+                    marker: match[1],
+                    displayMode: false,
                 };
             }
         },
@@ -209,28 +327,9 @@ function blockKatex(renderer: (token: IMathToken) => string) {
         name: 'multiplemath',
         level: 'block' as const,
         start(src: string) {
-            // Only search for $$ (double dollar) for block math. Single $ is
-            // handled by the inline math tokenizer and should not trigger
-            // block-level matching.
-            const dollar = src.search(/(?:^|\n)\${2}(?!\$)/);
-            const bracket = src.search(/(?:^|\n)\\\[ */);
-            if (dollar === -1)
-                return bracket;
-            if (bracket === -1)
-                return dollar;
-            return Math.min(dollar, bracket);
+            return src.indexOf('\n$');
         },
         tokenizer(src: string) {
-            const singleLineMatch = src.match(blockSingleLineRule);
-            if (singleLineMatch) {
-                return {
-                    type: 'multiplemath',
-                    raw: singleLineMatch[0],
-                    text: singleLineMatch[2].trim(),
-                    displayMode: true,
-                    mathStyle: '',
-                };
-            }
             const match = src.match(blockRule);
             if (match) {
                 return {
@@ -241,27 +340,8 @@ function blockKatex(renderer: (token: IMathToken) => string) {
                     mathStyle: '',
                 };
             }
-            const sameLineMatch = src.match(blockSameLineRule);
-            if (sameLineMatch) {
-                return {
-                    type: 'multiplemath',
-                    raw: sameLineMatch[0],
-                    text: `${sameLineMatch[2].trim()}\n${sameLineMatch[3].trim()}`,
-                    displayMode: sameLineMatch[1].length === 2,
-                    mathStyle: '',
-                };
-            }
-            const bracketMatch = src.match(blockBracketRule);
-            if (bracketMatch) {
-                return {
-                    type: 'multiplemath',
-                    raw: bracketMatch[0],
-                    text: bracketMatch[1].trim(),
-                    displayMode: true,
-                    mathStyle: '',
-                };
-            }
         },
         renderer,
     };
 }
+

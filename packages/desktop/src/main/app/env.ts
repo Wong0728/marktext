@@ -71,9 +71,10 @@ export class AppEnvironment {
 const setupEnvironment = (args: Record<string, unknown>): AppEnvironment => {
   patchEnvPath()
 
-  const isDevMode = process.env.NODE_ENV !== 'production'
-  const debug =
-    !!args['--debug'] || !!process.env.MARKTEXT_DEBUG || process.env.NODE_ENV !== 'production'
+  // Development mode is decided when the app is built (#5407); a NODE_ENV in
+  // the user's environment used to turn every release into a debug run.
+  const isDevMode = import.meta.env.DEV
+  const debug = !!args['--debug'] || !!process.env.MARKTEXT_DEBUG || import.meta.env.DEV
   const verbose = (args['--verbose'] as number | undefined) || 0
   const safeMode = !!args['--safe']
   const userDataPath = args['--user-data-dir'] as string | undefined // or undefined (= default user data path)
@@ -90,7 +91,6 @@ const setupEnvironment = (args: Record<string, unknown>): AppEnvironment => {
 
   ensureAppDirectoriesSync(appEnvironment.paths)
 
-  // Keep this for easier access.
   const mutableGlobal = global as unknown as {
     MARKTEXT_DEBUG: boolean
     MARKTEXT_DEBUG_VERBOSE: number

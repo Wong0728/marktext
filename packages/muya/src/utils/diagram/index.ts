@@ -1,8 +1,4 @@
 const rendererCache = new Map();
-/**
- *
- * @param {string} name the renderer name: plantuml, mermaid, vega-lite, flowchart, sequence, mindmap
- */
 async function loadRenderer(name: string) {
     if (!rendererCache.has(name)) {
         let m;

@@ -27,7 +27,11 @@ vi.mock('@/services/notification', () => ({
 }))
 
 import { useEditorStore } from '@/store/editor'
-import { resolveTocHeadingElement } from '@/util/tocNavigation'
+import {
+  getTocHeadingScrollTop,
+  resolveTocHeadingElement,
+  TOC_HEADING_TOP_GAP
+} from '@/util/tocNavigation'
 
 describe('useEditorStore UPDATE_TOC', () => {
   beforeEach(() => {
@@ -42,7 +46,6 @@ describe('useEditorStore UPDATE_TOC', () => {
     ])
 
     expect(store.listToc.map((i) => i.slug)).toEqual(['uid-1', 'uid-2'])
-    // listToTree nests the lvl-2 entry under the lvl-1 entry.
     expect(store.toc).toHaveLength(1)
     expect(store.toc[0].slug).toBe('uid-1')
     expect(store.toc[0].children).toHaveLength(1)
@@ -125,5 +128,34 @@ describe('resolveTocHeadingElement', () => {
     container.innerHTML = '<div class="mu-container"><h1>Only one</h1></div>'
     // listToc claims two headings but the DOM has one — guard against overrun.
     expect(resolveTocHeadingElement(container, listToc, 'uid-2')).toBeNull()
+  })
+})
+
+describe('getTocHeadingScrollTop', () => {
+  it('aligns the heading below the scroll container top edge', () => {
+    const container = document.createElement('div')
+    const heading = document.createElement('h2')
+    container.scrollTop = 900
+    vi.spyOn(container, 'getBoundingClientRect').mockReturnValue({ top: 52 } as DOMRect)
+    vi.spyOn(heading, 'getBoundingClientRect').mockReturnValue({ top: 600 } as DOMRect)
+
+    expect(getTocHeadingScrollTop(container, heading)).toBe(
+      900 + 600 - 52 - TOC_HEADING_TOP_GAP
+    )
+  })
+
+  it('accounts for layout chrome that moves the editor viewport', () => {
+    const container = document.createElement('div')
+    const heading = document.createElement('h2')
+    container.scrollTop = 900
+    vi.spyOn(heading, 'getBoundingClientRect').mockReturnValue({ top: 600 } as DOMRect)
+    const containerRect = vi.spyOn(container, 'getBoundingClientRect')
+
+    containerRect.mockReturnValue({ top: 24 } as DOMRect)
+    const withoutTabs = getTocHeadingScrollTop(container, heading)
+    containerRect.mockReturnValue({ top: 52 } as DOMRect)
+    const withTabs = getTocHeadingScrollTop(container, heading)
+
+    expect(withTabs).toBe(withoutTabs - 28)
   })
 })

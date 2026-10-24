@@ -1,33 +1,32 @@
-import fs from 'fs-extra'
 import { ipcMain } from 'electron'
-import commandExists from 'command-exists'
-import pandoc from '../utils/pandoc'
+import log from 'electron-log'
+import pandoc, { resolvePandocCommand } from '../utils/pandoc'
+import { resolveCommand } from '../utils/resolveCommand'
+import type { PandocCommandInfo } from '@shared/types/pandoc'
 
 export const registerCmdHandlers = (): void => {
   ipcMain.handle('mt::cmd::exists', async(_event, name: string) => {
     try {
-      if (commandExists.sync(name)) return true
-
-      if (name === 'picgo' && process.platform === 'darwin') {
-        const commonPaths = [
-          '/usr/local/bin/picgo',
-          '/opt/homebrew/bin/picgo',
-          `${process.env.HOME}/.npm-global/bin/picgo`,
-          `${process.env.HOME}/.npm/bin/picgo`,
-          '/usr/local/lib/node_modules/.bin/picgo'
-        ]
-        for (const p of commonPaths) {
-          if (fs.pathExistsSync(p)) return true
-        }
-      }
-      return false
+      return (await resolveCommand(name)) !== null
     } catch {
       return false
     }
   })
 
-  // Reuse pandoc.ts's full lookup (MARKTEXT_PANDOC env, PATH, Windows
-  // install-dir fallback) so the renderer resolves 'auto' DOCX engine the
-  // same way the main export path does.
-  ipcMain.handle('mt::pandoc::exists', () => pandoc.exists())
+  // Report the binary an export would spawn, which `mt::cmd::exists` cannot name (#2751).
+  ipcMain.handle('mt::pandoc::command', async(): Promise<PandocCommandInfo> => {
+    try {
+      return await resolvePandocCommand()
+    } catch (error) {
+      // The pane draws no status line when this rejects, so a failed lookup answers "no pandoc".
+      log.error('Failed to resolve the pandoc command:', error)
+      return { command: null }
+    }
+  })
+
+  // Fork: boolean existence check for the DOCX 'auto' engine picker. Shares the
+  // exact lookup chain with `mt::pandoc::command` (MARKTEXT_PANDOC override,
+  // PATH, Windows install-dir fallbacks) so the renderer resolves the engine
+  // the same way the export path does.
+  ipcMain.handle('mt::pandoc::exists', async() => pandoc.exists())
 }

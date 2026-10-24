@@ -18,8 +18,12 @@
           :key="file.id"
           draggable="true"
           :title="file.pathname"
+          :aria-label="
+            file.isPreview ? t('editor.tabs.preview', { name: file.filename }) : file.filename
+          "
           :class="{
             active: currentFile?.id === file.id,
+            preview: file.isPreview,
             unsaved: !file.isSaved,
             dragging: draggingTabId === file.id,
             'drop-before': isDropBefore(file),
@@ -32,42 +36,58 @@
           @dragstart="onDragStart($event, file)"
           @dragend="onDragEnd($event)"
         >
+          <el-icon
+            v-if="file.readOnly"
+            class="reading-lock"
+            :title="t('readingMode.title')"
+            :aria-label="t('readingMode.title')"
+          >
+            <Lock />
+          </el-icon>
           <span>{{ file.filename }}</span>
           <span class="unsaved-dot" />
-          <el-icon
-            class="close-icon"
-            :size="12"
+          <button
+            type="button"
+            class="plain-button close-icon"
+            :aria-label="t('editor.tabs.close', { name: file.filename })"
             @click.stop="removeFileInTab(file)"
           >
-            <Close />
-          </el-icon>
+            <el-icon :size="12">
+              <Close />
+            </el-icon>
+          </button>
         </li>
       </ul>
     </div>
-    <div
-      class="new-file"
-      @click.stop="newFile()"
-    >
-      <el-icon :size="16">
-        <Plus />
-      </el-icon>
-    </div>
+    <icon-tooltip :content="t('menu.file.newTab')">
+      <button
+        type="button"
+        class="plain-button new-file"
+        :aria-label="t('menu.file.newTab')"
+        @click.stop="newFile()"
+      >
+        <el-icon :size="16">
+          <Plus />
+        </el-icon>
+      </button>
+    </icon-tooltip>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useEditorStore } from '@/store/editor'
-import { useLayoutStore } from '@/store/layout'
 import { storeToRefs } from 'pinia'
-import { Plus, Close } from '@element-plus/icons-vue'
+import { Plus, Close, Lock } from '@element-plus/icons-vue'
+import { useI18n } from 'vue-i18n'
+import IconTooltip from '@/components/iconTooltip/index.vue'
 import { showContextMenu } from '../../contextMenu/tabs'
 import bus from '../../bus'
 import { getUniqueId } from '../../util'
 import type { IFileState, TabDragPayload } from '@shared/types/files'
 
+const { t } = useI18n()
 const editorStore = useEditorStore()
-const layoutStore = useLayoutStore()
 
 const { currentFile, tabs } = storeToRefs(editorStore)
 
@@ -84,7 +104,6 @@ let currentDragPayload: TabDragPayload | null = null
 const draggingTabId = ref<string | null>(null)
 const dropMarker = ref<{ id: string | null; after: boolean } | null>(null)
 
-// Methods incorporated from tabsMixins
 const selectFile = (file: IFileState) => {
   if (file.id !== currentFile.value?.id) {
     editorStore.UPDATE_CURRENT_FILE(file)
@@ -100,7 +119,6 @@ const removeFileInTab = (file: IFileState) => {
   }
 }
 
-// Original methods
 const newFile = () => {
   editorStore.NEW_UNTITLED_TAB({})
 }
@@ -157,10 +175,6 @@ const closeSaved = () => {
 
 const closeAll = () => {
   editorStore.CLOSE_ALL_TABS()
-}
-
-const changeMaxWidth = (width: unknown) => {
-  layoutStore.CHANGE_SIDE_BAR_WIDTH(width as number)
 }
 
 const rename = (tabId: unknown) => {
@@ -428,12 +442,10 @@ onMounted(() => {
   bus.on('TABS::copy-path', copyPath)
   bus.on('TABS::show-in-folder', showInFolder)
   bus.on('TABS::open-in-new-window', openInNewWindow)
-  bus.on('EDITOR_TABS::change-max-width', changeMaxWidth)
 
   const tabsEl = tabContainer.value
   if (!tabsEl) return
 
-  // Allow to scroll through the tabs by mouse wheel or touchpad.
   tabsEl.addEventListener('wheel', handleTabScroll)
 })
 
@@ -445,7 +457,6 @@ onBeforeUnmount(() => {
 
   stopAutoScroll()
 
-  // Remove event listeners
   bus.off('TABS::close-this', closeTab)
   bus.off('TABS::close-others', closeOthers)
   bus.off('TABS::close-saved', closeSaved)
@@ -454,18 +465,27 @@ onBeforeUnmount(() => {
   bus.off('TABS::copy-path', copyPath)
   bus.off('TABS::show-in-folder', showInFolder)
   bus.off('TABS::open-in-new-window', openInNewWindow)
-  bus.off('EDITOR_TABS::change-max-width', changeMaxWidth)
 })
 </script>
 
 <style scoped>
+.reading-lock {
+  margin-inline-end: 6px;
+  flex-shrink: 0;
+}
+
+/* Padding widens the hit area and keeps the inset focus ring off the glyph. */
 .close-icon {
-  cursor: pointer;
-  transition: opacity 0.15s ease-in-out;
+  padding: 2px;
+  border-radius: 4px;
+  transition:
+    opacity 0.15s ease-in-out,
+    background-color 0.15s ease-in-out;
 }
 
 .close-icon:hover {
   color: var(--focusColor);
+  background-color: var(--floatHoverColor);
 }
 
 .editor-tabs {
@@ -502,7 +522,8 @@ onBeforeUnmount(() => {
   & > li {
     transition: all 0.15s ease-in-out;
     position: relative;
-    padding: 0 8px;
+    padding: 0 28px 0 8px;
+    cursor: pointer;
     color: var(--editorColor50);
     font-size: 12px;
     line-height: 28px;
@@ -520,6 +541,13 @@ onBeforeUnmount(() => {
       box-shadow: inset -2px 0 0 var(--themeColor);
     }
     & > .close-icon {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      width: 20px;
+      height: 20px;
+      margin: 0;
+      box-sizing: border-box;
       opacity: 0;
     }
     &:focus {
@@ -528,20 +556,20 @@ onBeforeUnmount(() => {
     &:hover {
       background: var(--floatBgColor) !important;
     }
-    &:hover > .close-icon {
+    &:hover > .close-icon,
+    & > .close-icon:focus-visible {
       opacity: 1;
-    }
-    &:hover > .unsaved-dot {
-      display: none;
     }
     & > span {
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-      margin-right: 3px;
     }
     & > .unsaved-dot {
       display: none;
+      position: absolute;
+      top: 11px;
+      right: 11px;
       width: 6px;
       height: 6px;
       border-radius: 50%;
@@ -549,18 +577,20 @@ onBeforeUnmount(() => {
       flex-shrink: 0;
     }
   }
-  & > li.unsaved:not(.active) {
+  & > li.unsaved {
     & > .close-icon {
       opacity: 0;
     }
     & > .unsaved-dot {
       display: block;
     }
-    &:hover > .close-icon {
+    &:has(> .close-icon:hover) > .close-icon,
+    & > .close-icon:focus-visible {
       opacity: 1;
     }
-    &:hover > .unsaved-dot {
-      display: none;
+    &:has(> .close-icon:hover) > .unsaved-dot,
+    &:focus-within > .unsaved-dot {
+      visibility: hidden;
     }
   }
   & > li.active {
@@ -575,12 +605,9 @@ onBeforeUnmount(() => {
       height: 2px;
       background: var(--themeColor);
     }
-    & > .close-icon {
-      opacity: 1;
-    }
-    & > .unsaved-dot {
-      display: none;
-    }
+  }
+  & > li.preview > span {
+    font-style: italic;
   }
 }
 .editor-tabs > .new-file {
@@ -595,7 +622,8 @@ onBeforeUnmount(() => {
   cursor: pointer;
   color: var(--editorColor50);
   opacity: 0;
-  &.always-visible {
+  &.always-visible,
+  &:focus-visible {
     opacity: 1;
   }
 }

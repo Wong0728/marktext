@@ -31,11 +31,15 @@ import {
 // proven nesting fixture from the unit parity spec.
 const NESTED_TASKS = '- [ ] parent\n\n  - [ ] child1\n  - [ ] child2\n'
 
+const SCROLLED_TASKS = `${Array.from(
+  { length: 80 },
+  (_, index) => `Paragraph before task ${index + 1}`
+).join('\n\n')}\n\n- [ ] review decision\n`
+
 const setAutoCheck = async(app: ElectronApplication, value: boolean): Promise<void> => {
   await sendIpcToRenderer(app, 'mt::user-preference', { autoCheck: value })
 }
 
-// Read the `.checked` flag of the nth rendered task checkbox input.
 const checkboxChecked = async(page: Page, index: number): Promise<boolean> => {
   return await page.evaluate((i) => {
     const inputs = document.querySelectorAll<HTMLInputElement>(
@@ -71,7 +75,6 @@ test.describe('Checklist 32 — task list autoCheck cascade via a real checkbox 
     app = launched.app
     page = launched.page
     await waitForMenuReady(app)
-    // Three task items render three native checkboxes.
     await expect.poll(() => checkboxCount(page)).toBe(3)
   })
 
@@ -83,20 +86,16 @@ test.describe('Checklist 32 — task list autoCheck cascade via a real checkbox 
     await setAutoCheck(app, true)
     await page.waitForTimeout(200)
 
-    // Baseline: every checkbox is unchecked.
     expect(await checkboxChecked(page, 0)).toBe(false)
     expect(await checkboxChecked(page, 1)).toBe(false)
     expect(await checkboxChecked(page, 2)).toBe(false)
 
-    // Click the REAL parent checkbox input.
     await page.click('.editor-component input[type=checkbox] >> nth=0')
 
-    // The cascade flips both children checked.
     await expect.poll(() => checkboxChecked(page, 0)).toBe(true)
     await expect.poll(() => checkboxChecked(page, 1)).toBe(true)
     await expect.poll(() => checkboxChecked(page, 2)).toBe(true)
 
-    // Saved markdown shows the checked marker for all three task items.
     const md = await getMarkdownContent(page, app)
     const checked = (md.match(/- \[x\]/g) || []).length
     expect(checked).toBe(3)
@@ -105,27 +104,53 @@ test.describe('Checklist 32 — task list autoCheck cascade via a real checkbox 
   })
 
   test('with autoCheck OFF, clicking the parent changes only the parent (no cascade)', async() => {
-    // Turn the cascade off and reset to a clean all-unchecked nested list.
-    // (The previous test left all three checked.)
     await setAutoCheck(app, false)
     await page.waitForTimeout(200)
     await reloadFixture(page, app)
 
-    // Click the REAL parent checkbox input — the exact same gesture as the ON
-    // test, so the only difference is the autoCheck option.
     await page.click('.editor-component input[type=checkbox] >> nth=0')
 
     await expect.poll(() => checkboxChecked(page, 0)).toBe(true)
-    // No cascade: both children stay unchecked.
     expect(await checkboxChecked(page, 1)).toBe(false)
     expect(await checkboxChecked(page, 2)).toBe(false)
 
-    // Saved markdown shows exactly one checked marker (the parent).
     const md = await getMarkdownContent(page, app)
     const checked = (md.match(/- \[x\]/g) || []).length
     expect(checked).toBe(1)
     expect(md).toContain('- [x] parent')
 
     await expectNoRendererErrors(app)
+  })
+})
+
+test.describe('Task-list checkbox preserves the viewport', () => {
+  test('clicking a visible checkbox in a long document does not jump to the top', async() => {
+    const { app, page } = await launchWithMarkdown(SCROLLED_TASKS, {
+      suppressErrorDialog: true
+    })
+
+    try {
+      const checkbox = page.locator('.editor-component input[type=checkbox]')
+      await checkbox.scrollIntoViewIfNeeded()
+
+      const before = await page.evaluate(() => {
+        const editor = document.querySelector('.editor-component') as HTMLElement | null
+        return editor?.scrollTop ?? 0
+      })
+      expect(before).toBeGreaterThan(500)
+
+      await checkbox.click()
+      await expect(checkbox).toBeChecked()
+      await page.waitForTimeout(250)
+
+      const after = await page.evaluate(() => {
+        const editor = document.querySelector('.editor-component') as HTMLElement | null
+        return editor?.scrollTop ?? 0
+      })
+      expect(after).toBeGreaterThan(before - 100)
+      await expectNoRendererErrors(app)
+    } finally {
+      await app.close()
+    }
   })
 })

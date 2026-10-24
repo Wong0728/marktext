@@ -4,6 +4,7 @@ import type { Muya } from '../muya';
 import type { IRenderCursor } from '../selection/types';
 import type { IParagraphState, TContainerState, TState } from '../state/types';
 import type { IHighlight, Labels } from './types';
+import { prepareReadingLinks } from '../editor/readOnly';
 import logger from '../utils/logger';
 import { tokenizer } from './lexer';
 import Renderer from './renderer';
@@ -64,7 +65,7 @@ class InlineRenderer {
     patch(block: Format, cursor?: IRenderCursor, highlights: IHighlight[] = []) {
         const { jsonState } = this.muya.editor;
         if (jsonState.version !== this._labelsVersion) {
-            this._collectReferenceDefinitions();
+            this.labels = this.collectReferenceDefinitions();
             this._labelsVersion = jsonState.version;
         }
         const { domNode } = block;
@@ -75,12 +76,17 @@ class InlineRenderer {
         const html = this.renderer.output(
             tokens,
             block,
-            cursor && cursor.block === block ? cursor : {},
+            !this.muya.isReadOnly && cursor && cursor.block === block ? cursor : {},
         );
         domNode!.innerHTML = html;
+        if (this.muya.isReadOnly)
+            prepareReadingLinks(domNode!);
     }
 
-    private _collectReferenceDefinitions() {
+    // Reference definitions (`[ref]: url`) live in their own paragraphs, so
+    // resolving `[text][ref]` needs a document-wide pass. Shared with
+    // `getTOC`, which tokenizes headings outside a rendered block.
+    collectReferenceDefinitions(): Labels {
         const state = this.muya.editor.jsonState.getState();
         const labels = new Map();
 
@@ -101,7 +107,7 @@ class InlineRenderer {
 
         travel(state);
 
-        this.labels = labels;
+        return labels;
     }
 
     getLabelInfo(blockOrState: ParagraphContent | IParagraphState) {

@@ -1,8 +1,47 @@
-import type { CodeEmojiMathToken, ISyntaxRenderOptions } from '../types';
+import type Format from '../../block/base/format';
+import type { CodeEmojiMathToken, ISyntaxRenderOptions, Token } from '../types';
 import type Renderer from './index';
 import { CLASS_NAMES } from '../../config';
 import { renderMathOrThrow } from '../../utils/katex';
 import { htmlToVNode } from '../../utils/snabbdom';
+
+// The openers pandoc reads as display rather than inline math: `$$` from
+// `tex_math_dollars`, `\[` and `\\[` from the two backslash extensions.
+const DISPLAY_MATH_MARKERS = new Set(['$$', '\\[', '\\\\[']);
+
+function isDisplayMarker(marker: string) {
+    return DISPLAY_MATH_MARKERS.has(marker);
+}
+
+function isBlankOrDisplayMath(token: Token) {
+    switch (token.type) {
+        case 'inline_math':
+            return isDisplayMarker(token.marker);
+        case 'text':
+            return token.content.trim() === '';
+        case 'soft_line_break':
+        case 'hard_line_break':
+            return true;
+        default:
+            return false;
+    }
+}
+
+// A display formula is drawn in display mode only in a paragraph that holds
+// nothing but such formulas; next to other text, or in a heading or table cell,
+// it stays inline. pandoc instead draws `\[…\]` in display mode wherever it
+// appears, but `.katex-display` is a centred block, which would break the line
+// around it — so muya keeps the rule it already applies to `$$…$$` (#4904).
+function isDisplayMath(token: CodeEmojiMathToken, block: Format) {
+    if (!isDisplayMarker(token.marker) || block.blockName !== 'paragraph.content')
+        return false;
+
+    const siblings = token.parent;
+    const coversParagraph = siblings[0].range.start === 0
+        && siblings[siblings.length - 1].range.end === block.text.length;
+
+    return coversParagraph && siblings.every(isBlankOrDisplayMath);
+}
 
 export default function inlineMath(this: Renderer, {
     h,
@@ -12,13 +51,18 @@ export default function inlineMath(this: Renderer, {
     outerClass,
 }: ISyntaxRenderOptions & { token: CodeEmojiMathToken }) {
     const className = this.getClassName(outerClass, block, token, cursor);
-    const mathSelector
+    const { start, end } = token.range;
+    const { marker } = token;
+    const displayMode = isDisplayMath(token, block);
+    let mathSelector
         = className === CLASS_NAMES.MU_HIDE
             ? `span.${className}.${CLASS_NAMES.MU_MATH}`
             : `span.${CLASS_NAMES.MU_MATH}`;
-
-    const { start, end } = token.range;
-    const { marker } = token;
+    let markerSelector = `span.${className}.${CLASS_NAMES.MU_MATH_MARKER}`;
+    if (displayMode) {
+        mathSelector += `.${CLASS_NAMES.MU_DISPLAY_MATH}`;
+        markerSelector += `.${CLASS_NAMES.MU_DISPLAY_MATH}`;
+    }
 
     const startMarker = this.highlight(
         h,
@@ -36,12 +80,11 @@ export default function inlineMath(this: Renderer, {
         token,
     );
 
-    const { content: math, type, displayMode: tokenDisplayMode } = token;
+    const { content: math, type } = token;
 
     const { loadMathMap } = this;
 
-    const displayMode = tokenDisplayMode ?? false;
-    const key = `${math}_${type}_${displayMode}`;
+    const key = JSON.stringify([math, type, displayMode]);
     let mathVnode = null;
     const previewSelector = `span.${CLASS_NAMES.MU_MATH_RENDER}`;
     // Inline math errors stay compact to keep the surrounding text baseline
@@ -77,7 +120,7 @@ export default function inlineMath(this: Renderer, {
     }
 
     return [
-        h(`span.${className}.${CLASS_NAMES.MU_MATH_MARKER}`, startMarker),
+        h(markerSelector, startMarker),
         h(mathSelector, [
             h(
                 `span.${CLASS_NAMES.MU_INLINE_RULE}.${CLASS_NAMES.MU_MATH_TEXT}`,
@@ -100,6 +143,6 @@ export default function inlineMath(this: Renderer, {
                 mathVnode,
             ),
         ]),
-        h(`span.${className}.${CLASS_NAMES.MU_MATH_MARKER}`, endMarker),
+        h(markerSelector, endMarker),
     ];
 }

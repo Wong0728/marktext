@@ -1,4 +1,5 @@
 const COMMANDS = Object.freeze({
+  VIEW_READ_ONLY_MODE: 'view.read-only-mode',
   EDIT_COPY: 'edit.copy',
   EDIT_COPY_AS_HTML: 'edit.copy-as-html',
   EDIT_COPY_AS_RICH: 'edit.copy-as-rich',
@@ -36,7 +37,6 @@ const COMMANDS = Object.freeze({
   FILE_SAVE: 'file.save',
   FILE_SAVE_AS: 'file.save-as',
   FILE_EXPORT_FILE_PDF: 'file.export-file.pdf',
-  // FILE_TOGGLE_AUTO_SAVE: 'file.toggle-auto-save',
 
   FORMAT_CLEAR_FORMAT: 'format.clear-format',
   FORMAT_EMPHASIS: 'format.emphasis',
@@ -105,6 +105,7 @@ const COMMANDS = Object.freeze({
   WINDOW_TOGGLE_ALWAYS_ON_TOP: 'window.toggle-always-on-top',
   WINDOW_TOGGLE_FULL_SCREEN: 'window.toggle-full-screen',
   WINDOW_ZOOM_IN: 'window.zoomIn',
+  WINDOW_ZOOM_RESET: 'window.resetZoom',
   WINDOW_ZOOM_OUT: 'window.zoomOut'
 } as const)
 

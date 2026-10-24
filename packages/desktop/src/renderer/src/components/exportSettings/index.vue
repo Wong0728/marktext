@@ -27,7 +27,6 @@
           :label="t('exportSettings.page.label')"
           name="page"
         >
-          <!-- HTML -->
           <div v-if="!isPrintable">
             <text-box
               :description="t('exportSettings.page.pageTitle')"
@@ -51,7 +50,6 @@
             />
           </div>
 
-          <!-- PDF/Print -->
           <div v-if="isPrintable">
             <div v-if="exportType === 'pdf'">
               <cur-select
@@ -310,6 +308,9 @@
           :label="t('exportSettings.toc.label')"
           name="toc"
         >
+          <p class="text">
+            {{ t('exportSettings.toc.description') }}
+          </p>
           <bool
             :description="t('exportSettings.toc.includeTopHeading')"
             :detailed-description="t('exportSettings.toc.includeTopHeadingDetail')"
@@ -356,7 +357,7 @@ const exportType = ref('')
 const themesLoaded = ref(false)
 const isPrintable = ref(true)
 const showExportSettingsDialog = ref(false)
-const activeName = ref('info')
+const activeName = ref('page')
 const htmlTitle = ref('')
 const embedImages = ref(true)
 // Inverse of embedImages: the two options are mutually exclusive (either the
@@ -669,7 +670,7 @@ const loadThemesFromDisk = async () => {
   const themeDir = window.path.join(userDataPath, 'themes/export')
 
   if (!(await window.fileUtils.isDirectory(themeDir))) return
-  let filenames = []
+  let filenames: string[]
   try {
     filenames = await window.fileUtils.readdir(themeDir)
   } catch {

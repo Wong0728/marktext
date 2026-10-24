@@ -1,7 +1,6 @@
 import { rename as fsRename } from 'fs-extra'
-import { createReadStream } from 'fs'
+import { stat } from 'fs/promises'
 import path from 'path'
-import type { Readable } from 'stream'
 import {
   BrowserWindow,
   app,
@@ -9,26 +8,40 @@ import {
   shell,
   ipcMain,
   type IpcMainEvent,
-  type MenuItem
+  type MenuItem,
+  type WebContents
 } from 'electron'
 import log from 'electron-log'
 import JSZip from 'jszip'
 import { isDirectory, isFile, exists } from 'common/filesystem'
-import { MARKDOWN_EXTENSIONS, isDangerousExecutableFile, isMarkdownFile } from 'common/filesystem/paths'
+import {
+  MARKDOWN_EXTENSIONS,
+  isDangerousExecutableFile,
+  isMarkdownFile
+} from 'common/filesystem/paths'
 import { checkUpdates, userSetting } from './marktext'
 import { showTabBar } from './view'
 import { COMMANDS } from '../../commands'
 import type { CommandManager } from '../../commands'
 import { EXTENSION_HASN, PANDOC_EXTENSIONS, URL_REG } from '../../config'
-import { normalizeAndResolvePath, writeFile } from '../../filesystem'
+import { normalizeAndResolvePath, resolveLocalLinkTarget, writeFile } from '../../filesystem'
 import { writeMarkdownFile } from '../../filesystem/markdown'
+import { documentWrites } from '../../filesystem/documentWrites'
 import { getPath, getRecommendTitleFromMarkdownString } from '../../utils'
-import pandoc from '../../utils/pandoc'
+import pandoc, {
+  PANDOC_EXPORT_FORMATS,
+  formatLinksMedia,
+  getPandocLanguage,
+  getPandocReader,
+  getReaderExtensions,
+  listLinkedMedia,
+  shouldMirrorMedia
+} from '../../utils/pandoc'
 import { exportDocxFile, resolveDocxEngine } from '../../utils/htmlToDocx'
 import { printToPdfOffscreen } from '../../utils/offscreenPrint'
 import type { DocxFontSettings } from '../../utils/docxReference'
-import { t } from '../../i18n'
-import type { UnsavedFile } from '@shared/types/files'
+import { t, getCurrentLanguage } from '../../i18n'
+import type { PandocExportPayload, TabOptions, UnsavedFile } from '@shared/types/files'
 
 type Win = BrowserWindow | null | undefined
 
@@ -67,7 +80,6 @@ const getExportExtensionFilter = (type: string): Electron.FileFilter[] | undefin
     ]
   }
 
-  // Allow all extensions.
   return undefined
 }
 
@@ -104,7 +116,10 @@ interface ExportPayload {
   zipImages?: Array<{ zipName: string; data: Uint8Array }>
 }
 
-// Handle the export response from renderer process.
+/** A title or heading can carry a slash, a basename what the OS refuses; empty is `Untitled`. */
+const sanitizeFilename = (name?: string): string =>
+  (name || '').replace(/[/\\:*?"<>|]/g, '-').trim() || 'Untitled'
+
 const handleResponseForExport = async(e: IpcMainEvent, payload: ExportPayload): Promise<void> => {
   const { type, content, pathname, title, pageOptions } = payload
   const win = BrowserWindow.fromWebContents(e.sender)
@@ -114,10 +129,7 @@ const handleResponseForExport = async(e: IpcMainEvent, payload: ExportPayload): 
   const isZipExport = type === 'styledHtml' && !!payload.zipImages
   const extension = isZipExport ? '.zip' : (EXTENSION_HASN as Record<string, string>)[type]
   const dirname = pathname ? path.dirname(pathname) : getPath('documents')
-  let nakedFilename = pathname ? path.basename(pathname, '.md') : title
-  if (!nakedFilename) {
-    nakedFilename = 'Untitled'
-  }
+  const nakedFilename = sanitizeFilename(pathname ? path.basename(pathname, '.md') : title)
 
   const defaultPath = path.join(dirname, `${nakedFilename}${extension}`)
   const { filePath, canceled } = await dialog.showSaveDialog(win, {
@@ -129,6 +141,7 @@ const handleResponseForExport = async(e: IpcMainEvent, payload: ExportPayload): 
 
   if (filePath && !canceled) {
     try {
+      await assertExportDestination(pathname, filePath)
       if (type === 'pdf') {
         // The renderer hands over a fully print-ready document; it is
         // rasterized in a dedicated hidden window (#11) so the visible
@@ -158,8 +171,8 @@ const handleResponseForExport = async(e: IpcMainEvent, payload: ExportPayload): 
         if (!content) {
           throw new Error('No HTML content found for DOCX export.')
         }
-        const engine = resolveDocxEngine(payload.docxEngine)
-        if (engine === 'pandoc' && !pandoc.exists()) {
+        const engine = await resolveDocxEngine(payload.docxEngine)
+        if (engine === 'pandoc' && !(await pandoc.exists())) {
           noticeDocxPandocNotFound(win)
           return
         }
@@ -212,6 +225,121 @@ const handleResponseForExport = async(e: IpcMainEvent, payload: ExportPayload): 
   }
 }
 
+/** Bodies are HTML and pandoc echoes document text into them, so escape first. */
+const escapeNotificationText = (text: string): string =>
+  text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
+const MAX_PANDOC_WARNING_LINES = 5
+
+// The first few warning lines plus a count of the rest — pandoc prints one per link.
+const summarizePandocWarnings = (warnings: string): string => {
+  const lines = warnings
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+  const shown = lines.slice(0, MAX_PANDOC_WARNING_LINES).map(escapeNotificationText)
+  const hidden = lines.length - MAX_PANDOC_WARNING_LINES
+  if (hidden > 0) {
+    shown.push(escapeNotificationText(t('dialog.exportWarningMore', { count: hidden })))
+  }
+
+  // The body is HTML, so pandoc's line-per-warning output needs explicit breaks.
+  return shown.join('<br>')
+}
+
+const handlePandocExport = async(e: IpcMainEvent, payload: PandocExportPayload): Promise<void> => {
+  const win = BrowserWindow.fromWebContents(e.sender)
+  if (!win) return
+
+  const format = PANDOC_EXPORT_FORMATS.find((f) => f.id === payload.target)
+  if (!format) {
+    log.error(`Unknown pandoc export target: ${payload.target}`)
+    return
+  }
+
+  const {
+    markdown,
+    title,
+    pathname,
+    superSubScript,
+    githubAlerts,
+    footnote,
+    texMathDollars,
+    texMathGfm,
+    texMathSingleBackslash,
+    texMathDoubleBackslash
+  } = payload
+  // The save dialog and pandoc's link resolution both need the document's folder.
+  const sourceDir = pathname ? path.dirname(pathname) : undefined
+  const stem = sanitizeFilename(pathname ? path.basename(pathname, path.extname(pathname)) : title)
+  let filePath = ''
+  // Awaited inside the try, so a save the OS refuses becomes a notification.
+  try {
+    const { filePath: chosen, canceled } = await dialog.showSaveDialog(win, {
+      defaultPath: path.join(sourceDir ?? getPath('documents'), `${stem}${format.extension}`),
+      filters: [{ name: format.label, extensions: [format.extension.slice(1)] }]
+    })
+    if (canceled || !chosen || win.isDestroyed()) return
+    filePath = chosen
+    await assertExportDestination(pathname, filePath)
+    // The reader is built once the export is certain: naming `tex_math_gfm` needs pandoc
+    // to have answered `--list-extensions`, and a cancelled dialog should not pay for it.
+    const reader = getPandocReader(
+      {
+        superSubScript: superSubScript === true,
+        githubAlerts: githubAlerts === true,
+        footnotes: footnote === true,
+        texMathDollars: texMathDollars === true,
+        texMathGfm: texMathGfm === true,
+        texMathSingleBackslash: texMathSingleBackslash === true,
+        texMathDoubleBackslash: texMathDoubleBackslash === true
+      },
+      await getReaderExtensions()
+    )
+    // The plain-text writers keep images as links, so the pictures are mirrored along.
+    const linksMedia = formatLinksMedia(format.target)
+    const media = linksMedia ? await listLinkedMedia(markdown, reader) : []
+
+    const { warnings } = await pandoc.toFile(format.target, filePath, markdown, {
+      cwd: sourceDir,
+      resourcePath: sourceDir,
+      mirrorMedia: linksMedia && shouldMirrorMedia(media, sourceDir, filePath),
+      reader,
+      // Only EPUB takes a title, for its title page; `lang` is the app's, not the spawn locale.
+      metadata: {
+        ...(format.target === 'epub3' ? { title: title || stem } : {}),
+        lang: getPandocLanguage(getCurrentLanguage())
+      }
+    })
+
+    // Pandoc can exit successfully after replacing unreadable images with alt text; surface its nonblank warnings.
+    const message = summarizePandocWarnings(warnings)
+    if (message && !win.isDestroyed()) {
+      log.warn(`pandoc export warnings for ${filePath}:`, warnings)
+      win.webContents.send('mt::show-notification', {
+        title: t('dialog.exportWarning'),
+        type: 'warning',
+        message
+      })
+    }
+    // Whether or not the pictures could be mirrored, the notice has to say they are links.
+    if (!win.isDestroyed()) {
+      win.webContents.send('mt::export-success', { type: format.id, filePath, linksMedia })
+    }
+  } catch (err) {
+    log.error('Error while exporting with pandoc:', err)
+    if (win.isDestroyed()) return
+    const ERROR_MSG =
+      (err instanceof Error && err.message) || `Error happened when export ${filePath}`
+    // pandoc errors run several lines and the body is HTML, so the raw text is the fallback.
+    win.webContents.send('mt::show-notification', {
+      title: t('editor.export.failed', { type: format.label }),
+      type: 'error',
+      message: summarizePandocWarnings(ERROR_MSG) || escapeNotificationText(ERROR_MSG)
+    })
+  }
+}
+
 const handleResponseForPrint = async(e: IpcMainEvent): Promise<void> => {
   const win = BrowserWindow.fromWebContents(e.sender)
   if (!win) {
@@ -229,60 +357,76 @@ const handleResponseForSave = async(
   pathname: string | undefined,
   markdown: string,
   options: UnsavedFile['options'],
-  defaultPath?: string
+  defaultPath?: string,
+  saveAs = false
 ): Promise<string | void> => {
   const win = BrowserWindow.fromWebContents(e.sender)
-  if (!win) {
-    return Promise.resolve()
-  }
+  if (!win) return
+  registerDocumentOwner(e.sender)
+  const writeEpoch = documentWrites.capture(e.sender.id, id)
+  if (writeEpoch === null) return
   let recommendFilename = getRecommendTitleFromMarkdownString(markdown)
   if (!recommendFilename) {
     recommendFilename = filename || 'Untitled'
   }
 
-  // If the file doesn't exist on disk add it to the recently used documents later
-  // and execute file from filesystem watcher for a short time. The file may exists
-  // on disk nevertheless but is already tracked by MarkText.
-  const alreadyExistOnDisk = !!pathname
+  // CLI buffers have a target pathname before their first disk write.
+  const alreadyExistOnDisk = !!pathname && !options.isPendingCreation
+
+  if (!saveAs && pathname && options.isPendingCreation && (await exists(pathname))) {
+    const { response } = await dialog.showMessageBox(win, {
+      type: 'warning',
+      buttons: [t('dialog.replace'), t('dialog.cancel')],
+      defaultId: 1,
+      cancelId: 1,
+      message: t('dialog.fileExists', { filename: pathname })
+    })
+    if (response !== 0) return
+  }
 
   let filePath = pathname
 
-  if (!filePath) {
+  if (saveAs || !filePath) {
     const { filePath: dialogPath, canceled } = await dialog.showSaveDialog(win, {
-      defaultPath: path.join(defaultPath || getPath('documents'), `${recommendFilename}.md`)
+      defaultPath:
+        saveAs && pathname
+          ? pathname
+          : path.join(defaultPath || getPath('documents'), `${recommendFilename}.md`)
     })
-
-    if (dialogPath && !canceled) {
-      filePath = dialogPath
-    }
+    if (canceled || !dialogPath) return
+    filePath = dialogPath
   }
 
-  // Save dialog canceled by user - no error.
-  if (!filePath) {
-    return Promise.resolve()
-  }
+  const destination = path.resolve(!saveAs && !path.extname(filePath) ? `${filePath}.md` : filePath)
+  // SaveOptions is partial on the IPC surface; renderer save requests supply all document options.
+  return documentWrites
+    .write(e.sender.id, id, writeEpoch, () =>
+      writeMarkdownFile(
+        destination,
+        markdown,
+        options as Parameters<typeof writeMarkdownFile>[2]
+      ).then(() => true)
+    )
+    .then((written) => {
+      if (!written) return
+      if (!alreadyExistOnDisk || pathname !== destination) {
+        if (pathname && pathname !== destination) {
+          ipcMain.emit('window-change-file-path', win.id, destination, pathname)
+        } else {
+          ipcMain.emit('window-add-file-path', win.id, destination)
+        }
+        if (!alreadyExistOnDisk) ipcMain.emit('menu-add-recently-used', destination)
 
-  filePath = path.resolve(filePath)
-  const extension = path.extname(filePath) || '.md'
-  filePath = !filePath.endsWith(extension) ? (filePath += extension) : filePath
-  // The original JS passed `win` here; writeMarkdownFile only takes 3 args
-  // (the 4th was silently ignored). Drop it explicitly under strict mode.
-  // The IPC `SaveOptions` has every field optional, but writeMarkdownFile
-  // requires the strict `MarkdownDocumentOptions` shape — the renderer always
-  // populates every field for the unsaved-file dialog payload, so the cast
-  // is safe at this seam.
-  return writeMarkdownFile(filePath, markdown, options as Parameters<typeof writeMarkdownFile>[2])
-    .then(() => {
-      if (win.isDestroyed()) return id
-      if (!alreadyExistOnDisk) {
-        ipcMain.emit('window-add-file-path', win.id, filePath)
-        ipcMain.emit('menu-add-recently-used', filePath)
-
-        const newFilename = path.basename(filePath!)
-        win.webContents.send('mt::set-pathname', { id, pathname: filePath, filename: newFilename })
+        const newFilename = path.basename(destination)
+        win.webContents.send('mt::set-pathname', {
+          id,
+          pathname: destination,
+          filename: newFilename,
+          savedMarkdown: markdown
+        })
       } else {
-        ipcMain.emit('window-file-saved', win.id, filePath)
-        win.webContents.send('mt::tab-saved', id)
+        ipcMain.emit('window-file-saved', win.id, destination)
+        win.webContents.send('mt::tab-saved', id, markdown)
       }
       return id
     })
@@ -300,7 +444,11 @@ const showUnsavedFilesMessage = async(
 ): Promise<{ needSave: boolean } | null> => {
   const { response } = await dialog.showMessageBox(win, {
     type: 'warning',
-    buttons: [t('dialog.save'), t('dialog.dontSave'), t('dialog.cancel')],
+    buttons: [
+      t(files.some((file) => file.readOnly) ? 'readingMode.closeSave' : 'dialog.save'),
+      t('dialog.dontSave'),
+      t('dialog.cancel')
+    ],
     defaultId: 0,
     message: t('dialog.saveChanges', {
       count: files.length,
@@ -326,9 +474,9 @@ const showUnsavedFilesMessage = async(
   }
 }
 
-const noticePandocNotFound = (win: BrowserWindow): void => {
+const noticePandocNotFound = (win: BrowserWindow, titleKey = 'dialog.importWarning'): void => {
   win.webContents.send('mt::pandoc-not-exists', {
-    title: t('dialog.importWarning'),
+    title: t(titleKey),
     type: 'warning',
     message: t('dialog.installPandoc'),
     time: 10000
@@ -346,42 +494,9 @@ const noticeDocxPandocNotFound = (win: BrowserWindow): void => {
   })
 }
 
-// Map common file extensions to pandoc reader names. Most match one-to-one,
-// but LaTeX and reStructuredText have several conventional extensions.
-const getPandocInputFormat = (ext: string): string => {
-  switch (ext) {
-    case 'tex':
-    case 'ltx':
-      return 'latex'
-    case 'rest':
-      return 'rst'
-    case 'wiki':
-      return 'mediawiki'
-    default:
-      return ext
-  }
-}
-
-const streamToString = (stream: Readable | null): Promise<string> =>
-  new Promise((resolve, reject) => {
-    if (!stream) {
-      resolve('')
-      return
-    }
-    let data = ''
-    stream.on('data', (chunk: Buffer | string) => {
-      data += chunk.toString()
-    })
-    stream.on('end', () => resolve(data))
-    stream.on('error', reject)
-  })
-
 const openPandocFile = async(windowId: number, pathname: string): Promise<void> => {
   try {
-    const ext = path.extname(pathname).toLowerCase().slice(1)
-    const format = getPandocInputFormat(ext)
-    const converter = pandoc(format, 'markdown')
-    const data = await streamToString(converter.stream(createReadStream(pathname)))
+    const data = await pandoc(pathname, 'markdown')
     ipcMain.emit('app-open-markdown-by-id', windowId, data)
   } catch (err) {
     log.error('Error while converting file:', err)
@@ -389,11 +504,9 @@ const openPandocFile = async(windowId: number, pathname: string): Promise<void> 
 }
 
 const removePrintServiceFromWindow = (win: BrowserWindow): void => {
-  // remove print service content and restore GUI
   win.webContents.send('mt::print-service-clearup')
 }
 
-// --- events -----------------------------------
 
 ipcMain.on('mt::save-tabs', (e, unsavedFiles: UnsavedFile[]) => {
   Promise.all(
@@ -423,6 +536,7 @@ ipcMain.on('mt::save-and-close-tabs', async(e, unsavedFiles: UnsavedFile[]) => {
 
   const { needSave } = userResult
   if (needSave) {
+    await unlockDocumentsForSave(e, unsavedFiles)
     Promise.all(
       unsavedFiles.map((file) =>
         handleResponseForSave(
@@ -451,70 +565,8 @@ ipcMain.on('mt::save-and-close-tabs', async(e, unsavedFiles: UnsavedFile[]) => {
 
 ipcMain.on(
   'mt::response-file-save-as',
-  async(
-    e: IpcMainEvent,
-    id: string,
-    filename: string,
-    pathname: string | undefined,
-    markdown: string,
-    options: UnsavedFile['options'],
-    defaultPath?: string
-  ) => {
-    const win = BrowserWindow.fromWebContents(e.sender)
-    if (!win) {
-      return
-    }
-    let recommendFilename = getRecommendTitleFromMarkdownString(markdown)
-    if (!recommendFilename) {
-      recommendFilename = filename || 'Untitled'
-    }
-
-    // If the file doesn't exist on disk add it to the recently used documents later
-    // and execute file from filesystem watcher for a short time. The file may exists
-    // on disk nevertheless but is already tracked by MarkText.
-    const alreadyExistOnDisk = !!pathname
-
-    let { filePath, canceled } = await dialog.showSaveDialog(win, {
-      defaultPath:
-        pathname || path.join(defaultPath || getPath('documents'), `${recommendFilename}.md`)
-    })
-
-    if (filePath && !canceled) {
-      filePath = path.resolve(filePath)
-      writeMarkdownFile(filePath, markdown, options as Parameters<typeof writeMarkdownFile>[2])
-        .then(() => {
-          if (!alreadyExistOnDisk) {
-            ipcMain.emit('window-add-file-path', win.id, filePath)
-            ipcMain.emit('menu-add-recently-used', filePath)
-
-            const newFilename = path.basename(filePath!)
-            win.webContents.send('mt::set-pathname', {
-              id,
-              pathname: filePath,
-              filename: newFilename
-            })
-          } else if (pathname !== filePath) {
-            // Update window file list and watcher.
-            ipcMain.emit('window-change-file-path', win.id, filePath, pathname)
-
-            const newFilename = path.basename(filePath!)
-            win.webContents.send('mt::set-pathname', {
-              id,
-              pathname: filePath,
-              filename: newFilename
-            })
-          } else {
-            ipcMain.emit('window-file-saved', win.id, filePath)
-            win.webContents.send('mt::tab-saved', id)
-          }
-        })
-        .catch((err: unknown) => {
-          log.error('Error while save as:', err)
-          const msg = err instanceof Error ? err.message : String(err)
-          win.webContents.send('mt::tab-save-failure', id, msg)
-        })
-    }
-  }
+  (e, id, filename, pathname, markdown, options, defaultPath) =>
+    handleResponseForSave(e, id, filename, pathname, markdown, options, defaultPath, true)
 )
 
 // Window ids whose unsaved-changes confirm dialog is currently open. Guards
@@ -547,6 +599,10 @@ ipcMain.on('mt::close-window-confirm', async(e, unsavedFiles: UnsavedFile[]) => 
       return
     }
 
+    // Read-only documents are locked against writes by documentWrites; unlock
+    // them (main and renderer side) so the save below can go through.
+    await unlockDocumentsForSave(e, unsavedFiles)
+
     const results = await Promise.all(
       unsavedFiles.map((file) =>
         handleResponseForSave(
@@ -574,6 +630,17 @@ ipcMain.on('mt::close-window-confirm', async(e, unsavedFiles: UnsavedFile[]) => 
     }
   } catch (err: unknown) {
     log.error('Error while saving before quit:', err)
+    if (win.isDestroyed()) return
+    const msg = err instanceof Error ? err.message : String(err)
+    const { response } = await dialog.showMessageBox(win, {
+      type: 'error',
+      buttons: [t('dialog.close'), t('dialog.keepOpen')],
+      message: t('dialog.saveFailure'),
+      detail: msg
+    })
+    if (response === 0) {
+      ipcMain.emit('window-close-by-id', win.id)
+    }
   } finally {
     windowsAwaitingCloseConfirm.delete(win.id)
   }
@@ -582,6 +649,8 @@ ipcMain.on('mt::close-window-confirm', async(e, unsavedFiles: UnsavedFile[]) => 
 ipcMain.on('mt::response-file-save', handleResponseForSave as Parameters<typeof ipcMain.on>[1])
 
 ipcMain.on('mt::response-export', handleResponseForExport as Parameters<typeof ipcMain.on>[1])
+
+ipcMain.on('mt::response-pandoc-export', handlePandocExport as Parameters<typeof ipcMain.on>[1])
 
 ipcMain.on('mt::response-print', handleResponseForPrint as Parameters<typeof ipcMain.on>[1])
 
@@ -596,9 +665,8 @@ ipcMain.on('mt::window::drop', async(e, fileList: string[]) => {
       continue
     }
 
-    // Try to import the file
     if (PANDOC_EXTENSIONS.some((ext: string) => file.endsWith(ext))) {
-      const existsPandoc = pandoc.exists()
+      const existsPandoc = await pandoc.exists()
       if (!existsPandoc) {
         noticePandocNotFound(win)
       } else {
@@ -705,9 +773,10 @@ ipcMain.on('mt::ask-for-open-project-in-sidebar', async(e) => {
 interface FormatLinkPayload {
   data: { href?: string; text?: string }
   dirname?: string
+  readOnly?: boolean
 }
 
-ipcMain.on('mt::format-link-click', async(e, { data, dirname }: FormatLinkPayload) => {
+ipcMain.on('mt::format-link-click', async(e, { data, dirname, readOnly }: FormatLinkPayload) => {
   if (!data || (!data.href && !data.text)) {
     return
   }
@@ -719,7 +788,6 @@ ipcMain.on('mt::format-link-click', async(e, { data, dirname }: FormatLinkPayloa
   const rawUrl = data.href || data.text!
   const urlCandidate = rawUrl.replace(/^<(.+)>$/, '$1') // Replace any <> CommonMark #489
   if (urlCandidate === rawUrl) {
-    // No <> found, no spaces should be allowed
     if (/\s/.test(rawUrl)) {
       win.webContents.send('mt::show-notification', {
         title: 'Links cannot contain spaces',
@@ -735,27 +803,15 @@ ipcMain.on('mt::format-link-click', async(e, { data, dirname }: FormatLinkPayloa
     shell.openExternal(urlCandidate).catch((err: Error) => log.error('Failed to open URL:', err))
     return
   } else if (/^[a-z0-9]+:\/\//i.test(urlCandidate)) {
-    // Prevent other URLs.
     return
   }
 
-  let pathname = urlCandidate
-  if (dirname && !path.isAbsolute(urlCandidate)) {
-    pathname = path.join(dirname, urlCandidate)
-  }
-
+  const { pathname, anchor } = resolveLocalLinkTarget(urlCandidate, dirname ?? '')
   if (pathname) {
-    // decodeURIComponent() CommonMark #503, allow percent encoded path names to open files. https://github.com/marktext/marktext/issues/57
-    try {
-      pathname = path.normalize(decodeURIComponent(pathname))
-    } catch {
-      // Malformed percent sequence (e.g. "%", "%E0%A4%A") — use raw path.
-      pathname = path.normalize(pathname)
-    }
     if (isMarkdownFile(pathname)) {
       const innerWin = BrowserWindow.fromWebContents(e.sender)
       if (innerWin) {
-        openFileOrFolder(innerWin, pathname)
+        openFileOrFolder(innerWin, pathname, { anchor, readOnly })
       }
     } else {
       // A link in an untrusted document could point at a co-located script or
@@ -780,7 +836,6 @@ ipcMain.on('mt::format-link-click', async(e, { data, dirname }: FormatLinkPayloa
   }
 })
 
-// --- commands -------------------------------------
 
 ipcMain.on('mt::cmd-open-file', (e) => {
   const win = BrowserWindow.fromWebContents(e.sender)
@@ -810,7 +865,6 @@ ipcMain.on('mt::cmd-import-file', (e) => {
   }
 })
 
-// --- menu -------------------------------------
 
 export const exportFile = (win: Win, type: string): void => {
   if (win && win.webContents) {
@@ -818,11 +872,18 @@ export const exportFile = (win: Win, type: string): void => {
   }
 }
 
+// Pandoc needs Markdown and an output path; renderer HTML/PDF export uses rendered HTML instead.
+export const exportWithPandoc = async(win: Win, target: string): Promise<void> => {
+  if (!win || !win.webContents) return
+  if (!(await pandoc.exists())) return noticePandocNotFound(win, 'dialog.exportWarning')
+  win.webContents.send('mt::export-with-pandoc', target)
+}
+
 export const importFile = async(win: BrowserWindow | null): Promise<void> => {
   if (!win) {
     return
   }
-  const existsPandoc = pandoc.exists()
+  const existsPandoc = await pandoc.exists()
 
   if (!existsPandoc) {
     noticePandocNotFound(win)
@@ -882,10 +943,14 @@ export const openFolder = async(win: BrowserWindow | null): Promise<void> => {
   }
 }
 
-export const openFileOrFolder = (win: BrowserWindow, pathname: string): void => {
+export const openFileOrFolder = (
+  win: BrowserWindow,
+  pathname: string,
+  options: TabOptions = {}
+): void => {
   const resolvedPath = normalizeAndResolvePath(pathname)
   if (isFile(resolvedPath)) {
-    ipcMain.emit('app-open-file-by-id', win.id, resolvedPath)
+    ipcMain.emit('app-open-file-by-id', win.id, resolvedPath, options)
   } else if (isDirectory(resolvedPath)) {
     ipcMain.emit('app-open-directory-by-id', win.id, resolvedPath)
   } else {
@@ -955,7 +1020,6 @@ export const clearRecentlyUsed = (): void => {
   ipcMain.emit('menu-clear-recently-used')
 }
 
-// --- Commands -------------------------------------------------------------
 
 export const loadFileCommands = (commandManager: CommandManager): void => {
   commandManager.add(COMMANDS.FILE_CHECK_UPDATE, checkUpdates)
@@ -976,3 +1040,49 @@ export const loadFileCommands = (commandManager: CommandManager): void => {
   commandManager.add(COMMANDS.FILE_SAVE_AS, saveAs)
   commandManager.add(COMMANDS.FILE_EXPORT_FILE_PDF, exportPDF)
 }
+
+const documentOwners = new Set<number>()
+function registerDocumentOwner(sender: WebContents): void {
+  if (documentOwners.has(sender.id)) return
+  documentOwners.add(sender.id)
+  sender.once('destroyed', () => {
+    documentOwners.delete(sender.id)
+    documentWrites.clearOwner(sender.id)
+  })
+}
+ipcMain.handle('mt::set-document-read-only', async(event, tabId: string, readOnly: boolean) => {
+  if (typeof tabId !== 'string' || typeof readOnly !== 'boolean')
+    throw new Error('Invalid document mode')
+  const owner = event.sender.id
+  registerDocumentOwner(event.sender)
+  await documentWrites.setReadOnly(owner, tabId, readOnly)
+})
+
+async function unlockDocumentsForSave(event: IpcMainEvent, files: UnsavedFile[]): Promise<void> {
+  const ids = files.filter((file) => file.readOnly).map((file) => file.id)
+  for (const id of ids) await documentWrites.setReadOnly(event.sender.id, id, false)
+  if (ids.length) event.sender.send('mt::unlock-documents-for-save', ids)
+}
+
+async function assertExportDestination(
+  source: string | undefined,
+  destination: string
+): Promise<void> {
+  if (!source) return
+  if (path.resolve(source) === path.resolve(destination))
+    throw new Error(t('readingMode.exportSource'))
+  const [left, right] = await Promise.allSettled([stat(source), stat(destination)])
+  if (
+    left.status === 'fulfilled' &&
+    right.status === 'fulfilled' &&
+    left.value.dev === right.value.dev &&
+    left.value.ino === right.value.ino
+  ) {
+    throw new Error(t('readingMode.exportSource'))
+  }
+}
+
+ipcMain.on('mt::forget-document', (event, tabId: string) => {
+  registerDocumentOwner(event.sender)
+  documentWrites.forget(event.sender.id, tabId)
+})

@@ -3,7 +3,12 @@
     "counter": {
       "words": "Palavras",
       "characters": "Caracteres",
+      "charactersNoSpaces": "Caracteres (sem espaços)",
+      "charactersWithSpaces": "Caracteres (com espaços)",
       "paragraphs": "Parágrafos",
+      "allCharacters": "Todos os caracteres",
+      "document": "Documento",
+      "documentSelection": "Documento / Seleção",
       "selectedWords": "Palavras selecionadas"
     },
     "file": {
@@ -22,13 +27,14 @@
       "export": "Exportar",
       "exportHtml": "Exportar como HTML",
       "exportPdf": "Exportar como PDF",
-      "exportDocx": "Exportar como DOCX",
+      "convertWithPandoc": "Converter com o Pandoc",
       "import": "Importar",
       "print": "Imprimir",
       "closeTab": "Fechar Aba",
       "closeWindow": "Fechar Janela",
       "quit": "Sair",
-      "preferences": "Preferências"
+      "preferences": "Preferências",
+      "exportDocx": "Exportar como DOCX"
     },
     "edit": {
       "edit": "Editar",
@@ -68,6 +74,7 @@
       "table": "Tabela",
       "codeFences": "Blocos de Código",
       "quoteBlock": "Bloco de Citação",
+      "githubAlerts": "Alertas do GitHub",
       "mathBlock": "Bloco Matemático",
       "htmlBlock": "Bloco HTML",
       "orderedList": "Lista Ordenada",
@@ -82,6 +89,7 @@
       "minimize": "Minimizar",
       "zoomIn": "Aumentar Zoom",
       "zoomOut": "Diminuir Zoom",
+      "resetZoom": "Redefinir Zoom",
       "fullScreen": "Tela Cheia",
       "bringAllToFront": "Trazer Todas para Frente",
       "alwaysOnTop": "Sempre no Topo"
@@ -118,7 +126,7 @@
       "sourceCodeMode": "Modo Código Fonte",
       "typewriterMode": "Modo Máquina de Escrever",
       "focusMode": "Modo Foco",
-      "toggleTableOfContents": "Alternar Índice",
+      "toggleTableOfContents": "Mostrar sumário",
       "reloadImages": "Recarregar Imagens",
       "showDeveloperTools": "Mostrar Ferramentas de Desenvolvedor",
       "reloadWindow": "Recarregar Janela"
@@ -142,8 +150,8 @@
       "theme": "&Tema",
       "dark": "Escuro",
       "followThemDisabled": "Seleção de tema desativada ao seguir o tema do sistema",
-      "lightThemes": "— Temas Claros —",
-      "darkThemes": "— Temas Escuros —",
+      "lightThemes": "Temas Claros",
+      "darkThemes": "Temas Escuros",
       "ayuDark": "Ayu Escuro",
       "ayuLight": "Ayu Claro",
       "ayuMirage": "Ayu Mirage",
@@ -187,6 +195,7 @@
     "copyAsRich": "Copiar como Rich Text",
     "copyAsHtml": "Copiar como HTML",
     "pasteAsPlainText": "Colar como Texto Simples",
+    "lookUp": "Consultar \"{selection}\"",
     "insertParagraphBefore": "Inserir Parágrafo Antes",
     "insertParagraphAfter": "Inserir Parágrafo Depois",
     "spelling": "Ortografia...",
@@ -201,6 +210,7 @@
       "paste": "Colar",
       "rename": "Renomear",
       "moveToTrash": "Mover para Lixeira",
+      "copyPath": "Copiar Caminho",
       "showInFolder": "Mostrar na Pasta"
     },
     "tabs": {
@@ -211,6 +221,7 @@
       "rename": "Renomear",
       "copyPath": "Copiar caminho",
       "showInFolder": "Mostrar na pasta",
+      "showInSideBar": "Mostrar na barra lateral",
       "openInNewWindow": "Abrir em nova janela"
     }
   },
@@ -229,6 +240,7 @@
   },
   "sideBar": {
     "search": {
+      "backToFiles": "Voltar aos arquivos",
       "searchInFolder": "Pesquisar na pasta...",
       "noFolderOpen": "Nenhuma pasta aberta",
       "noResultsFound": "Nenhum resultado encontrado.",
@@ -247,13 +259,33 @@
       "noMatchingFiles": "Nenhum arquivo correspondente"
     },
     "toc": {
-      "title": "Índice"
+      "expand": "Expandir sumário",
+      "collapse": "Recolher sumário",
+      "empty": "Sem títulos",
+      "title": "Índice",
+      "expandAll": "Expandir tudo",
+      "collapseAll": "Recolher tudo"
     },
     "icons": {
       "files": "Arquivos",
       "search": "Pesquisar",
-      "toc": "Índice",
-      "settings": "Configurações"
+      "settings": "Configurações",
+      "toc": "Índice"
+    }
+  },
+  "titleBar": {
+    "applicationMenu": "Menu do aplicativo",
+    "minimize": "Minimizar",
+    "maximize": "Maximizar",
+    "restore": "Restaurar",
+    "close": "Fechar",
+    "documentStatistics": {
+      "title": "Estatísticas do documento",
+      "fileInformation": "Informações do arquivo",
+      "created": "Criado",
+      "lastModified": "Modificado",
+      "unavailable": "—",
+      "open": "Abrir estatísticas do documento"
     }
   },
   "commandPalette": {
@@ -267,13 +299,9 @@
   "exportSettings": {
     "autoNumberingHeadings": "Numeração automática de cabeçalhos",
     "title": "Opções de Exportação",
-    "info": {
-      "label": "Informações",
-      "description": "Por favor, personalize a aparência da página e clique em \"exportar\" para continuar."
-    },
     "page": {
       "label": "Página",
-      "pageTitle": "O título da página:",
+      "pageTitle": "O título da página",
       "pageSize": "Tamanho da página:",
       "landscapeOrientation": "Orientação paisagem:",
       "pageMargin": "Margem da página em mm:",
@@ -310,12 +338,13 @@
       "description": "O texto aparece em todas as páginas se cabeçalho e/ou rodapé estiver definido."
     },
     "toc": {
-      "includeTopHeading": "Incluir cabeçalho superior",
-      "includeTopHeadingDetail": "Incluir detalhe do cabeçalho superior",
+      "description": "Para mostrar um índice no documento exportado, insira [TOC] em uma linha separada no corpo do documento. O índice aparecerá nessa posição.",
+      "includeTopHeading": "Incluir títulos de nível 1",
+      "includeTopHeadingDetail": "Incluir todos os títulos de nível 1 (H1) no índice.",
       "label": "Índice",
       "title": "Índice"
     },
-    "export": "Exportar...",
+    "export": "Exportar",
     "options": {
       "pageSizes": {
         "a3": "A3",
@@ -341,6 +370,10 @@
         "default": "GitHub (Padrão)",
         "liber": "Liber"
       }
+    },
+    "info": {
+      "label": "Informações",
+      "description": "Por favor, personalize a aparência da página e clique em \"exportar\" para continuar."
     }
   },
   "recent": {
@@ -353,6 +386,7 @@
   },
   "preferences": {
     "title": "Preferências",
+    "learnMore": "Saiba mais sobre {name}",
     "search": {
       "placeholder": "Pesquisar preferências...",
       "categories": {
@@ -373,6 +407,7 @@
         "autoNormalizeLineEndings": "Normalizar automaticamente as quebras de linha ao abrir arquivos. Quando desativado, os arquivos são abertos como estão.",
         "titleBarStyle": "O estilo da barra de título (apenas sistemas Windows e Linux)",
         "openFilesInNewWindow": "Abrir arquivos em uma nova janela",
+        "openFilesInPreviewMode": "Abrir arquivos da barra lateral em abas de visualização",
         "openFolderInNewWindow": "Abrir pasta via menu em uma nova janela",
         "zoom": "O nível de zoom. Entre 0.5 e 2.0 inclusive",
         "hideScrollbar": "Se ocultar as barras de rolagem",
@@ -388,8 +423,9 @@
         "wrapCodeBlocks": "Quebrar texto dentro de blocos de código",
         "editorLineWidth": "Define a largura máxima da área do editor. Uma string vazia ou sufixos de ch (caracteres), px (pixels) ou % (porcentagem) são permitidos",
         "codeFontSize": "Tamanho da fonte no bloco de código, o intervalo é 12 ~ 18",
-        "codeFontFamily": "Família de fonte usada no bloco de código",
+        "codeFontFamily": "Fonte do código. Aplica-se ao código em linha e aos blocos de código.",
         "codeBlockLineNumbers": "Se mostrar os números de linha",
+        "sourceCodeLineNumbers": "Mostrar números de linha no modo código fonte",
         "trimUnnecessaryCodeBlockEmptyLines": "Aparar as linhas vazias do início e fim no bloco de código",
         "autoPairBracket": "Parênteses automáticos ao editar",
         "autoPairMarkdownSyntax": "Autocompletar sintaxe markdown",
@@ -411,8 +447,16 @@
         "frontmatterType": "O tipo de frontmatter",
         "superSubScript": "Habilitar extensão markdown do pandoc para sobrescrito e subscrito",
         "footnote": "Habilitar extensão markdown do pandoc para nota de rodapé",
+        "texMathDollars": "Ativar a extensão markdown do pandoc tex_math_dollars",
+        "texMathGfm": "Ativar a extensão markdown do pandoc tex_math_gfm",
+        "texMathSingleBackslash": "Ativar a extensão markdown do pandoc tex_math_single_backslash",
+        "texMathDoubleBackslash": "Ativar a extensão markdown do pandoc tex_math_double_backslash",
+        "highlightSyntax": "Ativar a sintaxe de realce não padrão ==texto==",
+        "inlineDiff": "Ativar a sintaxe de diff embutido não padrão {+ … +} / [- … -]",
+        "multilineBlockquote": "Ativar a sintaxe de citação multilinha não padrão >>> … >>>",
+        "githubAlerts": "Alertas do GitHub",
         "isHtmlEnabled": "Habilitar renderização HTML",
-        "isGitlabCompatibilityEnabled": "Habilitar modo de compatibilidade GitLab",
+        "softNewlineAsSpace": "Tratar quebras de linha suaves como espaços",
         "sequenceTheme": "Tema do diagrama de sequência",
         "plantumlServer": "URL do servidor PlantUML",
         "theme": "Selecionar o tema usado no MarkText",
@@ -428,7 +472,8 @@
         "imageRelativeDirectoryName": "O nome da pasta de imagem relativa",
         "fileSortOrder": "Ordem de classificação dos arquivos nas pastas abertas: ascendente ou descendente.",
         "openedFilesInSidebar": "Se os arquivos abertos são mostrados na barra lateral.",
-        "softNewlineAsSpace": "Tratar quebras de linha suaves como espaços"
+        "showPandocConvert": "Mostrar o menu de conversão do Pandoc. Requer o Pandoc instalado.",
+        "isGitlabCompatibilityEnabled": "Habilitar modo de compatibilidade GitLab"
       }
     },
     "categories": {
@@ -472,10 +517,20 @@
         "selectFolder": "Selecionar Pasta",
         "openBlankPage": "Abrir página em branco"
       },
+      "pandoc": {
+        "title": "Conversão com Pandoc",
+        "description": "Mostrar o menu de conversão do Pandoc",
+        "detailedDescription": "Requer o Pandoc instalado",
+        "found": "Encontrado: {path}",
+        "notFound": "Não encontrado",
+        "recheck": "Verificar novamente"
+      },
       "sidebar": {
         "title": "Barra Lateral",
         "wrapTextInToc": "Quebrar texto no índice",
         "showOpenedFiles": "Mostrar arquivos abertos",
+        "autoReveal": "Mostrar o arquivo ativo na barra lateral",
+        "openFilesInPreviewMode": "Abrir arquivos da barra lateral em abas de visualização. Editar ou clicar duas vezes mantém a aba.",
         "excludePatterns": "Padrões de exclusão",
         "excludePatternsNotes": "Padrões de exclusão (Notas)",
         "fileSortBy": {
@@ -504,8 +559,10 @@
           "german": "Deutsch",
           "japanese": "日本語",
           "korean": "한국어",
+          "dutch": "Nederlands",
           "portuguese": "Português",
-          "turkish": "Türkçe"
+          "turkish": "Türkçe",
+          "russian": "Русский"
         }
       }
     },
@@ -517,14 +574,17 @@
         "lineHeight": "Altura da linha",
         "fontFamily": "Família da fonte",
         "maxWidth": "Largura máxima",
-        "maxWidthNotes": "Largura máxima do conteúdo do editor"
+        "maxWidthNotes": "Largura máxima do conteúdo do editor. Digite um número seguido de px, ch (caracteres) ou %, por exemplo 800px, 80ch ou 60%. Deixe vazio para usar a largura padrão.",
+        "maxWidthInvalid": "Digite um número seguido de px, ch ou %, por exemplo 800px.",
+        "codeFontFamily": "Fonte do código",
+        "codeFontFamilyNotes": "Aplica-se ao código em linha e aos blocos de código."
       },
       "codeBlock": {
         "title": "Bloco de Código",
         "fontSize": "Tamanho da fonte",
-        "fontFamily": "Família da fonte",
         "showLineNumbers": "Mostrar números de linha",
-        "removeEmptyLines": "Remover linhas vazias"
+        "removeEmptyLines": "Remover linhas vazias",
+        "fontFamily": "Família da fonte"
       },
       "writingBehavior": {
         "title": "Comportamento de Escrita",
@@ -564,7 +624,8 @@
         "hideLinkPopup": "Ocultar popup de link",
         "autoCheck": "Verificação automática",
         "autoNormalizeLineEndings": "Normalizar automaticamente finais de linha para LF ao abrir",
-        "wrapCodeBlocks": "Quebrar blocos de código"
+        "wrapCodeBlocks": "Quebrar blocos de código",
+        "sourceCodeLineNumbers": "Mostrar números de linha no modo código fonte"
       }
     },
     "image": {
@@ -588,7 +649,7 @@
       },
       "uploader": {
         "title": "Carregador de Imagens",
-        "currentUploader": "Carregador Atual",
+        "currentUploader": "Uploader atual: {name}",
         "picgoNotInstalled": "PicGo não está instalado",
         "picgoInstalled": "PicGo está instalado",
         "picgoDetectionFailed": "Detecção do PicGo falhou",
@@ -634,6 +695,14 @@
         "superSubScript": "Super/Sub script",
         "footnote": "Nota de rodapé",
         "footnoteNotes": "Notas de rodapé",
+        "texMathDollars": "Matemática TeX com $ e $$",
+        "texMathGfm": "Matemática TeX do GitHub ($`…`$ e ```math)",
+        "texMathSingleBackslash": "Matemática TeX com barra invertida simples",
+        "texMathDoubleBackslash": "Matemática TeX com barra invertida dupla",
+        "highlightSyntax": "Realce (==texto==)",
+        "inlineDiff": "Diff embutido ({+ … +})",
+        "multilineBlockquote": "Citação multilinha (>>>)",
+        "githubAlerts": "Ativar alertas do GitHub",
         "frontmatterType": {
           "jsonBrace": "JSON com Chaves",
           "jsonSemicolon": "JSON com Ponto e Vírgula",
@@ -661,10 +730,10 @@
         "showHeadingNumbers": "Mostrar números dos títulos no editor"
       },
       "compatibility": {
-        "enableGitlab": "Habilitar compatibilidade GitLab",
         "enableHtml": "Habilitar suporte HTML",
+        "softNewlineAsSpace": "Tratar quebras de linha suaves como espaços",
         "title": "Compatibilidade",
-        "softNewlineAsSpace": "Tratar quebras de linha suaves como espaços"
+        "enableGitlab": "Habilitar compatibilidade GitLab"
       },
       "lists": {
         "bulletListMarker": "Marcador de lista com marcadores",
@@ -685,6 +754,7 @@
     "theme": {
       "title": "Tema",
       "followSystemTheme": "Seguir tema do sistema",
+      "followSystemNote": "Seguir o tema do sistema bloqueia a lista de temas abaixo. Desative esta opção para trocar de tema livremente.",
       "modeThemes": "Seleção de Tema",
       "lightModeTheme": "Tema do modo claro",
       "darkModeTheme": "Tema do modo escuro",
@@ -710,7 +780,7 @@
       "online": "Online",
       "saveError": "Erro ao salvar atalhos de teclado",
       "shortcutInUse": "Atalho em uso",
-      "shortcutInUseMessage": "Este atalho já está atribuído a outro comando",
+      "shortcutInUseMessage": "Este atalho já está atribuído a {accelerator}",
       "table": {
         "description": "Descrição",
         "edit": "Editar",
@@ -739,7 +809,7 @@
     }
   },
   "about": {
-    "copyright": "Copyright",
+    "copyright": "Copyright © Luo Ran 2017-{year}",
     "copyrightContributors": "Copyright Contribuidores"
   },
   "commands": {
@@ -767,6 +837,7 @@
       "quit": "Sair",
       "toggleAutoSave": "Alternar Salvamento Automático",
       "importFile": "Importar Arquivo",
+      "revealInSideBar": "Mostrar na barra lateral",
       "exportFile": "Exportar Arquivo",
       "exportFilePdf": "Exportar como PDF",
       "zoom": "Zoom",
@@ -887,19 +958,18 @@
     "ok": "OK"
   },
   "dialog": {
+    "moveToTrash": "Tem certeza de que deseja mover \"{name}\" para a lixeira?",
     "cancel": "Cancelar",
     "changesWillBeLost": "As alterações serão perdidas",
     "close": "Fechar",
     "dontSave": "Não Salvar",
-    "discard": "Descartar",
-    "recover": "Recuperar",
-    "unsavedContentFound": "Foi encontrado conteúdo não salvo da última sessão",
-    "unsavedContentFoundDetail": "O MarkText não foi encerrado corretamente da última vez. Recuperar {count} guia(s) não salva(s)? Descartar irá excluí-las permanentemente.",
     "file": "Arquivo",
-    "fileExists": "Arquivo existe",
+    "fileExists": "O arquivo já existe: {filename}",
     "files": "Arquivos",
     "importWarning": "Aviso de importação",
-    "installPandoc": "Instalar Pandoc",
+    "installPandoc": "Pandoc não foi encontrado. Instale-o, ou defina a variável de ambiente MARKTEXT_PANDOC com o caminho do executável do pandoc e reinicie o MarkText.",
+    "exportWarning": "Aviso de exportação",
+    "exportWarningMore": "…e mais {count}",
     "keepOpen": "Manter aberto",
     "replace": "Substituir",
     "save": "Salvar",
@@ -908,17 +978,21 @@
     "unsafeFileTitle": "Arquivo potencialmente inseguro",
     "unsafeFileMessage": "Este link abre um arquivo que pode executar código",
     "unsafeFileDetail": "\"{name}\" é um arquivo executável ou de script. Abri-lo pode executar programas no seu computador. Continue apenas se confiar neste documento.",
-    "openAnyway": "Abrir mesmo assim"
+    "openAnyway": "Abrir mesmo assim",
+    "discard": "Descartar",
+    "recover": "Recuperar",
+    "unsavedContentFound": "Foi encontrado conteúdo não salvo da última sessão",
+    "unsavedContentFoundDetail": "O MarkText não foi encerrado corretamente da última vez. Recuperar {count} guia(s) não salva(s)? Descartar irá excluí-las permanentemente."
   },
   "error": {
     "configSchemaViolation": "Violação do esquema de configuração",
     "copyError": "Erro de cópia",
-    "initializationFailed": "Falha na inicialização",
+    "initializationFailed": "Falha na inicialização {hint}",
     "otherInstanceDetected": "Outra instância do MarkText já está em execução",
     "report": "Reportar",
     "startupError": "Erro de inicialização",
     "terminatedDueToError": "Terminado devido a erro",
-    "unexpectedErrorWithMessage": "Erro inesperado com mensagem",
+    "unexpectedErrorWithMessage": "Erro inesperado: {message}",
     "unexpectedMainProcess": "Erro inesperado do processo principal",
     "unexpectedRendererProcess": "Erro inesperado do processo de renderização"
   },
@@ -930,7 +1004,7 @@
     "editor": {
       "anchorLinkCopied": "Link âncora copiado",
       "tabNotFound": "Aba não encontrada",
-      "tocItemNotFound": "Item do índice não encontrado",
+      "tocItemNotFound": "Item do índice {key} não encontrado",
       "errorLoadingTabTitle": "Erro ao carregar a aba",
       "errorLoadingTabMessage": "Ocorreu um erro ao carregar a alteração do arquivo porque a aba não pôde ser encontrada.",
       "mixedLineEndingsNormalized": "“{name}” possui finais de linha mistos que foram normalizados automaticamente para {lineEnding}.",
@@ -939,6 +1013,7 @@
       "errorWhileSaving": "Ocorreu um erro ao salvar: {msg}",
       "exportSuccessTitle": "Exportado com sucesso",
       "exportSuccessMessage": "“{name}” foi exportado com sucesso!",
+      "exportLinkedMediaMessage": "\"{name}\" foi exportado. Este formato liga as imagens em vez de incorporá-las: mantenha as imagens junto do arquivo e compartilhe a pasta inteira.",
       "fileRemovedOnDisk": "“{name}” foi removido no disco.",
       "fileChangedOnDisk": "“{name}” foi alterado no disco. Deseja recarregar?",
       "externalChangeMerged": "As alterações externas no disco foram mescladas em \"{name}\". Desfazer reverte a mesclagem.",
@@ -956,19 +1031,34 @@
   "editor": {
     "export": {
       "error": "Erro de exportação",
-      "errorExporting": "Erro ao exportar arquivo",
-      "failed": "Exportação falhou"
+      "errorExporting": "Erro ao exportar arquivo {type}",
+      "failed": "Falha na exportação {type}"
     },
     "insertTable": {
       "title": "Inserir Tabela",
       "rows": "Linhas",
       "columns": "Colunas"
     },
+    "mediaViewer": {
+      "title": "Pré-visualização",
+      "close": "Fechar",
+      "zoomIn": "Ampliar",
+      "zoomOut": "Reduzir",
+      "fit": "Ajustar à janela",
+      "actualSize": "Tamanho real",
+      "saveTitle": "Salvar diagrama",
+      "saveSvg": "Salvar como SVG",
+      "savePng": "Salvar como PNG",
+      "copyImage": "Copiar imagem",
+      "copied": "Imagem copiada para a área de transferência",
+      "saveFailed": "Não foi possível salvar a imagem: {error}",
+      "copyFailed": "Não foi possível copiar a imagem: {error}"
+    },
     "notifications": {
       "notificationNotFound": "Notificação não encontrada"
     },
     "print": {
-      "error": "Erro de impressão",
+      "error": "Erro de impressão para \"{title}\"",
       "failed": "Impressão falhou"
     },
     "sourceCode": {
@@ -977,10 +1067,31 @@
     },
     "spellcheck": {
       "disabledError": "Erro ao desativar verificação ortográfica",
-      "errorSwitchingLanguage": "Erro ao trocar idioma da verificação ortográfica",
-      "languageMissing": "Idioma da verificação ortográfica não encontrado",
-      "switchError": "Erro ao trocar verificação ortográfica",
+      "errorSwitchingLanguage": "Erro ao alternar idioma do corretor {languageCode}",
+      "languageMissing": "Idioma do corretor não encontrado {languageCode}",
+      "switchError": "Erro ao alternar corretor para {languageCode}, {error}",
       "title": "Verificação Ortográfica"
+    },
+    "tabs": {
+      "close": "Fechar {name}",
+      "preview": "{name}, aba de visualização"
     }
+  },
+  "readingMode": {
+    "title": "Modo de leitura",
+    "edit": "Modo de edição",
+    "lock": "Ativar o modo de leitura",
+    "unlock": "Alternar para o modo de edição",
+    "defaultMode": "Modo padrão ao abrir arquivos",
+    "defaultNote": "Aplica-se aos arquivos existentes abertos a partir de agora. Novos documentos continuam editáveis.",
+    "unsaved": "O modo de leitura está ativado. As alterações não salvas são mantidas e o salvamento automático está pausado.",
+    "failed": "Não foi possível alterar o modo do documento",
+    "closeSave": "Alternar para o modo de edição e salvar",
+    "exportSource": "Escolha um destino de exportação diferente do arquivo de origem.",
+    "unavailable": "Indisponível no modo de leitura",
+    "skipped": "Documentos somente leitura com alterações não salvas foram ignorados.",
+    "viewImage": "Ver imagem",
+    "copyLink": "Copiar endereço do link",
+    "resumed": "O modo de edição está ativado. O salvamento automático foi retomado."
   }
 }

@@ -3,7 +3,7 @@ import fsPromises from 'fs/promises'
 import { exec } from 'child_process'
 import dayjs from 'dayjs'
 import log from 'electron-log'
-import { app, BrowserWindow, dialog, nativeTheme, screen, shell, ipcMain } from 'electron'
+import { app, BrowserWindow, dialog, nativeTheme, screen, ipcMain } from 'electron'
 import type { BrowserWindowConstructorOptions } from 'electron'
 import { isChildOfDirectory } from 'common/filesystem/paths'
 import type { IUserPreferences } from '@shared/types/preferences'
@@ -11,7 +11,8 @@ import type { TabDragPayload, TabTransferData } from '@shared/types/files'
 import { isLinux, isOsx, isWindows, TITLE_BAR_HEIGHT } from '../config'
 import parseArgs from '../cli/parser'
 import { normalizeAndResolvePath } from '../filesystem'
-import { normalizeMarkdownPath } from '../filesystem/markdown'
+import { normalizeCliMarkdownPath, normalizeMarkdownPath } from '../filesystem/markdown'
+import { confirmAndTrashItem } from '../filesystem/trash'
 import { registerKeyboardListeners } from '../keyboard'
 import { selectTheme } from '../menu/actions/theme'
 import { dockMenu } from '../menu/templates'
@@ -19,9 +20,10 @@ import registerSpellcheckerListeners from '../spellchecker'
 import { watchers } from '../utils/imagePathAutoComplement'
 import { onInternalChannel } from '../utils/internalIpc'
 import { WindowLifecycle, WindowType } from '../windows/base'
-import EditorWindow from '../windows/editor'
+import EditorWindow, { type FileOpenOptions } from '../windows/editor'
 import SettingWindow from '../windows/setting'
 import { setLanguage, t } from '../i18n'
+import { matchSupportedLanguage } from 'common/i18n'
 import { getNativeThemeSource, isDarkApplicationTheme } from './nativeTheme'
 import type Accessor from './accessor'
 import type WindowManager from './windowManager'
@@ -31,7 +33,7 @@ interface CliArgs {
   [flag: string]: unknown
 }
 
-interface PathInfo {
+interface PathInfo extends FileOpenOptions {
   isDir: boolean
   path: string
 }
@@ -65,50 +67,44 @@ class App {
   private _themeListenerRegistered: boolean
   private _preferencesListenerRegistered: boolean
 
-  /**
-   * @param accessor The application accessor for application instances.
-   * @param args Parsed application arguments.
-   */
   constructor(accessor: Accessor, args: Partial<CliArgs>) {
     this._accessor = accessor
     this._args = (args as CliArgs) || ({ _: [] } as CliArgs)
     this._openFilesCache = []
     this._openFilesTimer = null
     this._windowManager = this._accessor.windowManager
-    // this.launchScreenshotWin = null // The window which call the screenshot.
-    // this.shortcutCapture = null
 
-    // Initialize main process language
-    this._initializeLanguage()
     this._listenForIpcMain()
-    // Initialize theme listener
     this._themeListenerRegistered = false
     this._preferencesListenerRegistered = false
   }
 
-  /**
-   * The entry point into the application.
-   */
   init(): void {
     // Enable these features to use `backdrop-filter` css rules!
     if (isOsx) {
       app.commandLine.appendSwitch('enable-experimental-web-platform-features', 'true')
     }
 
-    app.on('second-instance', (_event, argv, workingDirectory) => {
+    app.on('second-instance', (_event, argv, workingDirectory, additionalData) => {
       const { _openFilesCache, _windowManager } = this
-      const args = parseArgs(argv.slice(1)) as CliArgs
+      // `argv` lists switches before the other arguments and adds switches of its
+      // own, which separates `--user-data-dir <dir>` from its value (#3020), so
+      // parse the unchanged copy a second instance sends as additional data.
+      // A second instance of a version that doesn't send it falls back to `argv`.
+      const sent = additionalData as { argv?: unknown } | null | undefined
+      const secondArgv = Array.isArray(sent?.argv) ? (sent.argv as string[]) : argv
+      const args = parseArgs(secondArgv.slice(1)) as CliArgs
+      const readOnly = args['--read-only'] === true
 
       const buf: PathInfo[] = []
       for (const pathname of args._) {
-        // Ignore all unknown flags
         if (pathname.startsWith('--')) {
           continue
         }
 
-        const info = normalizeMarkdownPath(path.resolve(workingDirectory, pathname))
+        const info = normalizeCliMarkdownPath(path.resolve(workingDirectory, pathname))
         if (info) {
-          buf.push(info as PathInfo)
+          buf.push({ ...info, ...(readOnly ? { readOnly } : {}) } as PathInfo)
         }
       }
 
@@ -133,7 +129,6 @@ class App {
     app.on('ready', this.ready)
 
     app.on('window-all-closed', () => {
-      // Close all the image path watcher
       for (const watcher of watchers.values()) {
         watcher.close()
       }
@@ -167,73 +162,29 @@ class App {
   }
 
   /**
-   * Initialize main process language from preferences
+   * Initialize the main process language from preferences, detecting the
+   * system language on first start. Must run after the app is ready —
+   * `app.getLocale()` returns an empty string before the ready event — and
+   * before the first window is created so menus and the renderer start in
+   * the right language.
    */
-  private async _initializeLanguage(): Promise<void> {
+  private _initializeLanguage(): void {
     try {
       let currentLanguage = this._accessor.preferences.getItem<string>('language')
 
-      // If no language is set, auto-detect based on the system language
       if (!currentLanguage) {
-        const systemLanguage = app.getLocale()
-        log.info(`System language detected: ${systemLanguage}`)
-
-        // Supported language list (based on languages actually supported by the project)
-        const supportedLanguages = [
-          'en',
-          'zh-CN',
-          'zh-TW',
-          'ja',
-          'ko',
-          'fr',
-          'de',
-          'es',
-          'pt',
-          'ru'
-        ]
-
-        // Language mapping: system language code -> application language code
-        const languageMap: Record<string, string> = {
-          'zh-CN': 'zh-CN',
-          'zh-TW': 'zh-TW',
-          'zh-HK': 'zh-TW',
-          zh: 'zh-CN',
-          en: 'en',
-          'en-US': 'en',
-          'en-GB': 'en',
-          ja: 'ja',
-          'ja-JP': 'ja',
-          ko: 'ko',
-          'ko-KR': 'ko',
-          fr: 'fr',
-          'fr-FR': 'fr',
-          de: 'de',
-          'de-DE': 'de',
-          es: 'es',
-          'es-ES': 'es',
-          pt: 'pt',
-          'pt-BR': 'pt',
-          ru: 'ru',
-          'ru-RU': 'ru'
-        }
-
-        currentLanguage = languageMap[systemLanguage] || 'en'
-
-        // If the detected language is not in the supported list, use English
-        if (!supportedLanguages.includes(currentLanguage)) {
-          currentLanguage = 'en'
-        }
-
-        // Save the detected language setting
+        const systemLocale = app.getLocale()
+        currentLanguage = matchSupportedLanguage(systemLocale) ?? 'en'
         this._accessor.preferences.setItem('language', currentLanguage)
-        log.info(`Auto-detected and set language to: ${currentLanguage}`)
+        log.info(
+          `Auto-detected and set language to: ${currentLanguage} (system locale: ${systemLocale})`
+        )
       }
 
       setLanguage(currentLanguage)
       log.info(`Main process language initialized to: ${currentLanguage}`)
     } catch (error) {
       log.error('Failed to initialize main process language:', error)
-      // If an error occurs, use English as the default language
       setLanguage('en')
     }
   }
@@ -250,27 +201,23 @@ class App {
     const { _args: args, _openFilesCache } = this
     const { preferences } = this._accessor
 
-    // Initialize language settings
-    const { startUpAction, defaultDirectoryToOpen, theme, language } = preferences.getAll()
+    this._initializeLanguage()
+    const { startUpAction, defaultDirectoryToOpen, theme } = preferences.getAll()
     const followSystemTheme = preferences.getItem<boolean>('followSystemTheme')
     const lastOpenedFolder = preferences.getItem<string>('lastOpenedFolder')
     const lightModeTheme = preferences.getItem<string>('lightModeTheme')
     const darkModeTheme = preferences.getItem<string>('darkModeTheme')
 
-    if (language) {
-      setLanguage(language)
-    }
-
     if (args._.length) {
+      const readOnly = args['--read-only'] === true
       for (const pathname of args._) {
-        // Ignore all unknown flags
         if (pathname.startsWith('--')) {
           continue
         }
 
-        const info = normalizeMarkdownPath(pathname)
+        const info = normalizeCliMarkdownPath(pathname)
         if (info) {
-          _openFilesCache.push(info as PathInfo)
+          _openFilesCache.push({ ...info, ...(readOnly ? { readOnly } : {}) } as PathInfo)
         }
       }
     }
@@ -292,7 +239,6 @@ class App {
 
     nativeTheme.themeSource = getNativeThemeSource({ followSystemTheme, theme })
 
-    // Apply theme at startup if "Follow system theme" is enabled
     const isDarkTheme = isDarkApplicationTheme(theme)
     const systemIsDark = nativeTheme.shouldUseDarkColors
 
@@ -315,37 +261,34 @@ class App {
           }
           nativeTheme.themeSource = getNativeThemeSource(nextPreferences)
 
-      // When followSystemTheme is enabled, immediately switch to match system
-          if (change.followSystemTheme === true) {
-            const systemIsDark = nativeTheme.shouldUseDarkColors
-            const lightModeTheme = preferences.getItem<string>('lightModeTheme')
-            const darkModeTheme = preferences.getItem<string>('darkModeTheme')
-            const newTheme = systemIsDark ? darkModeTheme : lightModeTheme
+        if (change.followSystemTheme === true) {
+          const systemIsDark = nativeTheme.shouldUseDarkColors
+          const lightModeTheme = preferences.getItem<string>('lightModeTheme')
+          const darkModeTheme = preferences.getItem<string>('darkModeTheme')
+          const newTheme = systemIsDark ? darkModeTheme : lightModeTheme
 
-            log.info(
-              `followSystemTheme enabled, switching to: ${newTheme} (system ${systemIsDark ? 'dark' : 'light'})`
-            )
-            selectTheme(newTheme)
-            preferences.setItem('theme', newTheme)
-          }
-      // When light/dark mode theme preferences change, apply immediately if following system
-          if (
-            preferences.getItem<boolean>('followSystemTheme') &&
+          log.info(
+            `followSystemTheme enabled, switching to: ${newTheme} (system ${systemIsDark ? 'dark' : 'light'})`
+          )
+          selectTheme(newTheme)
+          preferences.setItem('theme', newTheme)
+        }
+        if (
+          preferences.getItem<boolean>('followSystemTheme') &&
         (change.lightModeTheme || change.darkModeTheme)
           ) {
             const systemIsDark = nativeTheme.shouldUseDarkColors
 
-        // Get current values, but prefer the NEW values from the change event
-            let lightModeTheme = preferences.getItem<string>('lightModeTheme')
-            let darkModeTheme = preferences.getItem<string>('darkModeTheme')
+        // Use newly changed theme preferences before the stored values are refreshed.
+          let lightModeTheme = preferences.getItem<string>('lightModeTheme')
+          let darkModeTheme = preferences.getItem<string>('darkModeTheme')
 
-        // If these preferences were just changed, use the new values from the change object
-            if (change.lightModeTheme !== undefined) {
-              lightModeTheme = change.lightModeTheme
-            }
-            if (change.darkModeTheme !== undefined) {
-              darkModeTheme = change.darkModeTheme
-            }
+          if (change.lightModeTheme !== undefined) {
+            lightModeTheme = change.lightModeTheme
+          }
+          if (change.darkModeTheme !== undefined) {
+            darkModeTheme = change.darkModeTheme
+          }
 
             const newTheme = systemIsDark ? darkModeTheme : lightModeTheme
 
@@ -356,7 +299,6 @@ class App {
         })
     }
 
-    // Listen for system theme changes and auto-switch if enabled
     if (!this._themeListenerRegistered) {
       nativeTheme.on('updated', () => {
         const followSystemTheme = preferences.getItem<boolean>('followSystemTheme')
@@ -368,7 +310,6 @@ class App {
           const newTheme = systemIsDark ? darkModeTheme : lightModeTheme
           const currentTheme = preferences.getItem<string>('theme')
 
-          // Only switch if the theme actually needs to change
           if (newTheme !== currentTheme) {
             log.info(
               `System theme changed, switching to: ${newTheme} (system ${systemIsDark ? 'dark' : 'light'})`
@@ -431,23 +372,10 @@ class App {
       // Fallback timeout in case 'updated' never fires (no theme change)
       setTimeout(createWindowOnce, 150)
     } else {
-      // Create immediately on Windows/macOS
       createWindow()
     }
 
-    // this.shortcutCapture = new ShortcutCapture()
-    // if (process.env.NODE_ENV === 'development') {
-    //   this.shortcutCapture.dirname = path.resolve(path.join(__dirname, '../../../node_modules/shortcut-capture'))
-    // }
-    // this.shortcutCapture.on('capture', async ({ dataURL }) => {
-    //   const { screenshotFileName } = this
-    //   const image = nativeImage.createFromDataURL(dataURL)
-    //   const bufferImage = image.toPNG()
 
-    //   if (this.launchScreenshotWin) {
-    //     this.launchScreenshotWin.webContents.send('mt::screenshot-captured')
-    //     this.launchScreenshotWin = null
-    //   }
 
     //   try {
     //     // write screenshot image into screenshot folder.
@@ -477,23 +405,20 @@ class App {
     }
   }
 
-  // --- private --------------------------------
 
-  /**
-   * Creates a new editor window.
-   */
   private _createEditorWindow(
     rootDirectory: string | null = null,
     fileList: string[] = [],
     markdownList: string[] = [],
     options: Partial<BrowserWindowConstructorOptions> = {},
-    unsavedTabs: TabTransferData[] = []
+    unsavedTabs: TabTransferData[] = [],
+    fileOptions: Record<string, FileOpenOptions> = {}
   ): EditorWindow {
     const editor = new EditorWindow(this._accessor)
     if (rootDirectory) {
       this._accessor.preferences.setItems({ lastOpenedFolder: rootDirectory })
     }
-    editor.createWindow(rootDirectory, fileList, markdownList, options, unsavedTabs)
+    editor.createWindow(rootDirectory, fileList, markdownList, options, unsavedTabs, fileOptions)
     this._windowManager.add(editor)
     if (this._windowManager.windowCount === 1) {
       this._accessor.menu.setActiveWindow(editor.id!)
@@ -611,28 +536,27 @@ class App {
     this._openPathList(this._openFilesCache, false)
   }
 
-  /**
-   * Open the path list in the best window(s).
-   *
-   * @param pathsToOpen The path list to open.
-   * @param openFilesInSameWindow Open all files in the same window with
-   * the first directory and discard other directories.
-   */
+  /** When openFilesInSameWindow is true, discard all but the first directory and open its files together. */
   private _openPathList(pathsToOpen: PathInfo[], openFilesInSameWindow: boolean = false): void {
     const { _windowManager } = this
     const openFilesInNewWindow = this._accessor.preferences.getItem<boolean>('openFilesInNewWindow')
 
+    const fileOptions: Record<string, FileOpenOptions> = {}
     const fileSet = new Set<string>()
     const directorySet = new Set<string>()
-    for (const { isDir, path } of pathsToOpen) {
+    for (const { allowMissing, isDir, path: pathname, readOnly } of pathsToOpen) {
       if (isDir) {
-        directorySet.add(path)
+        directorySet.add(pathname)
       } else {
-        fileSet.add(path)
+        fileSet.add(pathname)
+        fileOptions[pathname] = {
+          ...fileOptions[pathname],
+          ...(allowMissing ? { allowMissing: true } : {}),
+          ...(readOnly ? { readOnly: true } : {})
+        }
       }
     }
 
-    // Filter out directories that are already opened.
     for (const window of _windowManager.windows.values()) {
       if (window.type === WindowType.EDITOR) {
         const { openedRootDirectory } = window as EditorWindow
@@ -651,7 +575,6 @@ class App {
     }))
     const filesToOpen = Array.from(fileSet)
 
-    // Discard all directories except first one and add files.
     if (openFilesInSameWindow) {
       if (directoriesToOpen.length) {
         directoriesToOpen[0].fileList.push(...filesToOpen)
@@ -662,11 +585,9 @@ class App {
       filesToOpen.length = 0
     }
 
-    // Find the best window(s) to open the files in.
     if (!openFilesInSameWindow && !openFilesInNewWindow) {
       const isFirstWindow = _windowManager.getActiveEditorId() === null
 
-      // Prefer new directories
       for (let i = 0; i < directoriesToOpen.length; ++i) {
         const { fileList, rootDirectory } = directoriesToOpen[i]
 
@@ -691,7 +612,6 @@ class App {
         }
       }
 
-      // Find for the remaining files the best window to open the files in.
       if (isFirstWindow && directoriesToOpen.length && filesToOpen.length) {
         const { fileList } = directoriesToOpen[0]
         fileList.push(...filesToOpen)
@@ -701,7 +621,6 @@ class App {
         for (const item of windowList) {
           const { windowId, fileList } = item
 
-          // File list is empty when all files are already opened.
           if (fileList.length === 0) {
             continue
           }
@@ -709,42 +628,38 @@ class App {
           if (windowId !== null) {
             const window = _windowManager.get(windowId) as EditorWindow | undefined
             if (window) {
-              window.openTabsFromPaths(fileList)
+              window.openTabsFromPaths(fileList, fileOptions)
               window.bringToFront()
               continue
             }
             // else: fallthrough
           }
-          this._createEditorWindow(null, fileList)
+          this._createEditorWindow(null, fileList, [], {}, [], fileOptions)
         }
       }
 
-      // Directores are always opened in a new window if not already opened.
       for (const item of directoriesToOpen) {
         const { rootDirectory, fileList } = item
-        this._createEditorWindow(rootDirectory, fileList)
+        this._createEditorWindow(rootDirectory, fileList, [], {}, [], fileOptions)
       }
     } else {
-      // Open each file and directory in a new window.
 
       for (const pathname of filesToOpen) {
-        this._createEditorWindow(null, [pathname])
+        this._createEditorWindow(null, [pathname], [], {}, [], fileOptions)
       }
 
       for (const item of directoriesToOpen) {
         const { rootDirectory, fileList } = item
-        this._createEditorWindow(rootDirectory, fileList)
+        this._createEditorWindow(rootDirectory, fileList, [], {}, [], fileOptions)
       }
     }
 
-    // Empty the file list
     pathsToOpen.length = 0
   }
 
   private _openSettingsWindow(category?: string | null): void {
     const settingWins = this._windowManager.getWindowsByType(WindowType.SETTINGS)
     if (settingWins.length >= 1) {
-      // A setting window is already created
       const browserSettingWindow = settingWins[0].win.browserWindow!
       browserSettingWindow.webContents.send('settings::change-tab', category)
       if (isLinux) {
@@ -761,7 +676,6 @@ class App {
     registerKeyboardListeners()
     registerSpellcheckerListeners()
 
-    // Handle language setting requests
     ipcMain.on('mt::get-current-language', (event) => {
       const { language } = this._accessor.preferences.getAll()
       event.reply('mt::current-language', language || 'en')
@@ -850,7 +764,6 @@ class App {
 
     onInternalChannel('screen-capture', async(win: BrowserWindow) => {
       if (isOsx) {
-        // Use macOs `screencapture` command line when in macOs system.
         const screenshotFileName = await this.getScreenshotFileName()
         // Capture straight to a file: Electron 44 removed the synchronous
         // clipboard `readImage` API, and the file form also keeps the
@@ -886,17 +799,23 @@ class App {
       this._openSettingsWindow(category)
     })
 
-    onInternalChannel('app-open-file-by-id', (windowId: number, filePath: string) => {
-      const openFilesInNewWindow = this._accessor.preferences.getItem<boolean>('openFilesInNewWindow')
-      if (openFilesInNewWindow) {
-        this._createEditorWindow(null, [filePath])
-      } else {
-        const editor = this._windowManager.get(windowId) as EditorWindow | undefined
-        if (editor) {
-          editor.openTab(filePath, {}, true)
+    onInternalChannel(
+      'app-open-file-by-id',
+      (windowId: number, filePath: string, options: Record<string, unknown> = {}) => {
+        const openFilesInNewWindow =
+          this._accessor.preferences.getItem<boolean>('openFilesInNewWindow')
+        if (openFilesInNewWindow) {
+          this._createEditorWindow(null, [filePath], [], {}, [], {
+            [filePath]: options as FileOpenOptions
+          })
+        } else {
+          const editor = this._windowManager.get(windowId) as EditorWindow | undefined
+          if (editor) {
+            editor.openTab(filePath, options, true)
+          }
         }
       }
-    })
+    )
     onInternalChannel('app-open-files-by-id', (windowId: number, fileList: string[]) => {
       const openFilesInNewWindow = this._accessor.preferences.getItem<boolean>('openFilesInNewWindow')
       if (openFilesInNewWindow) {
@@ -941,7 +860,6 @@ class App {
       }
     )
 
-    // --- renderer -------------------
 
     ipcMain.on('mt::app-try-quit', () => {
       app.quit()
@@ -988,7 +906,6 @@ class App {
       const win = BrowserWindow.fromWebContents(e.sender)
       if (!win) return
       const { keybindings } = this._accessor
-      // Convert map to object
       win.webContents.send('mt::keybindings-response', Object.fromEntries(keybindings.keys))
     })
 
@@ -1021,11 +938,12 @@ class App {
       return saved
     })
 
-    ipcMain.handle('mt::fs-trash-item', async(_event, fullPath: string) => {
+    ipcMain.handle('mt::fs-trash-item', async(event, fullPath: string) => {
+      const win = BrowserWindow.fromWebContents(event.sender)
       // chokidar v5 emits POSIX separators on Windows, so sidebar tree
       // pathnames reach here as `C:/a/b.md`; shell.trashItem rejects those
       // with "Failed to parse path" (electron/electron#28831).
-      return shell.trashItem(path.normalize(fullPath))
+      return confirmAndTrashItem(win, path.normalize(fullPath))
     })
   }
 }

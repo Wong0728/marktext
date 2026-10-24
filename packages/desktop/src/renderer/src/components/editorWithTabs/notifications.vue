@@ -10,23 +10,27 @@
     </div>
     <div class="controls">
       <div>
-        <span
+        <button
           v-if="currentNotification.secondaryLabel"
-          class="inline-button wide"
+          type="button"
+          class="plain-button inline-button wide"
           @click.stop="handleSecondaryClick"
         >
           {{ currentNotification.secondaryLabel }}
-        </span>
-        <span
+        </button>
+        <button
           v-if="currentNotification.showConfirm"
-          class="inline-button"
+          type="button"
+          class="plain-button inline-button"
           :class="{ wide: !!currentNotification.primaryLabel }"
           @click.stop="handleClick(true)"
         >
           {{ currentNotification.primaryLabel ?? t('common.ok') }}
-        </span>
-        <span
-          class="inline-button"
+        </button>
+        <button
+          type="button"
+          class="plain-button inline-button"
+          :aria-label="t('dialog.close')"
           @click.stop="handleClick(false)"
         >
           <el-icon
@@ -35,7 +39,7 @@
           >
             <Close />
           </el-icon>
-        </span>
+        </button>
       </div>
     </div>
   </div>
@@ -138,7 +142,6 @@ const handleSecondaryClick = () => {
     width: 24px;
     height: 24px;
     font-size: 12px;
-    cursor: pointer;
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
   /* Labeled extra button (e.g. "view changes"): sized by its text. */
@@ -146,6 +149,11 @@ const handleSecondaryClick = () => {
     width: auto;
     padding: 0 8px;
     white-space: nowrap;
+  }
+  /* The bar is filled with the notification colour, which the text colour is
+     chosen to contrast with. */
+  & .inline-button:focus-visible {
+    outline-color: currentColor;
   }
   & .inline-button:hover {
     background: rgba(255, 255, 255, 0.1);

@@ -1,5 +1,5 @@
 import { fileURLToPath } from 'url'
-import { ipcMain, shell, clipboard, ClipboardItem } from 'electron'
+import { ipcMain, shell, clipboard, nativeImage, ClipboardItem } from 'electron'
 import log from 'electron-log'
 import { isDangerousExecutableFile } from 'common/filesystem/paths'
 import { copyDocxToClipboard } from '../utils/wordClipboard'
@@ -66,11 +66,13 @@ export const registerShellHandlers = (): void => {
     }
   })
 
-  ipcMain.on('mt::clipboard::write-text', (_e, text: string) => {
+  ipcMain.handle('mt::clipboard::write-text', async(_e, text: string) => {
     try {
-      clipboard.writeText(text)
-    } catch (err) {
-      log.error('clipboard.writeText failed:', err)
+      // Electron 44 made the main-process clipboard async (W3C-style).
+      await clipboard.writeText(text)
+      return true
+    } catch {
+      return false
     }
   })
   // "Copy as Rich Text" payload: markdown source + rendered HTML + RTF with
@@ -97,6 +99,19 @@ export const registerShellHandlers = (): void => {
   )
   ipcMain.handle('mt::clipboard::write-docx', async(_e, payload: DocxClipboardPayload) => {
     await copyDocxToClipboard(payload)
+  })
+  ipcMain.handle('mt::clipboard::write-image', async(_e, png: Uint8Array) => {
+    try {
+      const image = nativeImage.createFromBuffer(Buffer.from(png))
+      if (image.isEmpty()) return false
+      // Electron 44 removed `writeImage` along with the format-string
+      // clipboard APIs; a PNG goes in as an `image/png` ClipboardItem.
+      await clipboard.write([new ClipboardItem({ 'image/png': new Blob([Buffer.from(png)]) })])
+      return true
+    } catch (err) {
+      log.error('clipboard.writeImage failed:', err)
+      return false
+    }
   })
   ipcMain.handle('mt::clipboard::read-text', async() => {
     try {

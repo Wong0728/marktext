@@ -129,16 +129,26 @@ class Selection {
         return this._text.getSelection();
     }
 
+    /**
+     * The source text of the current text selection. Empty for a caret, and for
+     * table and image selections — both drop the native range this reads.
+     */
+    getSelectedText(): string {
+        return this._text.getSelectedText();
+    }
+
     setSelection(anchor: IAnchorFocusInfo, focus: IAnchorFocusInfo): void {
         this._text.setSelection(anchor, focus);
     }
 
     selectAll(): void {
+        if (this._muya.isReadOnly) {
+            this._text.selectAllContent();
+            return;
+        }
+
         const tableSelection = this._table;
 
-        // A frozen rectangular table selection escalates: the whole table jumps
-        // to the whole document; any partial rectangle (a single cell included)
-        // grows to the whole table first.
         if (tableSelection.hasSelection) {
             if (tableSelection.isWholeTableSelected()) {
                 tableSelection.clear();
@@ -150,19 +160,15 @@ class Selection {
             return;
         }
 
-        // Read the live DOM selection so the caret the user actually sees is
-        // honored. selectAll is driven from the application menu, so the cached
-        // endpoints may be stale — e.g. after a whole-document selection blurred
-        // the editor and the user clicked back into a single block.
+        // The live caret may have moved since the last cached menu selection.
         const live = this.getSelection();
         const anchorBlock = live ? live.anchor.block : this._text.anchorBlock;
         const focusBlock = live ? live.focus.block : this._text.focusBlock;
         const anchorOffset = live ? live.anchor.offset : this._text.anchor?.offset;
         const focusOffset = live ? live.focus.offset : this._text.focus?.offset;
 
-        // A caret or selection contained in a single content block.
-        if (anchorBlock && anchorBlock === focusBlock && anchorOffset != null && focusOffset != null) {
-            // Inside one table cell: freeze it as a 1x1 rectangle.
+        // Undo may detach the cached block without restoring a caret (#5387).
+        if (anchorBlock?.outMostBlock && anchorBlock === focusBlock && anchorOffset != null && focusOffset != null) {
             if (anchorBlock.blockName === 'table.cell.content') {
                 const cellBlock = anchorBlock.closestBlock('table.cell') as TableBodyCell | null;
                 if (cellBlock) {
@@ -171,8 +177,6 @@ class Selection {
                 }
             }
 
-            // A partial selection grows to the whole block; a full-block
-            // selection falls through to the whole document.
             if (Math.abs(focusOffset - anchorOffset) < anchorBlock.text.length) {
                 const path = anchorBlock.path;
                 this._text.setSelection(
@@ -183,7 +187,6 @@ class Selection {
             }
         }
 
-        // Spanning multiple blocks, or a single block already fully selected.
         this._text.selectAllContent();
     }
 

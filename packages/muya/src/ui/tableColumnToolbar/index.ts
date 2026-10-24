@@ -51,6 +51,23 @@ export class TableColumnToolbar extends BaseFloat {
 
             const { x, y } = event;
             const eles = [...document.elementsFromPoint(x, y)];
+
+            // Never show (or keep) the column tools while the inline format
+            // picker is up — check before the hover guard below, which would
+            // otherwise keep them alive behind the picker.
+            const { ui } = this.muya;
+            for (const { name, status } of ui.shownFloat) {
+                if (name === 'mu-format-picker' && status)
+                    return this.hide();
+            }
+
+            // The toolbar overhangs narrow columns, so (x, y + OFFSET) can
+            // land on a neighbour while the pointer is on the toolbar. Keep
+            // the current anchor until the pointer leaves it (#5574).
+            const topmost = document.elementFromPoint(x, y);
+            if (this.status && topmost && this.floatBox?.contains(topmost))
+                return;
+
             const bellowEles = [...document.elementsFromPoint(x, y + OFFSET)];
             const hasTableCell = (eles: Element[]) => {
                 return eles.some(
@@ -61,12 +78,6 @@ export class TableColumnToolbar extends BaseFloat {
             };
 
             if (!hasTableCell(eles) && hasTableCell(bellowEles)) {
-                // No need to show table column tools when format tool bar is shown. or the table column tools will show on the top of format toolbar.
-                const { ui } = this.muya;
-                for (const { name, status } of ui.shownFloat) {
-                    if (name === 'mu-format-picker' && status)
-                        return this.hide();
-                }
                 const tableCellEle = bellowEles.find(
                     ele =>
                         ele[BLOCK_DOM_PROPERTY]
@@ -143,13 +154,16 @@ export class TableColumnToolbar extends BaseFloat {
         event.stopPropagation();
 
         const { _block: block } = this;
-        // Block is not null, just in case
-        if (!block || !block.parent)
-            return;
+        // The toolbar stays open while the document changes under it. Once an
+        // Undo has removed the table, its cells are detached — and a detached
+        // cell still has its row as a parent, so only `outMostBlock` tells
+        // them apart.
+        if (!block?.outMostBlock)
+            return this.hide();
 
-        const offset = block.parent.offset(block);
+        const offset = block.parent!.offset(block);
         const { table, row } = block;
-        const columnCount = row.offset(this._block!);
+        const columnCount = row.offset(block);
 
         switch (item.type) {
             case 'remove': {

@@ -4,15 +4,6 @@ import type Content from '../../../base/content';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Muya } from '../../../../muya';
 
-// DATA-LOSS GUARD — forward-Delete-at-end-of-paragraph block merge.
-//
-// Pressing Delete at the very end of a paragraph appends the NEXT paragraph onto
-// it and removes the now-empty next block. The handler performs that merge in the
-// model itself, so it MUST call `event.preventDefault()` — otherwise the browser
-// also runs its native forward-delete on the freshly merged paragraph, eating the
-// first character of the appended text (`alpha` + `beta` -> `alphaeta`). The
-// preventDefault assertion below is the regression guard for that drop.
-
 const bootedHosts: HTMLElement[] = [];
 let originalVersion: string | undefined;
 let hadVersion = false;
@@ -61,8 +52,6 @@ function contentByText(muya: Muya, text: string): Content {
     return target;
 }
 
-// Land the caret at the end of the given content block (active block + cursor),
-// then route a Delete through its handler the way the keydown listener does.
 function deleteAtEnd(muya: Muya, content: Content): { preventDefault: ReturnType<typeof vi.fn> } {
     muya.editor.activeContentBlock = content;
     const offset = content.text.length;
@@ -164,6 +153,36 @@ describe('forward Delete merging a list item that owns a nested sublist (#1845)'
             name: 'paragraph',
             text: 'D',
         });
+    });
+
+    it('moves the nested sublist of a task list item as well', () => {
+        const muya = bootMuya('- [ ] a\n- [ ] C\n  - D\n');
+
+        emptyFirstItemThenDelete(muya);
+
+        muya.flush();
+        expect(muya.getMarkdown()).toBe('- [ ] C\n  - D\n');
+    });
+});
+
+// #5423 — the #1845 move applies to list items only.
+describe('forward Delete merging the first paragraph of a blockquote (#5423)', () => {
+    it('keeps the rest of the blockquote quoted', () => {
+        const muya = bootMuya('a\n\n> p\n>\n> q\n');
+
+        deleteAtEnd(muya, contentByText(muya, 'a'));
+
+        muya.flush();
+        expect(muya.getMarkdown()).toBe('ap\n\n> q\n');
+    });
+
+    it('keeps the rest of a blockquote nested in a list item quoted', () => {
+        const muya = bootMuya('- a\n\n  > p\n  >\n  > q\n');
+
+        deleteAtEnd(muya, contentByText(muya, 'a'));
+
+        muya.flush();
+        expect(muya.getMarkdown()).toBe('- ap\n\n  > q\n');
     });
 });
 

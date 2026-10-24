@@ -5,7 +5,11 @@ import Prism from 'prismjs';
 import cjkEmStrongExtension from './extensions/cjkEmStrong';
 import emojiExtension from './extensions/emoji';
 import footnoteExtension from './extensions/footnote';
-import mathExtension from './extensions/math';
+import githubAlertsExtension from './extensions/githubAlerts';
+import inlineDiffExtension from './extensions/inlineDiff';
+import markExtension from './extensions/mark';
+import mathExtension, { doubleBackslashMathExtension, gfmMathExtension, singleBackslashMathExtension } from './extensions/math';
+import multilineBlockquoteExtension from './extensions/multilineBlockquote';
 import superSubScriptExtension from './extensions/superSubscript';
 import fm, { frontMatterRender } from './frontMatter';
 import { DEFAULT_OPTIONS } from './options';
@@ -22,7 +26,6 @@ const DIAGRAM_TYPE = [
 ];
 
 function highlight(code: string, lang: string) {
-    // Language may be undefined (GH#591)
     if (!lang)
         return code;
 
@@ -42,27 +45,22 @@ export function getHighlightHtml(src: string, options: ILexOption = {}) {
     // block rules operate on LF, while Windows-authored Markdown uses CRLF.
     src = normalizeMarkdownInput(src);
     options = Object.assign({}, DEFAULT_OPTIONS, options);
-    const { footnote, frontMatter, math, isGitlabCompatibilityEnabled, superSubScript }
+    const { footnote, frontMatter, texMathDollars, texMathGfm, texMathSingleBackslash, texMathDoubleBackslash, superSubScript, highlightSyntax, inlineDiff, multilineBlockquote }
         = options;
 
-    // Build a fresh Marked instance per call. `Marked.use({ walkTokens })`
-    // chains rather than replaces, so reusing a module-level singleton would
-    // cause walkTokens to fire N times after N invocations and corrupt token
-    // state (e.g. wiping `lang` on subsequent runs).
+    // Use a fresh Marked instance; repeated use() chains walkTokens and corrupts repeated renders.
     const marked = new Marked(markedHighlight({ highlight }));
 
     marked.use({
-        walkTokens: walkTokens({ math, isGitlabCompatibilityEnabled }),
+        walkTokens: walkTokens({ texMathDollars, texMathGfm }),
     });
 
-    // Treat CJK characters as punctuation for emphasis/strong flanking so
-    // `中文**"加粗"**中文` bolds (marktext/marktext#4307). Additive override —
-    // never regresses spec-conformant Latin emphasis.
+    // Keep CJK emphasis flanking consistent with clipboard and export rendering (#4307).
     marked.use(cjkEmStrongExtension());
 
     marked.use(emojiExtension({ isRenderEmoji: true }));
 
-    if (math) {
+    if (texMathDollars) {
         marked.use(
             mathExtension({
                 throwOnError: false,
@@ -71,8 +69,44 @@ export function getHighlightHtml(src: string, options: ILexOption = {}) {
         );
     }
 
+    if (texMathGfm) {
+        marked.use(
+            gfmMathExtension({
+                throwOnError: false,
+                useKatexRender: true,
+            }),
+        );
+    }
+
+    if (texMathSingleBackslash) {
+        marked.use(
+            singleBackslashMathExtension({
+                throwOnError: false,
+                useKatexRender: true,
+            }),
+        );
+    }
+
+    if (texMathDoubleBackslash) {
+        marked.use(
+            doubleBackslashMathExtension({
+                throwOnError: false,
+                useKatexRender: true,
+            }),
+        );
+    }
+
     if (superSubScript)
         marked.use(superSubScriptExtension());
+
+    if (highlightSyntax)
+        marked.use(markExtension());
+
+    if (inlineDiff)
+        marked.use(inlineDiffExtension());
+
+    marked.use(multilineBlockquoteExtension(multilineBlockquote === true));
+    marked.use(githubAlertsExtension(options.githubAlerts === true));
 
     if (footnote)
         marked.use(footnoteExtension());

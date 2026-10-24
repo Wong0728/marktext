@@ -9,7 +9,6 @@
 import { app, clipboard, crashReporter, dialog, ipcMain } from 'electron'
 import os from 'os'
 import log from 'electron-log'
-import { createAndOpenGitHubIssueUrl } from './utils/createGitHubIssue'
 import { t } from './i18n'
 
 type ErrorType = 'main' | 'renderer'
@@ -39,9 +38,8 @@ const exceptionToString = (error: Error, type: ErrorType): string => {
 }
 
 const handleError = async(title: string, error: Error, type: ErrorType): Promise<void> => {
-  const { message, stack } = error
+  const { stack } = error
 
-  // Write error into file
   if (type === 'main') {
     logger(exceptionToString(error, type))
   }
@@ -59,12 +57,13 @@ const handleError = async(title: string, error: Error, type: ErrorType): Promise
     return
   }
 
-  // show error dialog
   if (app.isReady()) {
-    // Blocking message box
     const { response } = await dialog.showMessageBox({
       type: 'error',
-      buttons: [t('common.ok'), t('error.copyError'), t('error.report')],
+      buttons: [
+        t('common.ok'),
+        t('error.copyError')
+      ],
       defaultId: 0,
       noLink: true,
       message: title,
@@ -76,59 +75,34 @@ const handleError = async(title: string, error: Error, type: ErrorType): Promise
         clipboard.writeText(`${title}\n${stack}`)
         break
       }
-      case 2: {
-        const issueTitle = message ? t('error.unexpectedErrorWithMessage', { message }) : title
-        createAndOpenGitHubIssueUrl(
-          issueTitle,
-          `### Description
-
-${title}.
-
-### Minimal Reprouducible Markdown Example (or Steps)
-
-<Add steps or a markdown example to reproduce the problem.>
-
-### Stack Trace
-
-\`\`\`\n${stack}\n\`\`\`
-
-### Version
-
-MarkText: ${MARKTEXT_VERSION_STRING}
-Operating system: ${getOSInformation()}`
-        )
-        break
-      }
+      // The Report button is disabled because stack-only reports flooded the tracker without reproduction steps (#5356).
     }
   } else {
-    // error during Electron initialization
     dialog.showErrorBox(title, stack ?? '')
     process.exit(1)
   }
 }
 
 const setupExceptionHandler = (): void => {
-  // Suppress EPIPE errors when electron-log writes to a closed pipe.
-  const ignoreEpipe = (err: NodeJS.ErrnoException): void => {
-    if (err.code !== 'EPIPE') throw err
+  // macOS reports EIO for revoked terminal descriptors; other platforms
+  // commonly report EPIPE for the same closed-output condition.
+  const ignoreBrokenOutputPipe = (err: NodeJS.ErrnoException): void => {
+    if (err.code !== 'EPIPE' && err.code !== 'EIO') throw err
   }
-  process.stdout.on('error', ignoreEpipe)
-  process.stderr.on('error', ignoreEpipe)
+  process.stdout.on('error', ignoreBrokenOutputPipe)
+  process.stderr.on('error', ignoreBrokenOutputPipe)
 
-  // main process error handler
   process.on('uncaughtException', (error: Error) => {
     handleError(ERROR_MSG_MAIN(), error, 'main')
   })
 
-  // renderer process error handler
   ipcMain.on('mt::handle-renderer-error', (_e, error: Error) => {
     handleError(ERROR_MSG_RENDERER(), error, 'renderer')
   })
 
-  // start crashReporter to save core dumps to temporary folder
   crashReporter.start({
-    companyName: 'marktext',
-    productName: 'marktext',
+    companyName: 'MarkText',
+    productName: 'MarkText',
     submitURL: 'http://0.0.0.0/',
     uploadToServer: false,
     compress: true
@@ -136,7 +110,6 @@ const setupExceptionHandler = (): void => {
 }
 
 export const initExceptionLogger = (): void => {
-  // replace placeholder logger
   logger = log.error as unknown as Logger
 }
 

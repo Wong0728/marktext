@@ -1,4 +1,3 @@
-/* eslint-disable no-fallthrough */
 import type {
     IAtxHeadingState,
     IBlockQuoteState,
@@ -19,17 +18,9 @@ import type {
     IThematicBreakState,
     TState,
 } from './types';
-/**
- * Hi contributors!
- *
- * Before you edit or update codes in this file,
- * make sure you have read this bellow:
- * Commonmark Spec: https://spec.commonmark.org/0.29/
- * GitHub Flavored Markdown Spec: https://github.github.com/gfm/
- * Pandoc Markdown: https://pandoc.org/MANUAL.html#pandocs-markdown
- * The output markdown needs to obey the standards of these Spec.
- */
+/* eslint-disable no-fallthrough */
 import { deepClone } from '../utils';
+import { githubAlertMarker } from '../utils/githubAlerts';
 
 import logger from '../utils/logger';
 import stringWidth from '../utils/stringWidth';
@@ -47,10 +38,7 @@ export interface IExportMarkdownOptions {
 }
 
 export default class ExportMarkdown {
-    // Stack of currently-open list metas while serializing a tree (push on
-    // descent into bullet/order/task list, pop on ascent). The serializer
-    // reads `loose` / `marker` / `delimiter` / `start` from the top entry
-    // to render the correct bullet, indentation, and tightness.
+    // Open list metadata stack; innermost settings control nested item serialization.
     private _listType: (
         | IBulletListState['meta']
         | IOrderListState['meta']
@@ -72,7 +60,6 @@ export default class ExportMarkdown {
         // helper to translate the first tight item in a nested list
         this._isLooseParentList = true;
 
-        // set and validate settings
         this._listIndentation = 'number';
         if (listIndentation === 'dfm') {
             this._listIndentation = 'dfm';
@@ -116,6 +103,10 @@ export default class ExportMarkdown {
                     && this._startsWithEmptyDashBulletItem(state)
                     ? SETEXT_SAFE_BULLET_MARKER
                     : undefined;
+                const followsTightList = previousState !== undefined
+                    && isAnyListState(previousState)
+                    && !previousState.meta.loose
+                    && !state.meta.loose;
                 lastListBullet = this._serializeListBlock(
                     state,
                     result,
@@ -123,6 +114,7 @@ export default class ExportMarkdown {
                     listIndent,
                     lastListBullet,
                     markerOverride,
+                    followsTightList,
                 );
             }
             else if (state.name === 'list-item' || state.name === 'task-list-item') {
@@ -181,6 +173,14 @@ export default class ExportMarkdown {
                 result.push(this._serializeDiagramBlock(state, indent));
                 break;
 
+            case 'github-alert': {
+                this._insertLineBreak(result, indent);
+                const prefix = `${indent}> `;
+                const body = this._convertStatesToMarkdown(state.children, prefix);
+                result.push(`${prefix}${githubAlertMarker(state.meta)}\n${state.meta.blankLineAfterMarker && body.trim() ? `${prefix}\n` : ''}${body}`);
+                break;
+            }
+
             case 'block-quote':
                 this._insertLineBreak(result, indent);
                 result.push(this._serializeBlockquote(state, indent));
@@ -213,18 +213,27 @@ export default class ExportMarkdown {
         listIndent: string,
         lastListBullet: string,
         markerOverride?: string,
+        followsTightList = false,
     ): string {
         let insertNewLine = this._isLooseParentList;
         this._isLooseParentList = true;
         const meta = deepClone(state.meta);
         if (markerOverride && 'marker' in meta)
             meta.marker = markerOverride;
+        if (state.name !== 'bullet-list' && 'sourceMarkers' in meta && !this._shouldPreserveOrderMarkers(state))
+            delete meta.sourceMarkers;
 
-        // Start a new list without separation due changing the bullet or ordered list delimiter starts a new list.
+        // Changing a bullet or ordered delimiter starts a separate Markdown list.
         const bulletMarkerOrDelimiter
             = 'delimiter' in meta ? meta.delimiter : meta.marker;
 
         if (lastListBullet && lastListBullet !== bulletMarkerOrDelimiter)
+            insertNewLine = false;
+
+        // Adjacent tight lists with the same marker are one markdown list (the
+        // parser splits it where items switch between plain and task), so a
+        // blank line would only make that list loose on the next parse.
+        if (lastListBullet === bulletMarkerOrDelimiter && followsTightList)
             insertNewLine = false;
 
         if (insertNewLine)
@@ -235,6 +244,21 @@ export default class ExportMarkdown {
         this._listType.pop();
 
         return bulletMarkerOrDelimiter;
+    }
+
+    // Source markers only hold while the list keeps the items it was parsed
+    // with: an insert, delete or reorder breaks the per-item match, and the
+    // list falls back to numbering from `start`.
+    private _shouldPreserveOrderMarkers(state: IOrderListState | ITaskListState) {
+        const sourceMarkers = 'sourceMarkers' in state.meta
+            ? state.meta.sourceMarkers
+            : undefined;
+        if (!sourceMarkers || sourceMarkers.length !== state.children.length)
+            return false;
+
+        return state.children.every((child, index) =>
+            child.meta?.orderMarker === sourceMarkers[index],
+        );
     }
 
     private _startsWithEmptyDashBulletItem(
@@ -261,7 +285,6 @@ export default class ExportMarkdown {
     ) {
         const { loose } = this._listType[this._listType.length - 1];
 
-        // helper variable to correct the first tight item in a nested list
         this._isLooseParentList = loose;
         if (loose)
             this._insertLineBreak(result, indent);
@@ -353,11 +376,17 @@ export default class ExportMarkdown {
         const result = [];
         const { text, meta } = state;
         const textList = text.split('\n');
-        // `meta.lang` holds the full info string verbatim, so emit it as-is.
         const { type, lang } = meta;
 
         if (type === 'fenced') {
-            const fence = '`'.repeat(this._codeFenceLength(text, meta.fenceLength));
+            // A backtick fence's info string may not contain a backtick
+            // (CommonMark §4.5), so fall back to a tilde fence rather than emit
+            // markdown that would not read back as a code block.
+            const fenceChar: '`' | '~'
+                = meta.fenceChar === '~' || lang.includes('`') ? '~' : '`';
+            const fence = fenceChar.repeat(
+                this._codeFenceLength(text, meta.fenceLength, fenceChar),
+            );
             result.push(`${indent}${lang ? `${fence}${lang}\n` : `${fence}\n`}`);
             textList.forEach((text) => {
                 result.push(`${indent}${text}\n`);
@@ -373,14 +402,16 @@ export default class ExportMarkdown {
         return result.join('');
     }
 
-    // The opening fence must be longer than any all-backtick line in the body
-    // (else that line closes the block early), at least as long as the original
-    // fence, and never shorter than the markdown minimum of 3.
-    private _codeFenceLength(text: string, stored?: number): number {
+    // The opening fence must be longer than any interior line made only of the
+    // same fence character (else that line closes the block early), at least as
+    // long as the original fence, and never shorter than the markdown minimum
+    // of 3.
+    private _codeFenceLength(text: string, stored: number | undefined, fenceChar: '`' | '~'): number {
+        const fenceRun = fenceChar === '`' ? /^`+$/ : /^~+$/;
         let longestInterior = 0;
         for (const line of text.split('\n')) {
             const trimmed = line.trim();
-            if (/^`+$/.test(trimmed))
+            if (fenceRun.test(trimmed))
                 longestInterior = Math.max(longestInterior, trimmed.length);
         }
 
@@ -433,20 +464,19 @@ export default class ExportMarkdown {
     }
 
     private _serializeBlockquote(state: IBlockQuoteState, indent: string) {
-        const { children } = state;
-        const newIndent = `${indent}> `;
+        const { children, meta } = state;
 
+        if (meta?.style === 'fenced') {
+            const inner = this._convertStatesToMarkdown(children, indent);
+            return `${indent}>>>\n${inner}${indent}>>>\n`;
+        }
+
+        const newIndent = `${indent}> `;
         return this._convertStatesToMarkdown(children, newIndent);
     }
 
     private _serializeFootnote(state: IFootnoteBlockState, indent: string) {
-        // Footnote definitions render as
-        //   [^id]: first paragraph
-        //
-        //       continuation block indented by 4 spaces
-        // i.e. the `[^id]: ` prefix sits on the first child's first line and
-        // subsequent content (including blank lines between paragraphs) is
-        // indented by four spaces past the surrounding `indent`.
+        // Prefix the first line with [^id]: and indent continuation blocks by four spaces.
         const { meta, children } = state;
         const innerIndent = `${indent}    `;
         const inner = this._convertStatesToMarkdown(children, innerIndent);
@@ -554,9 +584,6 @@ export default class ExportMarkdown {
     ) {
         const result = [];
         const listInfo = this._listType[this._listType.length - 1];
-        // `listInfo` is one of three list-meta shapes (bullet / order / task).
-        // bullet & task carry `marker`; order carries `delimiter` + `start`.
-        // We discriminate on presence of `marker` to pick the right fields.
         const marker = 'marker' in listInfo ? listInfo.marker : undefined;
         const delimiter = 'delimiter' in listInfo ? listInfo.delimiter : undefined;
         const isUnorderedList = !!marker;
@@ -567,39 +594,33 @@ export default class ExportMarkdown {
             itemMarker = marker ? `${marker} ` : '- ';
         }
         else if ('start' in listInfo) {
-            // NOTE: GitHub and Bitbucket limit the list count to 99 but this is nowhere defined.
-            //  We limit the number to 99 for Daring Fireball Markdown to prevent indentation issues.
-            let n = listInfo.start;
-            if ((this._listIndentation === 'dfm' && n > 99) || n > 999999999)
-                n = 1;
+            const preservedMarker = listInfo.sourceMarkers?.shift();
+            if (preservedMarker) {
+                itemMarker = `${preservedMarker} `;
+            }
+            else {
+                // NOTE: GitHub and Bitbucket limit the list count to 99 but this is nowhere defined.
+                //  We limit the number to 99 for Daring Fireball Markdown to prevent indentation issues.
+                let n = listInfo.start;
+                if ((this._listIndentation === 'dfm' && n > 99) || n > 999999999)
+                    n = 1;
 
+                itemMarker = `${n}${delimiter || '.'} `;
+            }
             listInfo.start++;
-
-            itemMarker = `${n}${delimiter || '.'} `;
         }
         else {
             itemMarker = '- ';
         }
 
-        // Subsequent paragraph indentation
         const newIndent = indent + ' '.repeat(itemMarker.length);
 
-        // Extra indentation for a NESTED list, added on top of the parent
-        // item's content column — `newIndent` above already advanced by the
-        // marker width, i.e. the CommonMark-minimal nest (a child list must
-        // sit at least past the parent marker to parse as nested). The nested
-        // marker therefore lands at: itemMarker.length + (listIndentationCount - 1).
-        //
-        // So a numeric "N spaces" is an indentation LEVEL relative to the
-        // content column, NOT an absolute column count: for a `- ` marker
-        // (width 2), N=1 -> 2 cols (tightest), N=4 -> 5 cols. Only `dfm` pins a
-        // hard 4-column nest regardless of marker width (4 - itemMarker.length).
-        // This matches the legacy muyajs serializer byte-for-byte
-        // (muyajs/lib/utils/exportMarkdown.js `normalizeListItem`).
+        // Additional nesting indentation beyond the parent item’s content column;
+        // CommonMark already permits nesting at that column.
         let listIndent = '';
         const { _listIndentation: listIndentation } = this;
         if (listIndentation === 'dfm')
-            listIndent = ' '.repeat(4 - itemMarker.length);
+            listIndent = ' '.repeat(Math.max(0, 4 - itemMarker.length));
         else if (listIndentation === 'number')
             listIndent = ' '.repeat(this._listIndentationCount - 1);
 

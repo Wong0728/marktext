@@ -8,15 +8,23 @@
       style="display: flex; align-items: center"
     >
       <span>{{ description }}:</span>
-      <LinkIcon
+      <icon-tooltip
         v-if="more"
-        :size="14"
-        class="link-icon"
-        @click="handleMoreClick"
-      />
+        :content="t('preferences.learnMore', { name: description })"
+      >
+        <button
+          type="button"
+          class="plain-button link-icon"
+          :aria-label="t('preferences.learnMore', { name: description })"
+          @click="handleMoreClick"
+        >
+          <LinkIcon :size="14" />
+        </button>
+      </icon-tooltip>
     </div>
     <el-input
       v-model="inputText"
+      :aria-label="description"
       class="input"
       :class="{ error: invalidInput }"
       :placeholder="defaultValue"
@@ -24,6 +32,12 @@
       clearable
       @input="handleInput"
     />
+    <div
+      v-if="invalidInput && errorMessage"
+      class="error-message"
+    >
+      {{ errorMessage }}
+    </div>
     <div
       v-if="notes"
       class="notes"
@@ -35,8 +49,12 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import LinkIcon from '@/components/icons/LinkIcon.vue'
+import IconTooltip from '@/components/iconTooltip/index.vue'
 import type { PrefControlBaseProps } from '../types'
+
+const { t } = useI18n()
 
 interface TextBoxProps extends PrefControlBaseProps {
   notes?: string
@@ -45,11 +63,13 @@ interface TextBoxProps extends PrefControlBaseProps {
   defaultValue?: string
   emitTime?: number
   regexValidator?: RegExp
+  errorMessage?: string
 }
 
 const props = withDefaults(defineProps<TextBoxProps>(), {
   description: '',
   notes: '',
+  errorMessage: '',
   more: '',
   disable: false,
   defaultValue: '',
@@ -144,6 +164,11 @@ const handleInput = (value: string) => {
   }
 }
 .pref-text-box-item .el-input.error input {
+  color: #f56c6c;
+}
+.pref-text-box-item .error-message {
+  margin: 8px 0 0;
+  font-size: 12px;
   color: #f56c6c;
 }
 </style>

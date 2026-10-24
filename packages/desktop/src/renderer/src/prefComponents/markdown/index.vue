@@ -63,6 +63,54 @@
           :on-change="(value) => onSelectChange('footnote', value)"
           more="https://pandoc.org/MANUAL.html#footnotes"
         />
+        <bool
+          :description="t('preferences.markdown.extensions.texMathDollars')"
+          :bool="texMathDollars"
+          :on-change="(value) => onSelectChange('texMathDollars', value)"
+          more="https://pandoc.org/MANUAL.html#extension-tex_math_dollars"
+        />
+        <bool
+          :description="t('preferences.markdown.extensions.texMathGfm')"
+          :bool="texMathGfm"
+          :on-change="(value) => onSelectChange('texMathGfm', value)"
+          more="https://pandoc.org/MANUAL.html#extension-tex_math_gfm"
+        />
+        <bool
+          :description="t('preferences.markdown.extensions.texMathSingleBackslash')"
+          :bool="texMathSingleBackslash"
+          :on-change="(value) => onSelectChange('texMathSingleBackslash', value)"
+          more="https://pandoc.org/MANUAL.html#extension-tex_math_single_backslash"
+        />
+        <bool
+          :description="t('preferences.markdown.extensions.texMathDoubleBackslash')"
+          :bool="texMathDoubleBackslash"
+          :on-change="(value) => onSelectChange('texMathDoubleBackslash', value)"
+          more="https://pandoc.org/MANUAL.html#extension-tex_math_double_backslash"
+        />
+        <bool
+          :description="t('preferences.markdown.extensions.highlightSyntax')"
+          :bool="highlightSyntax"
+          :on-change="(value) => onSelectChange('highlightSyntax', value)"
+          more="https://www.markdownguide.org/extended-syntax/#highlight"
+        />
+        <bool
+          :description="t('preferences.markdown.extensions.inlineDiff')"
+          :bool="inlineDiff"
+          :on-change="(value) => onSelectChange('inlineDiff', value)"
+          more="https://docs.gitlab.com/user/markdown/#inline-diff"
+        />
+        <bool
+          :description="t('preferences.markdown.extensions.githubAlerts')"
+          :bool="githubAlerts"
+          :on-change="(value) => onSelectChange('githubAlerts', value)"
+          more="https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax#alerts"
+        />
+        <bool
+          :description="t('preferences.markdown.extensions.multilineBlockquote')"
+          :bool="multilineBlockquote"
+          :on-change="(value) => onSelectChange('multilineBlockquote', value)"
+          more="https://docs.gitlab.com/user/markdown/#multiline-blockquote"
+        />
       </template>
     </compound>
 
@@ -77,11 +125,6 @@
           :description="t('preferences.markdown.compatibility.enableHtml')"
           :bool="isHtmlEnabled"
           :on-change="(value) => onSelectChange('isHtmlEnabled', value)"
-        />
-        <bool
-          :description="t('preferences.markdown.compatibility.enableGitlab')"
-          :bool="isGitlabCompatibilityEnabled"
-          :on-change="(value) => onSelectChange('isGitlabCompatibilityEnabled', value)"
         />
         <bool
           :description="t('preferences.markdown.compatibility.softNewlineAsSpace')"
@@ -170,8 +213,15 @@ const {
   frontmatterType,
   superSubScript,
   footnote,
+  texMathDollars,
+  texMathGfm,
+  texMathSingleBackslash,
+  texMathDoubleBackslash,
+  highlightSyntax,
+  inlineDiff,
+  multilineBlockquote,
+  githubAlerts,
   isHtmlEnabled,
-  isGitlabCompatibilityEnabled,
   softNewlineAsSpace,
   sequenceTheme,
   plantumlServer
