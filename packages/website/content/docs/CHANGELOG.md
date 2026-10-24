@@ -4,6 +4,28 @@ The entries below are this fork's releases; everything under them is inherited
 upstream history. Release artifacts and notes:
 https://github.com/Wong0728/marktext/releases
 
+## 0.23.0-fork.1
+
+First fork release on top of upstream **v0.23.0**, reconciled **upstream-first**: the official v0.23.0 tree and its restructuring are adopted wholesale, and the fork's features were re-ported onto the new structure rather than kept on the old one. The integration landed as merge commit 57d7a15b and was finished by 286a73ce (drop committed test artifacts and stray lockfiles), 96c71155 (DOCX dual-engine adapted to the async v0.23.0 pandoc API), 445abe64 (fork-only dependencies restored) and 39c3ce85 (typecheck, unit, lint and build repairs after the integration). From upstream this release gains per-tab editing, source-code, reading and read-only document modes (#5801, #5802, #5793), a `--read-only` CLI option (#5821), foldable headings and a rebuilt document outline (#5276, #5791), preview tabs for sidebar files (#5820, #5792), a title-bar document statistics popover (#5794, #5819) and Linux arm64 release packages (#5778) — the full upstream list is in the 0.23.0 section below.
+
+**:cactus:Preserved fork features**
+
+- Word clipboard rich copy stays byte-exact: `HTML Format` and RTF from Word are carried as raw bytes instead of an ANSI-codepage round-trip, and equations travel as OMML (`packages/desktop/src/main/utils/wordClipboard.ts`, regression-tested in `test/unit/specs/wordClipboard.spec.ts`).
+- DOCX export keeps two engines behind `auto` / `pandoc` / `js` (`resolveDocxEngine`/`exportDocxFile` dispatched from `src/main/menu/actions/file.ts`); specs `htmlToDocx.spec.ts`, `exportHtmlJsDocx.spec.ts`, `docxReference.spec.ts`.
+- External file changes are reconciled with a three-way merge (2410907c); specs `threeWayMerge.spec.ts`, `external-change-merge.spec.ts`.
+- muya keeps the fork's clipboard/selection behavior — MathML math copies, cross-block extraction, IME composition survival (`packages/muya/src/clipboard/__tests__/`, `packages/muya/src/selection/TextSelection.ts`).
+- Native multi-window tabs — drag a tab out, drop it onto another window — with crash-recovery snapshots (`src/main/app/windowManager.ts`).
+- High-contrast dark theme across UI, Prism, CodeMirror and menus (`src/common/theme.ts`).
+- Windows-specific fixes preserved: Pandoc discovery beyond `PATH` via `Program Files`/`LOCALAPPDATA` (`src/main/utils/pandoc.ts`), CJK-safe `fileUrlToNativePath` (`renderer/src/util/fileUrl.ts`), atomic writes with retry on `EPERM`/`EBUSY` (`src/main/filesystem`).
+- Frontmatter-driven export presets and the CJK/math/table/diagram export suites (`export-frontmatter-preset.spec.ts`, `export-combined-cjk-math-table-diagram.spec.ts`).
+
+**:warning:Known risks**
+
+- The merge-execution report («v0.23 合并执行报告», published by the merge pipeline) is the authoritative record of this integration: the per-bucket conflict resolution, the files deleted in favor of upstream, the post-merge cleanup and the risk points self-reported by the resolution engineers. File-level merge decisions are documented there.
+- The Playwright e2e suite was not run in the release pipeline (it needs browser binaries and a packaged app): behavior-level parity of the re-ported features on the v0.23.0 base rests on the unit suites above plus a pending manual smoke pass.
+- `eslint --cache .` exits 0 but carries 190 warnings (0 errors), dominated by `@typescript-eslint/no-non-null-assertion`, inherited from the integration.
+- Deliberate divergence to watch: Electron stays at ~44.3.0 (the fork's Windows fixes depend on it) while upstream v0.23.0 pins ~42.1.0.
+
 ## 0.20.0-fork.3
 
 **:beetle:Bug fix**
