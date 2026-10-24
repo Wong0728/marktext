@@ -36,11 +36,17 @@ export interface JsDocxOptions {
   docxFont?: DocxFontSettings
 }
 
-/** Resolve the preference; 'auto' prefers pandoc and falls back to bundled JS. */
-export const resolveDocxEngine = (preferred?: 'auto' | 'pandoc' | 'js'): 'pandoc' | 'js' => {
+/**
+ * Resolve the preference; 'auto' prefers pandoc and falls back to bundled JS.
+ * Async since v0.23.0: `pandoc.exists()` resolves the binary via the shared
+ * `resolveCommand` chain (MARKTEXT_PANDOC, PATH, Windows install dirs).
+ */
+export const resolveDocxEngine = async(
+  preferred?: 'auto' | 'pandoc' | 'js'
+): Promise<'pandoc' | 'js'> => {
   if (preferred === 'pandoc') return 'pandoc'
   if (preferred === 'js') return 'js'
-  return pandoc.exists() ? 'pandoc' : 'js'
+  return (await pandoc.exists()) ? 'pandoc' : 'js'
 }
 
 /** Export HTML already preprocessed for the selected engine, without UI notices. */
@@ -49,11 +55,11 @@ export const exportDocxFile = async(
   outputPath: string,
   options: JsDocxOptions & { docxEngine?: 'auto' | 'pandoc' | 'js' } = {}
 ): Promise<void> => {
-  const engine = resolveDocxEngine(options.docxEngine)
+  const engine = await resolveDocxEngine(options.docxEngine)
   if (engine === 'js') {
     return jsDocxEngine.convert(html, outputPath, options)
   }
-  if (!pandoc.exists()) {
+  if (!(await pandoc.exists())) {
     throw new Error('Pandoc is not installed. Please install Pandoc or switch to the JS engine.')
   }
 
@@ -65,15 +71,18 @@ export const exportDocxFile = async(
   if (isFile(referenceDoc)) {
     pandocArgs.push(`--reference-doc=${referenceDoc}`)
   }
-  const converter = pandoc('html', 'docx', ...pandocArgs)
-  await converter.toFile(html, outputPath)
+  // v0.23.0 pandoc: the old converter factory (`pandoc(...).toFile(input, path)`)
+  // is gone; `toFile` takes (target, outputPath, input, options) and stdin HTML
+  // is parsed with the explicit `html` reader.
+  await pandoc.toFile('docx', outputPath, html, { reader: 'html', args: pandocArgs })
   await centerImageParagraphsFile(outputPath)
 }
 
 /**
  * Convert HTML to DOCX using the pure-JS engine and write the result to
- * `outputPath`. Mirrors the pandoc `converter.toFile(content, filePath)`
- * contract so the main process can treat both engines uniformly.
+ * `outputPath`. Same (html, outputPath, options) contract as the pandoc
+ * branch of `exportDocxFile` above, so the main process can treat both
+ * engines uniformly.
  */
 export const convertHtmlToDocxFile = async(
   html: string,
