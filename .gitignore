@@ -27,3 +27,10 @@ latex-test.md
 .codex/
 .agents/
 .agent/
+# v0.23 merge cleanup: e2e docx run artifacts & stray lockfiles
+packages/desktop/test/e2e/marktext-e2e-docx-*.docx.extracted/
+packages/desktop/test/e2e/marktext-e2e-docx-*.docx.styles/
+packages/desktop/test/e2e/marktext-e2e-docx-*
+packages/desktop/test/e2e/last-docx-document.xml
+packages/muya/package-lock.json
+dist-build-*/
