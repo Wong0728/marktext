@@ -15,6 +15,11 @@ export default [
   {
     ignores: [
       '.claude/**',
+      // ZCode CLI state: workflow drafts and per-run runtime scripts that the
+      // runtime regenerates before every launch (they say so in their header).
+      // Machine-generated, so linting them only produces churn that the next
+      // run overwrites again.
+      '.zcode/**',
       '**/out/**',
       '**/dist/**',
       // The website ships with its own ESLint v8 config (React conventions).

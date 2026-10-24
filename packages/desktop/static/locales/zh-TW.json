@@ -307,7 +307,11 @@
       "pageMargin": "頁面邊距（毫米）：",
       "topBottom": "上/下：",
       "leftRight": "左/右：",
-      "widthHeight": "寬度/高度（毫米）："
+      "widthHeight": "寬度/高度（毫米）：",
+      "embedImages": "內嵌本地圖片到匯出的 HTML：",
+      "embedImagesDetail": "把本地圖片轉成 data URI 內嵌到文件中，匯出的 HTML 單獨移動或分享後圖片仍能正常顯示。",
+      "exportZip": "匯出為包含本地圖片的 ZIP：",
+      "exportZipDetail": "把 HTML 和引用到的本地圖片（含 SVG）打包成一個 ZIP，圖片以相對路徑引用；遠端圖片保持原樣。該選項與內嵌圖片互斥。"
     },
     "showFrontMatter": "顯示前置資料",
     "style": {
@@ -374,6 +378,10 @@
         "auto": "自動（推薦）",
         "pandoc": "Pandoc（原生數學公式）",
         "js": "內建 JS（表格更好，原生公式）"
+      },
+      "docxFonts": {
+        "defaultSize": "12 pt（預設）",
+        "followWord": "預設（跟隨 Word）"
       }
     },
     "info": {
@@ -382,6 +390,11 @@
     },
     "docxEngine": {
       "description": "DOCX 引擎："
+    },
+    "docxFonts": {
+      "eastAsia": "中文字型：",
+      "latin": "西文字型：",
+      "size": "內文字號："
     }
   },
   "recent": {

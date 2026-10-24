@@ -360,7 +360,7 @@ const onTabStripDrop = (event: DragEvent): void => {
 
   const raw = dataTransfer.getData(TAB_MIME)
   if (!raw) return
-  let payload: TabDragPayload | null = null
+  let payload: TabDragPayload | null
   try {
     payload = JSON.parse(raw) as TabDragPayload
   } catch {

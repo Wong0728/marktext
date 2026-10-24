@@ -430,16 +430,16 @@ export class Muya {
         const selection = this.editor.selection.getSelection();
         this.editor.scrollPage?.updateState(this.getState());
 
-        this.editor.searchModule.refresh();
-
         let anchorOffset: number;
         let focusOffset: number;
         let anchorPath: TBlockPath;
+        let hasAnchor = false;
 
         if (selection && selection.isSelectionInSameBlock) {
             anchorOffset = selection.anchor.offset;
             focusOffset = selection.focus.offset;
             anchorPath = selection.anchor.path;
+            hasAnchor = true;
         }
         else {
             // The live DOM selection can be unresolvable (e.g. an orphan
@@ -447,22 +447,28 @@ export class Muya {
             // cached selection so a full re-render does not drop the caret;
             // a stale path just makes queryBlock a no-op.
             const cached = this.editor.selection;
-            if (!cached.anchorBlock || cached.anchorBlock !== cached.focusBlock || !cached.anchor || !cached.focus)
-                return;
-
-            anchorOffset = cached.anchor.offset;
-            focusOffset = cached.focus.offset;
-            // queryBlock consumes the path array in place, so hand it a copy.
-            anchorPath = [...cached.anchorPath];
+            if (cached.anchorBlock && cached.anchorBlock === cached.focusBlock && cached.anchor && cached.focus) {
+                anchorOffset = cached.anchor.offset;
+                focusOffset = cached.focus.offset;
+                // queryBlock consumes the path array in place, so hand it a copy.
+                anchorPath = [...cached.anchorPath];
+                hasAnchor = true;
+            }
         }
 
-        if (!this.isReadOnly) {
-            const begin = Math.min(anchorOffset, focusOffset);
-            const end = Math.max(anchorOffset, focusOffset);
-            const cursorBlock = this.editor.scrollPage?.queryBlock(anchorPath);
+        // Restore the caret BEFORE re-running the open search: restoring may
+        // re-render the caret's block plain, and the search re-paints the
+        // highlights last (without moving the caret) — the other order wipes
+        // them again (#5651).
+        if (!this.isReadOnly && hasAnchor) {
+            const begin = Math.min(anchorOffset!, focusOffset!);
+            const end = Math.max(anchorOffset!, focusOffset!);
+            const cursorBlock = this.editor.scrollPage?.queryBlock(anchorPath!);
             if (cursorBlock && cursorBlock.isContent())
                 cursorBlock.setCursor(begin, end, true);
         }
+
+        this.editor.searchModule.refresh();
     }
 
     setListIndentation(listIndentation: IMuyaOptions['listIndentation']) {

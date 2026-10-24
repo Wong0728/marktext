@@ -307,7 +307,11 @@
       "pageMargin": "Margen de página en mm:",
       "topBottom": "Superior/Inferior:",
       "leftRight": "Izquierda/Derecha:",
-      "widthHeight": "Ancho/Alto en mm:"
+      "widthHeight": "Ancho/Alto en mm:",
+      "embedImages": "Incrustar imágenes en el HTML exportado:",
+      "embedImagesDetail": "Incluye las imágenes locales como URI de datos para que el HTML exportado siga mostrándose cuando el archivo se mueva o comparta por sí solo.",
+      "exportZip": "Exportar como ZIP con imágenes locales:",
+      "exportZipDetail": "Empaqueta el HTML y todas las imágenes locales referenciadas (incluidas las SVG) en un solo archivo ZIP, con las imágenes referenciadas por ruta relativa. Las imágenes remotas se dejan como están. No se puede combinar con la incrustación de imágenes."
     },
     "showFrontMatter": "Mostrar metadatos",
     "style": {
@@ -369,11 +373,28 @@
         "academic": "Académico",
         "default": "GitHub (Predeterminado)",
         "liber": "Liber"
+      },
+      "docxEngines": {
+        "auto": "Automático (recomendado)",
+        "js": "JS integrado (mejores tablas, matemáticas nativas)",
+        "pandoc": "Pandoc (ecuaciones matemáticas nativas)"
+      },
+      "docxFonts": {
+        "defaultSize": "12 pt (predeterminado)",
+        "followWord": "Predeterminado (según Word)"
       }
     },
     "info": {
       "label": "Información",
       "description": "Por favor personalice la apariencia de la página y haga clic en \"exportar\" para continuar."
+    },
+    "docxEngine": {
+      "description": "Motor DOCX:"
+    },
+    "docxFonts": {
+      "eastAsia": "Fuente china (asiática oriental):",
+      "latin": "Fuente occidental (latina):",
+      "size": "Tamaño del texto del cuerpo:"
     }
   },
   "recent": {
@@ -982,7 +1003,10 @@
     "discard": "Descartar",
     "recover": "Recuperar",
     "unsavedContentFound": "Se encontró contenido sin guardar de la última sesión",
-    "unsavedContentFoundDetail": "MarkText no se cerró correctamente la última vez. ¿Recuperar {count} pestañas sin guardar? Si las descarta, se perderán permanentemente."
+    "unsavedContentFoundDetail": "MarkText no se cerró correctamente la última vez. ¿Recuperar {count} pestañas sin guardar? Si las descarta, se perderán permanentemente.",
+    "installPandocOrSwitchEngine": "No se encontró Pandoc. Instala pandoc para obtener ecuaciones matemáticas nativas de Word, o cambia el motor DOCX a «JS integrado» o «Auto» en las opciones de exportación para continuar sin pandoc.",
+    "windowNotResponding": "Esta ventana no responde",
+    "windowNotRespondingDetail": "MarkText no puede confirmar los cambios sin guardar porque la ventana dejó de responder. ¿Cerrar de todos modos? Los cambios sin guardar podrían perderse."
   },
   "error": {
     "configSchemaViolation": "Violación del esquema de configuración",

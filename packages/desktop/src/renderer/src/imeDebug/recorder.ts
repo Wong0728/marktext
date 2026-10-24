@@ -241,30 +241,32 @@ export function plainSnapshot(root: HTMLElement): Snapshot {
 }
 
 /**
- * Structural view of the pieces of the engine the trace reads. muya ships no
- * built typings and the desktop's `@muyajs/core` shim is deliberately
- * permissive, so the boundary is described here rather than reached for with
- * `any`.
+ * Structural view of the pieces of the engine the trace reads. `@muyajs/core`
+ * now ships real class typings; the boundary stays a hand-written structural
+ * view (no index signatures — class instances like `Muya`/`Content` do not get
+ * implicit ones, and the recorder reaches dynamic properties through explicit
+ * casts where it needs them).
  */
 interface MuyaBlockLike {
   blockName?: string
   text?: string
   isComposed?: boolean
-  domNode?: HTMLElement
+  // The engine types its DOM handle `Nullable<HTMLElement>` (`T | null |
+  // undefined | void`, muya src/types.ts), so the mirror here accepts the same
+  // members — the snapshot code treats every falsy value alike.
+  domNode?: HTMLElement | null | undefined | void
   getCursor?: () => { start?: { offset?: number }, end?: { offset?: number } } | null
-  [key: string]: unknown
 }
 
 interface MuyaLike {
   editor?: {
-    activeContentBlock?: MuyaBlockLike | null
+    // `Editor.activeContentBlock` is `Nullable<Content>` in the engine, and its
+    // `Nullable` carries `void`; include it or the real `Muya` class is not
+    // assignable to this structural view.
+    activeContentBlock?: MuyaBlockLike | null | undefined | void
     selection?: { getSelection?: () => unknown }
   }
   domNode?: HTMLElement
-  // The desktop's `@muyajs/core` shim exposes the instance as an index
-  // signature; matching it here keeps the engine handle assignable without a
-  // cast at the call site.
-  [key: string]: unknown
 }
 
 /**
@@ -366,7 +368,7 @@ export function muyaSnapshot(muya: MuyaLike): Snapshot {
   // before declaring the two representations out of sync.
   const normalizedDom = rawDom == null ? null : rawDom.replace(/\u200B/g, '')
 
-  let cursor: string | null = null
+  let cursor: string | null
   try {
     const c = block.getCursor?.()
     cursor = c?.start ? `${c.start.offset ?? '?'}-${c.end?.offset ?? '?'}` : null
@@ -535,7 +537,7 @@ export class PaneProbe {
   private readonly recorder: TraceRecorder
   private readonly pane: PaneKind
   private readonly snapshot: () => Snapshot | null
-  private readonly getActiveBlock?: () => MuyaBlockLike | null | undefined
+  private readonly getActiveBlock?: () => MuyaBlockLike | null | undefined | void
   private readonly cleanup: Array<() => void> = []
   private lastSelection = ''
 
@@ -543,7 +545,7 @@ export class PaneProbe {
     recorder: TraceRecorder,
     pane: PaneKind,
     snapshot: () => Snapshot | null,
-    getActiveBlock?: () => MuyaBlockLike | null | undefined
+    getActiveBlock?: () => MuyaBlockLike | null | undefined | void
   ) {
     this.recorder = recorder
     this.pane = pane

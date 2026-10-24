@@ -124,34 +124,36 @@ export const writeFile = async(
   // symlink to its target, and uses a unique temp name — all of which a plain
   // temp+rename dropped.
   //
-  // Fork: the phase-tuned retries inside `writeFileAtomicWithRetry` clear the
-  // watcher race; the final rename still fails with EPERM/EBUSY on Windows
-  // when the target is held open longer — an antivirus scanner or search
-  // indexer latching onto a freshly written file (every DOCX export), or the
-  // user viewing the previous export in Word. An outer exponential backoff
-  // rides out those sub-second holds, and a persistent lock gets a message
-  // that names the real cause instead of a bare "EPERM: rename".
-  let lastError: Error | null = null
-  for (let attempt = 1; attempt <= LOCK_RETRY_ATTEMPTS; attempt++) {
+  // Fork: a phase-tuned retry cadence clears the Windows watcher race (#5322);
+  // the same handle can also be held open longer — an antivirus scanner or
+  // search indexer latching onto a freshly written file (every DOCX export),
+  // or the user viewing the previous export in Word — which an exponential
+  // backoff rides out. ONE shared attempt budget bounds the whole save, so a
+  // persistent lock is reported promptly (with a message that names the real
+  // cause) instead of hammering the file with nested retries.
+  let lastError: Error | null
+  for (let attempt = 1; ; attempt++) {
     try {
-      await writeFileAtomicWithRetry(pathname, content, options)
+      await writeFileAtomic(pathname, content, options)
       return
     } catch (err) {
       lastError = err as Error
       const code = (err as NodeJS.ErrnoException).code
-      if (!code || !RETRYABLE_LOCK_CODES.has(code)) {
+      const lockRetryable = !!code && RETRYABLE_LOCK_CODES.has(code)
+      if (!lockRetryable || attempt >= MAX_SAVE_ATTEMPTS) {
+        if (lockRetryable) {
+          throw new Error(
+            `[ERROR] Cannot save "${pathname}": the file is locked by another program ` +
+            '(e.g. open in Word or being scanned by antivirus). Close it and try again.' +
+            (lastError ? `\n${lastError.message}` : ''),
+            { cause: err }
+          )
+        }
         throw err
       }
-      if (attempt < LOCK_RETRY_ATTEMPTS) {
-        await delay(LOCK_RETRY_BASE_MS * 2 ** (attempt - 1))
-      }
+      await delay(retryDelayMs(attempt))
     }
   }
-  throw new Error(
-    `[ERROR] Cannot save "${pathname}": the file is locked by another program ` +
-    '(e.g. open in Word or being scanned by antivirus). Close it and try again.' +
-    (lastError ? `\n${lastError.message}` : '')
-  )
 }
 
 // Windows refuses MoveFileEx(REPLACE_EXISTING) — what the atomic save's rename
@@ -166,8 +168,7 @@ export const writeFile = async(
 // one. That handle is released within milliseconds, so a short backoff clears
 // the race. A process holding the file open continuously (a scanner, a sync
 // client) is out of reach of any retry — on a local disk as much as a share.
-const RENAME_RACE_CODES = new Set(['EPERM', 'EACCES', 'EBUSY'])
-
+//
 // The watcher stats on a fixed period (chokidar's `interval`, 100ms, and
 // awaitWriteFinish's `pollInterval`, 150ms), so what decides whether a retry
 // helps is the phase its CUMULATIVE offset lands on, not how long it waits:
@@ -178,30 +179,21 @@ const RENAME_RACE_CODES = new Set(['EPERM', 'EACCES', 'EBUSY'])
 // is strictly worse: the last two land on the failing phase again.
 const RENAME_RETRY_DELAYS_MS = [50, 75, 50]
 
-const writeFileAtomicWithRetry = async(
-  pathname: string,
-  content: string | Buffer,
-  options: BufferEncoding | undefined
-): Promise<void> => {
-  for (let attempt = 0; ; attempt++) {
-    try {
-      await writeFileAtomic(pathname, content, options)
-      return
-    } catch (error) {
-      const { code } = error as NodeJS.ErrnoException
-      if (attempt >= RENAME_RETRY_DELAYS_MS.length || !code || !RENAME_RACE_CODES.has(code)) {
-        throw error
-      }
-      await new Promise((resolve) => setTimeout(resolve, RENAME_RETRY_DELAYS_MS[attempt]))
-    }
-  }
-}
-
 // Error codes reported when a file cannot be replaced because another process
 // holds it open. Retrying is only worthwhile for these.
 const RETRYABLE_LOCK_CODES = new Set(['EPERM', 'EBUSY', 'EACCES', 'ENOTEMPTY'])
-const LOCK_RETRY_ATTEMPTS = 4
+
+// Total writeFileAtomic attempts one save may make: the three phase-tuned
+// retries above, then a final exponentially-backed-off attempt for a hold that
+// outlasts them. Bounding the total (rather than nesting an outer loop around
+// the tuned retries) keeps a persistent lock answering in well under a second.
+const MAX_SAVE_ATTEMPTS = RENAME_RETRY_DELAYS_MS.length + 2
 const LOCK_RETRY_BASE_MS = 200
+
+const retryDelayMs = (attempt: number): number =>
+  attempt <= RENAME_RETRY_DELAYS_MS.length
+    ? RENAME_RETRY_DELAYS_MS[attempt - 1]
+    : LOCK_RETRY_BASE_MS * 2 ** (attempt - 1 - RENAME_RETRY_DELAYS_MS.length)
 
 const delay = (ms: number): Promise<void> =>
   new Promise(resolve => setTimeout(resolve, ms))

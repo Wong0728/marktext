@@ -99,7 +99,9 @@ describe('per-tab reading state', () => {
     store.currentFile = tab
     const snapshot = store.CREATE_BUFFERED_STATE()!
     delete snapshot.tabs[0].readOnly
-    store.RESTORE_BUFFERED_STATE(snapshot)
+    // Crash restore goes through `RESTORE_UNSAVED_TABS` with the snapshot's
+    // tabs; it must not consult the default open mode.
+    store.RESTORE_UNSAVED_TABS(snapshot.tabs)
     expect(store.currentFile?.readOnly).toBe(false)
   })
 

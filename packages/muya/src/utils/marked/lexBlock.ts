@@ -4,11 +4,11 @@ import { Marked } from 'marked';
 import compatibleTaskList from './compatibleTaskList';
 import footnoteExtension from './extensions/footnote';
 import githubAlertsExtension, { normalizeGithubAlertTokens } from './extensions/githubAlerts';
-import mathExtension, { doubleBackslashMathExtension, gfmMathExtension, singleBackslashMathExtension } from './extensions/math';
+import mathExtension, { bracketBlockMathExtension, doubleBackslashMathExtension, gfmMathExtension, singleBackslashMathExtension } from './extensions/math';
 import multilineBlockquoteExtension from './extensions/multilineBlockquote';
 import fm from './frontMatter';
-import { DEFAULT_OPTIONS } from './options';
 import { normalizeMarkdownInput } from './normalizeMarkdownInput';
+import { DEFAULT_OPTIONS } from './options';
 import walkTokens from './walkTokens';
 
 export function lexBlock(
@@ -31,6 +31,11 @@ export function lexBlock(
             mathExtension({
                 throwOnError: false,
                 useKatexRender: false,
+                // State building keeps the authored syntax: a same-line
+                // `$$…$$` stays paragraph-level inline math and the editor's
+                // own display rule decides how it draws (#4904).
+                authoredDisplayMath: false,
+                texMathSingleBackslash,
             }),
         );
     }
@@ -47,6 +52,17 @@ export function lexBlock(
     if (texMathSingleBackslash) {
         m.use(
             singleBackslashMathExtension({
+                throwOnError: false,
+                useKatexRender: false,
+            }),
+        );
+    }
+    else if (texMathSingleBackslash === undefined) {
+        // No pandoc backslash mode picked: muya's own `\[...\]` display
+        // delimiters stay math blocks on load, as they were before the
+        // pandoc extensions arrived (#5481).
+        m.use(
+            bracketBlockMathExtension({
                 throwOnError: false,
                 useKatexRender: false,
             }),

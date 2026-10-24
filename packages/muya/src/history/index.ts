@@ -160,6 +160,14 @@ class History {
             this._ignoreChange = false;
         }
 
+        // An entry without a selection is the first edit after boot/clear
+        // (#5387): undo leaves the caret where the edit put it. When the
+        // revert shortened that block the cached offset now overshoots the
+        // text — clamp it back in. A revert that removed the caret's block
+        // keeps the detached reference, which is the no-caret signal.
+        if (selection == null)
+            this._selection.clampIntoSurvivingBlocks();
+
         this._getLastSelection();
     }
 
@@ -267,11 +275,12 @@ class History {
 
         // With two snapshots the older one is the selection as it was BEFORE
         // this edit — what an undo must restore. With only one snapshot (the
-        // very first edit after boot/clear) there is no pre-edit snapshot, so
-        // fall back to the post-edit selection: returning `null` would make
-        // the undo entry skip `_restoreSelection` entirely and leave the
-        // caret dangling after the pick/drop rebuild.
-        return this._selectionStack[0] ?? null;
+        // very first edit after boot/clear) there is no pre-edit snapshot and
+        // the undo entry carries no selection: undoing that first edit
+        // restores no caret, exactly like the freshly loaded file (#5387).
+        // `selectAll` and the block commands already treat a detached caret
+        // block as their no-op signal.
+        return this._selectionStack.length === 2 ? this._selectionStack[0] : null;
     }
 
     private _record(op: JSONOpList, doc: TState[]) {

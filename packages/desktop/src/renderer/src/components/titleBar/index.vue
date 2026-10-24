@@ -172,7 +172,6 @@ const props = defineProps<{
   pathname?: string
   active?: boolean
   wordCount?: FileWordCount | null
-  selectionWordCount?: FileWordCount | null
   platform?: string
   isSaved?: boolean
 }>()

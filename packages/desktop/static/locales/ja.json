@@ -307,7 +307,11 @@
       "pageMargin": "ページ余白 (mm):",
       "topBottom": "上/下 :",
       "leftRight": "左/右 :",
-      "widthHeight": "幅/高さ (mm):"
+      "widthHeight": "幅/高さ (mm):",
+      "embedImages": "書き出した HTML に画像を埋め込む:",
+      "embedImagesDetail": "ローカル画像を data URI として埋め込み、書き出した HTML を単体で移動・共有しても画像が表示され続けるようにします。",
+      "exportZip": "ローカル画像込みで ZIP として書き出す:",
+      "exportZipDetail": "HTML と参照されているすべてのローカル画像（SVG を含む）を 1 つの ZIP アーカイブにまとめ、画像は相対パスで参照します。リモート画像はそのまま残ります。画像の埋め込みとの併用はできません。"
     },
     "showFrontMatter": "フロントマターを表示",
     "style": {
@@ -369,11 +373,28 @@
         "academic": "アカデミック",
         "default": "GitHub (デフォルト)",
         "liber": "Liber"
+      },
+      "docxEngines": {
+        "auto": "自動（推奨）",
+        "js": "内蔵 JS（高品質な表、ネイティブ数式）",
+        "pandoc": "Pandoc（ネイティブ数式）"
+      },
+      "docxFonts": {
+        "defaultSize": "12 pt（既定）",
+        "followWord": "既定（Word に合わせる）"
       }
     },
     "info": {
       "label": "情報",
       "description": "ページレイアウトを調整して、'エクスポート'をクリックして続行してください。"
+    },
+    "docxEngine": {
+      "description": "DOCX エンジン:"
+    },
+    "docxFonts": {
+      "eastAsia": "中国語フォント（東アジア）:",
+      "latin": "西欧フォント（ラテン）:",
+      "size": "本文のフォントサイズ:"
     }
   },
   "recent": {
@@ -982,7 +1003,10 @@
     "discard": "破棄",
     "recover": "復元",
     "unsavedContentFound": "前回のセッションの未保存の内容が見つかりました",
-    "unsavedContentFoundDetail": "前回 MarkText が正常に終了しませんでした。未保存のタブ {count} 件を復元しますか？破棄すると元に戻せません。"
+    "unsavedContentFoundDetail": "前回 MarkText が正常に終了しませんでした。未保存のタブ {count} 件を復元しますか？破棄すると元に戻せません。",
+    "installPandocOrSwitchEngine": "Pandoc が見つかりません。Word 標準の数式には pandoc をインストールするか、書き出しオプションで DOCX エンジンを「内蔵 JS」または「自動」に切り替えて、pandoc なしで続行してください。",
+    "windowNotResponding": "このウィンドウは応答していません",
+    "windowNotRespondingDetail": "ウィンドウが応答しなくなったため、MarkText は未保存の変更を確認できません。それでも閉じますか？未保存の変更は失われる可能性があります。"
   },
   "error": {
     "configSchemaViolation": "設定スキーマ違反",

@@ -33,7 +33,11 @@ export interface ITokenizerFacOptions {
     footnote: boolean;
     texMathDollars: boolean;
     texMathGfm: boolean;
-    texMathSingleBackslash: boolean;
+    // Optional on purpose: a caller that leaves it out gets muya's own
+    // single-line `\(...\)`/`\[...\]` rules; one that passes a boolean —
+    // the editor always does — gets pandoc's `tex_math_single_backslash`
+    // on true and the plain CommonMark escape on false.
+    texMathSingleBackslash?: boolean;
     texMathDoubleBackslash: boolean;
     highlightSyntax: boolean;
     inlineDiff?: boolean;

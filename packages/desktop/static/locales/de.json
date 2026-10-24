@@ -307,7 +307,11 @@
       "pageMargin": "Seitenrand (mm):",
       "topBottom": "Oben/Unten:",
       "leftRight": "Links/Rechts:",
-      "widthHeight": "Breite/Höhe (mm):"
+      "widthHeight": "Breite/Höhe (mm):",
+      "embedImages": "Bilder in das exportierte HTML einbetten:",
+      "embedImagesDetail": "Lokale Bilder als Data-URIs einbetten, damit das exportierte HTML auch nach dem Verschieben oder Weitergeben allein weiterdarstellbar bleibt.",
+      "exportZip": "Als ZIP mit lokalen Bildern exportieren:",
+      "exportZipDetail": "Packt das HTML und jedes referenzierte lokale Bild (einschließlich SVG) in ein ZIP-Archiv, mit relativ referenzierten Bildern. Remote-Bilder bleiben unverändert. Kann nicht mit dem Einbetten von Bildern kombiniert werden."
     },
     "showFrontMatter": "Front Matter anzeigen",
     "style": {
@@ -369,11 +373,28 @@
         "academic": "Akademisch",
         "default": "GitHub (Standard)",
         "liber": "Liber"
+      },
+      "docxEngines": {
+        "auto": "Auto (empfohlen)",
+        "js": "Integriertes JS (bessere Tabellen, native Formeln)",
+        "pandoc": "Pandoc (native Formeln)"
+      },
+      "docxFonts": {
+        "defaultSize": "12 pt (Standard)",
+        "followWord": "Standard (wie Word)"
       }
     },
     "info": {
       "label": "Information",
       "description": "Bitte passen Sie das Seitenlayout an und klicken Sie auf 'Exportieren', um fortzufahren."
+    },
+    "docxEngine": {
+      "description": "DOCX-Engine:"
+    },
+    "docxFonts": {
+      "eastAsia": "Chinesische Schrift (Ostasien):",
+      "latin": "Westliche Schrift (Latein):",
+      "size": "Schriftgröße des Fließtexts:"
     }
   },
   "recent": {
@@ -982,7 +1003,10 @@
     "discard": "Verwerfen",
     "recover": "Wiederherstellen",
     "unsavedContentFound": "Nicht gespeicherte Inhalte aus der letzten Sitzung gefunden",
-    "unsavedContentFoundDetail": "MarkText wurde beim letzten Mal nicht ordnungsgemäß beendet. {count} nicht gespeicherte Tabs wiederherstellen? Beim Verwerfen gehen sie dauerhaft verloren."
+    "unsavedContentFoundDetail": "MarkText wurde beim letzten Mal nicht ordnungsgemäß beendet. {count} nicht gespeicherte Tabs wiederherstellen? Beim Verwerfen gehen sie dauerhaft verloren.",
+    "installPandocOrSwitchEngine": "Pandoc wurde nicht gefunden. Installiere pandoc für native Word-Formeln, oder wechsle die DOCX-Engine in den Exportoptionen auf „Integriertes JS“ oder „Auto“, um ohne pandoc fortzufahren.",
+    "windowNotResponding": "Dieses Fenster reagiert nicht",
+    "windowNotRespondingDetail": "MarkText kann ungespeicherte Änderungen nicht bestätigen, weil das Fenster nicht mehr reagiert. Trotzdem schließen? Ungespeicherte Änderungen können verloren gehen."
   },
   "error": {
     "configSchemaViolation": "Konfigurationsschema-Verletzung",

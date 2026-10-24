@@ -1,7 +1,5 @@
-import type TreeNode from '../block/base/treeNode';
 import type TableBodyCell from '../block/gfm/table/cell';
 import type { Muya } from '../muya';
-import type { Nullable } from '../types';
 import type { IAnchorFocusInfo, IImageSelectionData, ISelection } from './types';
 import {
     getCursorCoords,
@@ -12,11 +10,6 @@ import ImageSelection from './ImageSelection';
 import TableRectSelection from './TableRectSelection';
 import TextSelection from './TextSelection';
 import { SelectionType } from './types';
-
-// A block node reference at the outmost-container level: `getSelectedText`
-// walks outmost blocks and their `.next` chains, so this is the tree-node base
-// type rather than the content-leaf type carried on the selection endpoints.
-type IBlockRef = TreeNode;
 
 class Selection {
     static getCursorYOffset(paragraph: HTMLElement) {
@@ -141,6 +134,11 @@ class Selection {
         this._text.setSelection(anchor, focus);
     }
 
+    // See TextSelection.clampIntoSurvivingBlocks.
+    clampIntoSurvivingBlocks(): void {
+        this._text.clampIntoSurvivingBlocks();
+    }
+
     selectAll(): void {
         if (this._muya.isReadOnly) {
             this._text.selectAllContent();
@@ -188,140 +186,6 @@ class Selection {
         }
 
         this._text.selectAllContent();
-    }
-
-    /**
-     * The markdown source text covered by the current text selection
-     * (empty string when nothing is selected). Exact within one content
-     * leaf; a best-effort concatenation across leaves/blocks otherwise —
-     * sufficient for status displays like a selection word count (#2791).
-     */
-    getSelectedText(): string {
-        const sel = this.getSelection();
-        if (!sel)
-            return '';
-
-        const { anchor, focus } = sel;
-        const anchorBlock = anchor.block;
-        const focusBlock = focus.block;
-        if (anchorBlock == null || focusBlock == null)
-            return '';
-
-        if (anchorBlock === focusBlock) {
-            const start = Math.min(anchor.offset, focus.offset);
-            const end = Math.max(anchor.offset, focus.offset);
-            return (anchorBlock as { text?: string }).text?.substring(start, end) ?? '';
-        }
-
-        try {
-            const anchorFirst = this._isBeforeInDocument(
-                anchorBlock.outMostBlock!,
-                focusBlock.outMostBlock!,
-            );
-            const startBlock = anchorFirst ? anchorBlock : focusBlock;
-            const endBlock = anchorFirst ? focusBlock : anchorBlock;
-            const startOffset = anchorFirst ? anchor.offset : focus.offset;
-            const endOffset = anchorFirst ? focus.offset : anchor.offset;
-            // Both endpoints inside the same outmost container: the head part
-            // must skip leaves up to and including the start leaf.
-            const sameOutmost = anchorBlock.outMostBlock === focusBlock.outMostBlock;
-
-            const parts: string[] = [];
-            // Tail of the boundary leaf, plus any later leaves of its block.
-            parts.push(...this._leafTextsFrom(startBlock.outMostBlock!, startBlock, startOffset));
-            // Whole outmost blocks strictly between the two boundaries.
-            let node: Nullable<IBlockRef> = sameOutmost ? null : startBlock.outMostBlock!.next;
-            while (node != null && node !== endBlock.outMostBlock) {
-                parts.push(...this._leafTextsFrom(node, null, 0));
-                node = node.next;
-            }
-            // Head of the end boundary up to the caret.
-            parts.push(
-                ...this._leafTextsUntil(
-                    endBlock.outMostBlock!,
-                    endBlock,
-                    endOffset,
-                    sameOutmost ? startBlock : null,
-                ),
-            );
-
-            return parts.filter(p => p.length > 0).join('\n');
-        }
-        catch {
-            return '';
-        }
-    }
-
-    // Whether `a` precedes `b` in document order (outmost-block level).
-    private _isBeforeInDocument(a: IBlockRef, b: IBlockRef): boolean {
-        let node: Nullable<IBlockRef> = a;
-        for (let i = 0; i < 10_000 && node != null; i++) {
-            if (node === b)
-                return true;
-            node = node.next;
-        }
-        return false;
-    }
-
-    // Leaf texts of `outmost` from `boundary` (inclusive, from `offset` when
-    // given) onwards. `boundary == null` means the whole block.
-    private _leafTextsFrom(outmost: IBlockRef, boundary: IBlockRef | null, offset: number): string[] {
-        const leaves: string[] = [];
-        let pastBoundary = boundary == null;
-        const walk = (block: unknown): void => {
-            const b = block as { children?: unknown[]; text?: string };
-            if (Array.isArray(b.children)) {
-                for (const child of b.children)
-                    walk(child);
-                return;
-            }
-            const text = typeof b.text === 'string' ? b.text : '';
-            if (!pastBoundary) {
-                if (block === boundary) {
-                    pastBoundary = true;
-                    leaves.push(text.substring(offset));
-                }
-                return;
-            }
-            leaves.push(text);
-        };
-        walk(outmost);
-        return leaves;
-    }
-
-    // Leaf texts of `outmost` up to and including `boundary`, truncated to
-    // `offset` on the boundary leaf. When `startAfter` is given (both
-    // endpoints share the same outmost block), leaves up to and including it
-    // are skipped so text before the selection start is not counted twice.
-    private _leafTextsUntil(
-        outmost: IBlockRef,
-        boundary: IBlockRef,
-        offset: number,
-        startAfter: IBlockRef | null = null,
-    ): string[] {
-        const leaves: string[] = [];
-        let pastStart = startAfter == null;
-        const walk = (block: unknown): void => {
-            const b = block as { children?: unknown[]; text?: string };
-            if (Array.isArray(b.children)) {
-                for (const child of b.children)
-                    walk(child);
-                return;
-            }
-            if (!pastStart) {
-                if (block === startAfter)
-                    pastStart = true;
-                return;
-            }
-            const text = typeof b.text === 'string' ? b.text : '';
-            if (block === boundary) {
-                leaves.push(text.substring(0, offset));
-                return;
-            }
-            leaves.push(text);
-        };
-        walk(outmost);
-        return leaves;
     }
 }
 

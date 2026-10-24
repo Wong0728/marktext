@@ -601,8 +601,10 @@ test.describe('diagram viewer', () => {
     await openDiagram(page)
 
     await page.locator('.media-viewer-toolbar button').nth(6).click()
+    // Electron 44 removed `clipboard.readImage()`; the copy path writes the
+    // PNG as an `image/png` ClipboardItem, so probe for that format instead.
     await expect
-      .poll(() => app.evaluate(({ clipboard }) => !clipboard.readImage().isEmpty()), {
+      .poll(() => app.evaluate(({ clipboard }) => clipboard.has('image/png')), {
         timeout: 20000
       })
       .toBe(true)

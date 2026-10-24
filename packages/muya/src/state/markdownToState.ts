@@ -21,7 +21,9 @@ interface IMarkdownToStateOptions {
     footnote: boolean;
     texMathDollars: boolean;
     texMathGfm: boolean;
-    texMathSingleBackslash: boolean;
+    // Optional on purpose: a caller that does not pick a pandoc backslash mode
+    // keeps muya's own `\[...\]` display-math blocks on load.
+    texMathSingleBackslash?: boolean;
     texMathDoubleBackslash: boolean;
     trimUnnecessaryCodeBlockEmptyLines: boolean;
     frontMatter: boolean;
@@ -33,7 +35,6 @@ const DEFAULT_OPTIONS = {
     footnote: false,
     texMathDollars: true,
     texMathGfm: false,
-    texMathSingleBackslash: false,
     texMathDoubleBackslash: false,
     trimUnnecessaryCodeBlockEmptyLines: false,
     frontMatter: true,
@@ -63,7 +64,7 @@ export class MarkdownToState {
             footnote = false,
             texMathDollars = true,
             texMathGfm = false,
-            texMathSingleBackslash = false,
+            texMathSingleBackslash,
             texMathDoubleBackslash = false,
             trimUnnecessaryCodeBlockEmptyLines = false,
             frontMatter = true,

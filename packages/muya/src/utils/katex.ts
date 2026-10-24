@@ -36,13 +36,14 @@ interface CDToken {
 const CD_MARKERS: Record<string, { close: string; type: 'h-arrow' | 'v-arrow'; dir: string }> = {
     '>': { close: '>', type: 'h-arrow', dir: 'right' },
     '<': { close: '<', type: 'h-arrow', dir: 'left' },
-    V: { close: 'V', type: 'v-arrow', dir: 'down' },
-    A: { close: 'A', type: 'v-arrow', dir: 'up' },
+    'V': { close: 'V', type: 'v-arrow', dir: 'down' },
+    'A': { close: 'A', type: 'v-arrow', dir: 'up' },
 };
 
 /** Parse a single CD arrow token starting at position {@link i} in {@link row}. */
 function parseCDArrow(row: string, i: number): { token: CDToken; nextIndex: number } | null {
-    if (row[i] !== '@') return null;
+    if (row[i] !== '@')
+        return null;
     const ch = row[i + 1];
 
     if (ch === '=') {
@@ -53,7 +54,8 @@ function parseCDArrow(row: string, i: number): { token: CDToken; nextIndex: numb
     }
 
     const marker = CD_MARKERS[ch];
-    if (!marker) return null;
+    if (!marker)
+        return null;
 
     // Syntax: @<marker>label1<close>label2<close>
     let j = i + 2;
@@ -62,7 +64,8 @@ function parseCDArrow(row: string, i: number): { token: CDToken; nextIndex: numb
         label1 += row[j];
         j++;
     }
-    if (j >= row.length) return null;
+    if (j >= row.length)
+        return null;
     j++; // skip first close marker
 
     let label2 = '';
@@ -70,7 +73,8 @@ function parseCDArrow(row: string, i: number): { token: CDToken; nextIndex: numb
         label2 += row[j];
         j++;
     }
-    if (j >= row.length) return null;
+    if (j >= row.length)
+        return null;
     j++; // skip second close marker
 
     const l1 = label1.trim();
@@ -81,13 +85,15 @@ function parseCDArrow(row: string, i: number): { token: CDToken; nextIndex: numb
         case 'right':
             // l1 = above, l2 = below
             latex = '\\xrightarrow';
-            if (l2) latex += `[${l2}]`;
+            if (l2)
+                latex += `[${l2}]`;
             latex += `{${l1}}`;
             break;
         case 'left':
             // l1 = below, l2 = above
             latex = '\\xleftarrow';
-            if (l1) latex += `[${l1}]`;
+            if (l1)
+                latex += `[${l1}]`;
             latex += `{${l2}}`;
             break;
         case 'down':
@@ -102,7 +108,8 @@ function parseCDArrow(row: string, i: number): { token: CDToken; nextIndex: numb
     return { token: { type: marker.type, latex }, nextIndex: j };
 }
 
-/** Build a vertical arrow with optional left / right labels.
+/**
+ * Build a vertical arrow with optional left / right labels.
  *
  * Labels are placed next to the arrow using `\;` instead of `\overset`/`
  * \underset`, because the latter produces nested `<mo>` MathML that Word
@@ -159,13 +166,14 @@ function convertCDToArray(content: string): string {
 
     // In rows that contain only vertical arrows, interleave filler cells so
     // arrows align with the cell columns of adjacent rows.
-    const processedRows: string[][] = parsedRows.map(row => {
+    const processedRows: string[][] = parsedRows.map((row) => {
         const isArrowRow = row.length > 0 && row.every(t => t.type === 'v-arrow');
         if (isArrowRow) {
             const cells: string[] = [];
             for (let i = 0; i < row.length; i++) {
                 cells.push(row[i].latex);
-                if (i < row.length - 1) cells.push(CD_EMPTY_CELL);
+                if (i < row.length - 1)
+                    cells.push(CD_EMPTY_CELL);
             }
             return cells;
         }
@@ -175,7 +183,7 @@ function convertCDToArray(content: string): string {
     const maxCols = Math.max(...processedRows.map(r => r.length), 1);
     const colSpec = 'c'.repeat(maxCols);
 
-    const arrayRows = processedRows.map(row => {
+    const arrayRows = processedRows.map((row) => {
         const cells = [...row];
         while (cells.length < maxCols) cells.push(CD_EMPTY_CELL);
         return cells.join(' & ');
@@ -276,7 +284,7 @@ function preprocessCommands(tex: string): string {
         // \Sb...\endSb / \Sp...\endSp → smallmatrix (AMS-TeX sub/superscript matrix)
         .replace(/\\Sb([\s\S]*?)\\endSb/g, '\\begin{smallmatrix}$1\\end{smallmatrix}')
         .replace(/\\Sp([\s\S]*?)\\endSp/g, '\\begin{smallmatrix}$1\\end{smallmatrix}')
-        .replace(/[\u2018\u2019]/g, "'");
+        .replace(/[\u2018\u2019]/g, '\'');
 }
 
 // Common macros injected into every KaTeX render so that formulas copied from
@@ -360,15 +368,19 @@ function extractNewcommands(tex: string): { text: string; macros: Record<string,
         let depth = 1;
         let i = bodyStart;
         while (i < tex.length && depth > 0) {
-            if (tex[i] === '{') depth++;
-            else if (tex[i] === '}') depth--;
-            if (depth === 0) break;
+            if (tex[i] === '{')
+                depth++;
+            else if (tex[i] === '}')
+                depth--;
+            if (depth === 0)
+                break;
             i++;
         }
         if (depth === 0) {
             macros[`\\${name}`] = tex.substring(bodyStart, i);
             lastIndex = i + 1; // skip the closing `}`
-        } else {
+        }
+        else {
             // Unbalanced braces — leave the text as-is
             result += tex.substring(match.index, header.lastIndex);
             lastIndex = header.lastIndex;
@@ -387,7 +399,7 @@ function extractNewcommands(tex: string): { text: string; macros: Record<string,
  * string use {@link renderMath} instead.
  */
 export function renderMathOrThrow(tex: string, options: IRenderMathOptions = {}): string {
-    const { displayMode = false } = options;
+    const { displayMode = false, throwOnError = true } = options;
     const { text: texWithoutDefs, macros: extractedMacros } = extractNewcommands(tex);
     const processed = [preprocessAMSCD, preprocessAMS, preprocessCommands].reduce(
         (t, fn) => fn(t),
@@ -395,7 +407,10 @@ export function renderMathOrThrow(tex: string, options: IRenderMathOptions = {})
     );
     return katex.renderToString(processed, {
         displayMode,
-        throwOnError: true,
+        // The marked export pipeline passes false so KaTeX itself renders the
+        // red `katex-error` span; the editor paths keep the throwing default
+        // and catch to draw their own fallback.
+        throwOnError,
         strict: 'ignore',
         trust: true,
         macros: { ...COMMON_MACROS, ...extractedMacros },
@@ -405,7 +420,8 @@ export function renderMathOrThrow(tex: string, options: IRenderMathOptions = {})
 export function renderMath(tex: string, options: IRenderMathOptions = {}): string {
     try {
         return renderMathOrThrow(tex, options);
-    } catch (err) {
+    }
+    catch (err) {
         // Graceful gray placeholder instead of a red error. The original LaTeX
         // and the parse error are kept in the title for debugging. Use " | "
         // instead of a literal newline so the attribute survives snabbdom's
@@ -442,7 +458,8 @@ export function renderMathToMathML(tex: string, options: IRenderMathOptions = {}
             output: 'mathml',
             macros: { ...COMMON_MACROS, ...extractedMacros },
         });
-    } catch {
+    }
+    catch {
         return escapeHtml(tex);
     }
 }

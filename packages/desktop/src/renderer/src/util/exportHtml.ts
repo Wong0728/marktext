@@ -288,11 +288,24 @@ export const exportStyledHTML = async(
 
   // Render the engine's full HTML document. We re-extract its <article> body so
   // we can inject the TOC / header-footer, then re-emit the document shell.
-  const fullDoc = await new MarkdownToHtml(markdown, muya).generate({
-    title,
-    extraCSS: extraCss,
-    dir
-  })
+  //
+  // The engine resolves relative image srcs against `window.DIRNAME`, which
+  // tracks the ACTIVE tab — but an export may target another document (or a
+  // race with a tab switch), whose directory `resourceDirectory` carries. The
+  // store itself reassigns that global on every tab change, so borrow the same
+  // licence for the duration of the render and restore it right after.
+  const savedDirname = window.DIRNAME
+  let fullDoc: string
+  try {
+    if (resourceDirectory !== savedDirname) window.DIRNAME = resourceDirectory
+    fullDoc = await new MarkdownToHtml(markdown, muya).generate({
+      title,
+      extraCSS: extraCss,
+      dir
+    })
+  } finally {
+    window.DIRNAME = savedDirname
+  }
 
   const articleMatch = /<article class="markdown-body">([\s\S]*)<\/article>/.exec(fullDoc)
   let article = articleMatch ? articleMatch[1] : fullDoc

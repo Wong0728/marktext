@@ -307,7 +307,11 @@
       "pageMargin": "Marge de page (mm) :",
       "topBottom": "Haut/Bas :",
       "leftRight": "Gauche/Droite :",
-      "widthHeight": "Largeur/Hauteur (mm) :"
+      "widthHeight": "Largeur/Hauteur (mm) :",
+      "embedImages": "Intégrer les images dans le HTML exporté :",
+      "embedImagesDetail": "Intègre les images locales en URI de données pour que le HTML exporté continue de s'afficher lorsque le fichier est déplacé ou partagé seul.",
+      "exportZip": "Exporter en ZIP avec les images locales :",
+      "exportZipDetail": "Regroupe le HTML et chaque image locale référencée (SVG compris) dans une seule archive ZIP, avec des images référencées par chemin relatif. Les images distantes restent inchangées. Ne peut pas être combiné avec l'intégration des images."
     },
     "showFrontMatter": "Afficher les métadonnées",
     "style": {
@@ -369,11 +373,28 @@
         "academic": "Académique",
         "default": "GitHub (par défaut)",
         "liber": "Liber"
+      },
+      "docxEngines": {
+        "auto": "Auto (recommandé)",
+        "js": "JS intégré (meilleurs tableaux, maths natives)",
+        "pandoc": "Pandoc (équations mathématiques natives)"
+      },
+      "docxFonts": {
+        "defaultSize": "12 pt (par défaut)",
+        "followWord": "Par défaut (suivre Word)"
       }
     },
     "info": {
       "label": "Informations",
       "description": "Veuillez personnaliser l'apparence de la page et cliquer sur 'Exporter' pour continuer."
+    },
+    "docxEngine": {
+      "description": "Moteur DOCX :"
+    },
+    "docxFonts": {
+      "eastAsia": "Police chinoise (asiatique orientale) :",
+      "latin": "Police occidentale (latine) :",
+      "size": "Taille du texte du corps :"
     }
   },
   "recent": {
@@ -982,7 +1003,10 @@
     "discard": "Ignorer",
     "recover": "Récupérer",
     "unsavedContentFound": "Du contenu non enregistré de la dernière session a été trouvé",
-    "unsavedContentFoundDetail": "MarkText ne s'est pas fermé correctement la dernière fois. Récupérer {count} onglet(s) non enregistré(s) ? Les ignorer les supprimera définitivement."
+    "unsavedContentFoundDetail": "MarkText ne s'est pas fermé correctement la dernière fois. Récupérer {count} onglet(s) non enregistré(s) ? Les ignorer les supprimera définitivement.",
+    "installPandocOrSwitchEngine": "Pandoc est introuvable. Installez pandoc pour des équations mathématiques Word natives, ou passez le moteur DOCX sur « JS intégré » ou « Auto » dans les options d'export pour continuer sans pandoc.",
+    "windowNotResponding": "Cette fenêtre ne répond plus",
+    "windowNotRespondingDetail": "MarkText ne peut pas confirmer les modifications non enregistrées car la fenêtre ne répond plus. Fermer quand même ? Les modifications non enregistrées pourraient être perdues."
   },
   "error": {
     "configSchemaViolation": "Violation du schéma de configuration",

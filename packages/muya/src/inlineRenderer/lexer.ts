@@ -46,7 +46,7 @@ interface ILexState {
     footnote: boolean;
     texMathDollars: boolean;
     texMathGfm: boolean;
-    texMathSingleBackslash: boolean;
+    texMathSingleBackslash: boolean | undefined;
     texMathDoubleBackslash: boolean;
     highlightSyntax: boolean;
     inlineDiff: boolean;
@@ -183,6 +183,68 @@ function tryBackslashMath(state: ILexState): boolean {
     }
 
     return false;
+}
+
+// muya's own single-line `\(...\)` / `\[...\]` delimiters. They run only while
+// `texMathSingleBackslash` is unset — a caller that passes the option gets
+// pandoc's rules through `tryBackslashMath` instead — and ahead of
+// `tryBacklash`, which would otherwise consume `\(` as a plain escape.
+function tryInlineMathParen(state: ILexState): boolean {
+    if (state.texMathSingleBackslash !== undefined)
+        return false;
+
+    const to = state.inlineRules.inline_math_paren.exec(state.src);
+    if (!to || !isLengthEven(to[2]))
+        return false;
+
+    pushPending(state);
+    const range = {
+        start: state.pos,
+        end: state.pos + to[0].length,
+    };
+    state.tokens.push({
+        type: 'inline_math',
+        raw: to[0],
+        range,
+        marker: '\\(',
+        parent: state.tokens,
+        content: to[1],
+        backlash: to[2],
+        displayMode: false,
+    });
+    state.src = state.src.substring(to[0].length);
+    state.pos = state.pos + to[0].length;
+
+    return true;
+}
+
+function tryInlineMathBracket(state: ILexState): boolean {
+    if (state.texMathSingleBackslash !== undefined)
+        return false;
+
+    const to = state.inlineRules.inline_math_bracket.exec(state.src);
+    if (!to || !isLengthEven(to[2]))
+        return false;
+
+    pushPending(state);
+    const range = {
+        start: state.pos,
+        end: state.pos + to[0].length,
+    };
+    state.tokens.push({
+        type: 'inline_math',
+        raw: to[0],
+        range,
+        marker: '\\[',
+        parent: state.tokens,
+        content: to[1],
+        backlash: to[2],
+        displayMode: true,
+    });
+    state.src = state.src.substring(to[0].length);
+    state.pos = state.pos + to[0].length;
+
+    return true;
 }
 
 function tryBacklash(state: ILexState): boolean {
@@ -793,6 +855,8 @@ function tryTailHeader(state: ILexState): boolean {
 // iterates. This array order IS the rule-precedence contract.
 const INLINE_HANDLERS: ReadonlyArray<(state: ILexState) => boolean> = [
     tryBackslashMath,
+    tryInlineMathParen,
+    tryInlineMathBracket,
     tryBacklash,
     tryStrongEm,
     tryChunks,
@@ -871,7 +935,8 @@ export function tokenizer(src: string, {
         footnote: false,
         texMathDollars: true,
         texMathGfm: false,
-        texMathSingleBackslash: false,
+        // Left unset: the bare tokenizer keeps muya's own `\(...\)` /
+        // `\[...\]` delimiters; passing the flag selects pandoc's rules.
         texMathDoubleBackslash: false,
         highlightSyntax: false,
         inlineDiff: false,

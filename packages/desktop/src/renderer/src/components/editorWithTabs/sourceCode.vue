@@ -484,7 +484,8 @@ const wrapSelection = (
   const replacements: Array<{ from: CMCursor; to: CMCursor; text: string }> = []
   const nextSelections: CmRange[] = []
   for (const { anchor, head } of ranges) {
-    const forward = cm.cmpPos(anchor, head) <= 0
+    // `cmpPos` is a CodeMirror static (CodeMirror.cmpPos), not an Editor method.
+    const forward = codeMirror.cmpPos(anchor, head) <= 0
     const from = forward ? anchor : head
     const to = forward ? head : anchor
     const text = cm.getRange(from, to)
@@ -541,7 +542,8 @@ const stripFormatting = (cm: CMInstance): void => {
   const replacements: Array<{ from: CMCursor; to: CMCursor; text: string }> = []
   const nextSelections: CmRange[] = []
   for (const { anchor, head } of ranges) {
-    const forward = cm.cmpPos(anchor, head) <= 0
+    // `cmpPos` is a CodeMirror static (CodeMirror.cmpPos), not an Editor method.
+    const forward = codeMirror.cmpPos(anchor, head) <= 0
     const from = forward ? anchor : head
     const to = forward ? head : anchor
     const original = cm.getRange(from, to)
@@ -696,7 +698,10 @@ onBeforeUnmount(() => {
       renderCursor: true
     })
 
-    editor.value.toTextArea()
+    // The instance was created on a container div, not a textarea, so it has no
+    // `toTextArea` (that exists only on `CodeMirror.fromTextArea` results). The
+    // official way to delete such an editor is removing its wrapper node.
+    editor.value.getWrapperElement().remove()
     editor.value = null
   }
 })

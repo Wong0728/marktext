@@ -8,7 +8,8 @@
       "paragraphs": "Alinea's",
       "allCharacters": "Alle tekens",
       "document": "Document",
-      "documentSelection": "Document / Selectie"
+      "documentSelection": "Document / Selectie",
+      "selectedWords": "Geselecteerde woorden"
     },
     "file": {
       "file": "Bestand",
@@ -32,7 +33,8 @@
       "closeTab": "Tabblad sluiten",
       "closeWindow": "Venster sluiten",
       "quit": "Afsluiten",
-      "preferences": "Voorkeuren"
+      "preferences": "Voorkeuren",
+      "exportDocx": "Exporteren als DOCX"
     },
     "edit": {
       "edit": "Bewerken",
@@ -182,7 +184,8 @@
       "tokyoNight": "Tokyo Night",
       "tokyoNightLight": "Tokyo Night Light",
       "tokyoNightStorm": "Tokyo Night Storm",
-      "ulyssesLight": "Ulysses Light"
+      "ulyssesLight": "Ulysses Light",
+      "highContrast": "Hoog contrast"
     }
   },
   "contextMenu": {
@@ -218,7 +221,8 @@
       "rename": "Hernoemen",
       "copyPath": "Pad kopiëren",
       "showInFolder": "Tonen in map",
-      "showInSideBar": "Tonen in zijbalk"
+      "showInSideBar": "Tonen in zijbalk",
+      "openInNewWindow": "Openen in nieuw venster"
     }
   },
   "search": {
@@ -250,7 +254,9 @@
       "closeAll": "Alles sluiten",
       "emptyProject": "Leeg project",
       "createFile": "Bestand aanmaken",
-      "openFolder": "Map openen"
+      "openFolder": "Map openen",
+      "filterFiles": "Bestanden filteren...",
+      "noMatchingFiles": "Geen overeenkomende bestanden"
     },
     "toc": {
       "expand": "Inhoudsopgave uitklappen",
@@ -263,7 +269,8 @@
     "icons": {
       "files": "Bestanden",
       "search": "Zoeken",
-      "settings": "Instellingen"
+      "settings": "Instellingen",
+      "toc": "Inhoudsopgave"
     }
   },
   "titleBar": {
@@ -300,7 +307,11 @@
       "pageMargin": "Paginamarge in mm:",
       "topBottom": "Boven/Onder:",
       "leftRight": "Links/Rechts:",
-      "widthHeight": "Breedte/Hoogte in mm:"
+      "widthHeight": "Breedte/Hoogte in mm:",
+      "embedImages": "Afbeeldingen insluiten in de geëxporteerde HTML:",
+      "embedImagesDetail": "Sluit lokale afbeeldingen in als data-URI’s, zodat de geëxporteerde HTML blijft renderen wanneer het bestand apart wordt verplaatst of gedeeld.",
+      "exportZip": "Exporteren als ZIP met lokale afbeeldingen:",
+      "exportZipDetail": "Pakt de HTML en elke gerefereerde lokale afbeelding (inclusief SVG) in één ZIP-archief, met afbeeldingen gerefereerd via een relatief pad. Externe afbeeldingen blijven ongewijzigd. Kan niet worden gecombineerd met het insluiten van afbeeldingen."
     },
     "showFrontMatter": "Front Matter tonen",
     "style": {
@@ -362,7 +373,28 @@
         "academic": "Academisch",
         "default": "GitHub (Standaard)",
         "liber": "Liber"
+      },
+      "docxEngines": {
+        "auto": "Auto (aanbevolen)",
+        "pandoc": "Pandoc (native wiskundige vergelijkingen)",
+        "js": "Ingebouwde JS (betere tabellen, native wiskunde)"
+      },
+      "docxFonts": {
+        "followWord": "Standaard (volg Word)",
+        "defaultSize": "12 pt (standaard)"
       }
+    },
+    "info": {
+      "label": "Info",
+      "description": "Pas het pagina-uiterlijk aan en klik op \"exporteren\" om verder te gaan."
+    },
+    "docxEngine": {
+      "description": "DOCX-engine:"
+    },
+    "docxFonts": {
+      "latin": "Westers lettertype (Latijns):",
+      "eastAsia": "Chinees lettertype (Oost-Aziatisch):",
+      "size": "Lettergrootte van hoofdtekst:"
     }
   },
   "recent": {
@@ -461,7 +493,8 @@
         "autoNormalizeLineEndings": "Regeleindes automatisch normaliseren bij het openen van bestanden. Indien uitgeschakeld worden bestanden ongewijzigd geopend.",
         "fileSortOrder": "Sorteervolgorde voor bestanden in geopende mappen: oplopend of aflopend.",
         "openedFilesInSidebar": "Geopende bestanden tonen in de zijbalk.",
-        "showPandocConvert": "Het Pandoc-conversiemenu tonen. Vereist een installatie van Pandoc."
+        "showPandocConvert": "Het Pandoc-conversiemenu tonen. Vereist een installatie van Pandoc.",
+        "isGitlabCompatibilityEnabled": "GitLab-compatibiliteitsmodus inschakelen"
       }
     },
     "categories": {
@@ -571,13 +604,16 @@
         "title": "Codeblok",
         "fontSize": "Lettergrootte",
         "showLineNumbers": "Regelnummers tonen",
-        "removeEmptyLines": "Lege regels verwijderen"
+        "removeEmptyLines": "Lege regels verwijderen",
+        "fontFamily": "Lettertypefamilie"
       },
       "writingBehavior": {
         "title": "Schrijfgedrag",
         "autoCloseBrackets": "Haakjes automatisch sluiten",
         "autoCompleteMarkdown": "Markdown automatisch aanvullen",
-        "autoCloseQuotes": "Aanhalingstekens automatisch sluiten"
+        "autoCloseQuotes": "Aanhalingstekens automatisch sluiten",
+        "vimMode": "Vim-sneltoetsen inschakelen in broncodemodus",
+        "writingTarget": "Schrijfdoel in woorden (0 = uit)"
       },
       "fileRepresentation": {
         "title": "Bestandsweergave",
@@ -711,12 +747,14 @@
           "atx": "ATX-stijl",
           "setext": "Setext-stijl"
         },
-        "title": "Diversen"
+        "title": "Diversen",
+        "showHeadingNumbers": "Kopnummers tonen in de editor"
       },
       "compatibility": {
         "enableHtml": "HTML-ondersteuning inschakelen",
         "softNewlineAsSpace": "Zachte regeleinden als spaties behandelen",
-        "title": "Compatibiliteit"
+        "title": "Compatibiliteit",
+        "enableGitlab": "GitLab-compatibiliteit inschakelen"
       },
       "lists": {
         "bulletListMarker": "Opsommingsteken",
@@ -961,7 +999,14 @@
     "unsafeFileTitle": "Mogelijk onveilig bestand",
     "unsafeFileMessage": "Deze link opent een bestand dat code kan uitvoeren",
     "unsafeFileDetail": "\"{name}\" is een uitvoerbaar bestand of script. Het openen kan programma's op je computer uitvoeren. Ga alleen door als je dit document vertrouwt.",
-    "openAnyway": "Toch openen"
+    "openAnyway": "Toch openen",
+    "discard": "Verwerpen",
+    "recover": "Herstellen",
+    "unsavedContentFound": "Er is niet-opgeslagen inhoud van je laatste sessie gevonden",
+    "unsavedContentFoundDetail": "MarkText is vorige keer niet correct afgesloten. {count} niet-opgeslagen tabblad(en) herstellen? Verwerpen verwijdert ze permanent.",
+    "installPandocOrSwitchEngine": "Pandoc is niet gevonden. Installeer pandoc voor native Word-vergelijkingen, of zet de DOCX-engine in de exportopties op \"Ingebouwde JS\" of \"Auto\" om zonder pandoc door te gaan.",
+    "windowNotResponding": "Dit venster reageert niet",
+    "windowNotRespondingDetail": "MarkText kan niet-opgeslagen wijzigingen niet bevestigen omdat het venster niet meer reageert. Toch sluiten? Niet-opgeslagen wijzigingen kunnen verloren gaan."
   },
   "error": {
     "configSchemaViolation": "Configuratieschemaovertreding",
@@ -994,7 +1039,13 @@
       "exportSuccessMessage": "\"{name}\" is succesvol geëxporteerd!",
       "exportLinkedMediaMessage": "\"{name}\" is geëxporteerd. Deze indeling verwijst naar afbeeldingen in plaats van ze in te sluiten — houd de afbeeldingen bij het bestand en deel de hele map.",
       "fileRemovedOnDisk": "\"{name}\" is verwijderd van schijf.",
-      "fileChangedOnDisk": "\"{name}\" is gewijzigd op schijf. Wil je het opnieuw laden?"
+      "fileChangedOnDisk": "\"{name}\" is gewijzigd op schijf. Wil je het opnieuw laden?",
+      "externalChangeMerged": "Wijzigingen op schijf zijn samengevoegd in \"{name}\". Ongedaan maken zet de samenvoeging terug.",
+      "externalChangeConflict": "De schijfversie van \"{name}\" conflicteert met je niet-opgeslagen bewerkingen. Jouw versie is bewaard — bewerk verder en probeer opnieuw samen te voegen, of laad de schijfversie.",
+      "viewMergedChanges": "Wijzigingen bekijken",
+      "fileChangedOnDiskWithEdits": "\"{name}\" is gewijzigd op schijf en je hebt niet-opgeslagen bewerkingen. Laden verwijdert je bewerkingen; samenvoegen voegt de schijfwijzigingen in je inhoud in; sluiten houdt jouw versie.",
+      "loadExternalChange": "Schijfversie laden",
+      "mergeExternalChanges": "Wijzigingen samenvoegen"
     }
   },
   "spellchecker": {

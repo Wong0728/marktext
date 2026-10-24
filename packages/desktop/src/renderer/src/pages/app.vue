@@ -9,7 +9,6 @@
         :filename="filename"
         :active="windowActive"
         :word-count="wordCount"
-        :selection-word-count="selectionWordCount"
         :platform="platform"
         :is-saved="isSaved"
       />
@@ -79,7 +78,7 @@ const { windowActive, platform, init } = storeToRefs(mainStore)
 const { showTabBar } = storeToRefs(layoutStore)
 const { sourceCode, theme, customCss, textDirection, zoom } = storeToRefs(preferencesStore)
 const { projectTree } = storeToRefs(projectStore)
-const { currentFile, selectionWordCount } = storeToRefs(editorStore)
+const { currentFile } = storeToRefs(editorStore)
 
 watch(
   () => [currentFile.value?.id, currentFile.value?.readOnly],

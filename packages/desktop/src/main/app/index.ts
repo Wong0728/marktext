@@ -261,34 +261,34 @@ class App {
           }
           nativeTheme.themeSource = getNativeThemeSource(nextPreferences)
 
-        if (change.followSystemTheme === true) {
-          const systemIsDark = nativeTheme.shouldUseDarkColors
-          const lightModeTheme = preferences.getItem<string>('lightModeTheme')
-          const darkModeTheme = preferences.getItem<string>('darkModeTheme')
-          const newTheme = systemIsDark ? darkModeTheme : lightModeTheme
+          if (change.followSystemTheme === true) {
+            const systemIsDark = nativeTheme.shouldUseDarkColors
+            const lightModeTheme = preferences.getItem<string>('lightModeTheme')
+            const darkModeTheme = preferences.getItem<string>('darkModeTheme')
+            const newTheme = systemIsDark ? darkModeTheme : lightModeTheme
 
-          log.info(
-            `followSystemTheme enabled, switching to: ${newTheme} (system ${systemIsDark ? 'dark' : 'light'})`
-          )
-          selectTheme(newTheme)
-          preferences.setItem('theme', newTheme)
-        }
-        if (
-          preferences.getItem<boolean>('followSystemTheme') &&
+            log.info(
+              `followSystemTheme enabled, switching to: ${newTheme} (system ${systemIsDark ? 'dark' : 'light'})`
+            )
+            selectTheme(newTheme)
+            preferences.setItem('theme', newTheme)
+          }
+          if (
+            preferences.getItem<boolean>('followSystemTheme') &&
         (change.lightModeTheme || change.darkModeTheme)
           ) {
             const systemIsDark = nativeTheme.shouldUseDarkColors
 
         // Use newly changed theme preferences before the stored values are refreshed.
-          let lightModeTheme = preferences.getItem<string>('lightModeTheme')
-          let darkModeTheme = preferences.getItem<string>('darkModeTheme')
+            let lightModeTheme = preferences.getItem<string>('lightModeTheme')
+            let darkModeTheme = preferences.getItem<string>('darkModeTheme')
 
-          if (change.lightModeTheme !== undefined) {
-            lightModeTheme = change.lightModeTheme
-          }
-          if (change.darkModeTheme !== undefined) {
-            darkModeTheme = change.darkModeTheme
-          }
+            if (change.lightModeTheme !== undefined) {
+              lightModeTheme = change.lightModeTheme
+            }
+            if (change.darkModeTheme !== undefined) {
+              darkModeTheme = change.darkModeTheme
+            }
 
             const newTheme = systemIsDark ? darkModeTheme : lightModeTheme
 

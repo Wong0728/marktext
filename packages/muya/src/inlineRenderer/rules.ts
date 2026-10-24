@@ -98,7 +98,17 @@ export const inlineExtensionRules = {
     // with none of the escape rule above: pandoc ends the span at the first
     // `\\)` it sees, so `\\(a\\)b\\)` holds `a` rather than running on.
     inline_math_double_backslash: /^(\\\\\()((?:(?!\\\\\))[\s\S])+)\\\\\)/,
-    display_math_double_backslash: /^(\\\\\[)((?:(?!\\\\\])[\s\S])+)\\\\\)/,
+    display_math_double_backslash: /^(\\\\\[)((?:(?!\\\\\])[\s\S])+)\\\\\]/,
+    // muya's own single-line LaTeX delimiters, older than the pandoc
+    // extensions above. They answer to no option: a caller that passes none —
+    // like the bare exported `tokenizer()` — gets them, while one that passes
+    // `texMathSingleBackslash` gets pandoc's rules instead. Consumed by
+    // dedicated lexer handlers running before `backlash`, else `\(` is eaten
+    // as an escape before any math rule sees it.
+    // eslint-disable-next-line regexp/no-super-linear-backtracking
+    inline_math_paren: /^\\\(((?:[^\\\n]|\\.)+?)(\\*)\\\)/,
+    // eslint-disable-next-line regexp/no-super-linear-backtracking
+    inline_math_bracket: /^\\\[((?:[^\\\n]|\\.)+?)(\\*)\\\]/,
     // This is not the best regexp, because it not support `2^2\\^`.
     superscript: /^(\^)((?:[^^\s]|(?<=\\)\1|(?<=\\) )+?)(?<!\\)\1(?!\1)/,
     subscript: /^(~)((?:[^~\s]|(?<=\\)\1|(?<=\\) )+?)(?<!\\)\1(?!\1)/,

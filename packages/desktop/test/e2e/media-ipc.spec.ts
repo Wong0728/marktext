@@ -78,6 +78,8 @@ test.describe('media IPC bridge', () => {
     })
 
     expect(written).toBe(true)
-    expect(await app.evaluate(({ clipboard }) => !clipboard.readImage().isEmpty())).toBe(true)
+    // Electron 44 removed `clipboard.readImage()`; `writeImage` above lands on
+    // the clipboard as an `image/png` ClipboardItem.
+    expect(await app.evaluate(({ clipboard }) => clipboard.has('image/png'))).toBe(true)
   })
 })

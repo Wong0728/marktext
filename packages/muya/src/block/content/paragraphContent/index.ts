@@ -76,7 +76,7 @@ const MATH_BLOCK_REG = /^\$\$[ \t]*$/;
 // LaTeX display-math opener `\[` converts the paragraph the same way; it
 // answers to the single-backslash extension the way `$$` answers to
 // `texMathDollars`, mirroring the marked tokenizer's split.
-const LATEX_DISPLAY_BLOCK_REG = /^\\\[ \t]*$/;
+const LATEX_DISPLAY_BLOCK_REG = /^\\\[ \t\]*$/;
 const MULTILINE_BLOCKQUOTE_REG = /^>>>[ \t]*$/;
 // eslint-disable-next-line regexp/no-super-linear-backtracking
 const TABLE_BLOCK_REG = /^\|.*?(\\*)\|.*?(\\*)\|/;
@@ -107,8 +107,9 @@ function matchBlockConversion(
     // recognised; otherwise the block would serialize to markdown this editor
     // no longer reads back (#5446).
     if ((texMathDollars && MATH_BLOCK_REG.test(text))
-        || (texMathSingleBackslash && LATEX_DISPLAY_BLOCK_REG.test(text)))
+        || (texMathSingleBackslash && LATEX_DISPLAY_BLOCK_REG.test(text))) {
         return { kind: 'math' };
+    }
 
     const fence = parseFenceLine(text);
     if (fence)
@@ -713,15 +714,13 @@ class ParagraphContent extends Format {
         if (!parent.isFirstChild())
             return this._handleBackspaceInParagraph();
 
-        // Backspace at a list item's start steps OUT one level per press: a
-        // nested item outdents like Shift+Tab (level 3 -> 2 -> 1); a top-level
-        // item then lifts OUT of the list into a plain paragraph (the branches
-        // below, splitting the list as needed). Merging into the previous block
-        // only happens on the next press, once it is an ordinary paragraph.
-        const unindentType = this._getUnindentType();
-        if (unindentType != null)
-            return this._unindentListItem(unindentType);
-
+        // Backspace never outdents — outdenting is Shift+Tab's job
+        // (`_getUnindentType`/`_unindentListItem` serve that path). A nested
+        // item's only paragraph is lifted into the surrounding item (the
+        // `isOnlyChild` branch below); a top-level item lifts OUT of the list
+        // into a plain paragraph, splitting the list as needed. Merging into
+        // the previous block only happens on the next press, once it is an
+        // ordinary paragraph.
         if (listItem.isOnlyChild()) {
             listItem.forEach((node, i: number) => {
                 const paragraph = (node as Parent).clone() as Parent;

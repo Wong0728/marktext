@@ -9,6 +9,11 @@ packages:
 overrides:
   postcss: '8.5.29'
   'esbuild@>=0.27.0 <0.28.1': '0.28.1'
+  # node-abi 4.31.0 (resolved for @electron/rebuild@4.2.1) has no ABI mapping
+  # for Electron 44 → electron-rebuild fails with "Could not detect abi for
+  # version 44.3.0". 4.32.0+ added Electron 44 (abi 149); pin the whole ^4.2.0
+  # range (only @electron/rebuild declares it) so the lockfile cannot regress.
+  'node-abi@^4.2.0': '4.40.0'
 
 allowBuilds:
   ced: true

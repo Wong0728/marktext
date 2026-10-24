@@ -12,8 +12,8 @@ import mathExtension, { doubleBackslashMathExtension, gfmMathExtension, singleBa
 import multilineBlockquoteExtension from './extensions/multilineBlockquote';
 import superSubScriptExtension from './extensions/superSubscript';
 import fm, { frontMatterRender } from './frontMatter';
-import { DEFAULT_OPTIONS } from './options';
 import { normalizeMarkdownInput } from './normalizeMarkdownInput';
+import { DEFAULT_OPTIONS } from './options';
 import walkTokens from './walkTokens';
 
 const DIAGRAM_TYPE = [
@@ -65,6 +65,11 @@ export function getHighlightHtml(src: string, options: ILexOption = {}) {
             mathExtension({
                 throwOnError: false,
                 useKatexRender: true,
+                // The preview/export pipeline mirrors the editor: display math
+                // only when the paragraph is all math (#4904), and the
+                // backslash spellings ride their own flags.
+                authoredDisplayMath: false,
+                texMathSingleBackslash,
             }),
         );
     }
@@ -74,6 +79,9 @@ export function getHighlightHtml(src: string, options: ILexOption = {}) {
             gfmMathExtension({
                 throwOnError: false,
                 useKatexRender: true,
+                // The preview/export pipeline mirrors the editor: display math
+                // only when the paragraph is all math (#4904).
+                authoredDisplayMath: false,
             }),
         );
     }
@@ -83,6 +91,9 @@ export function getHighlightHtml(src: string, options: ILexOption = {}) {
             singleBackslashMathExtension({
                 throwOnError: false,
                 useKatexRender: true,
+                // The preview/export pipeline mirrors the editor: display math
+                // only when the paragraph is all math (#4904).
+                authoredDisplayMath: false,
             }),
         );
     }
@@ -92,6 +103,9 @@ export function getHighlightHtml(src: string, options: ILexOption = {}) {
             doubleBackslashMathExtension({
                 throwOnError: false,
                 useKatexRender: true,
+                // The preview/export pipeline mirrors the editor: display math
+                // only when the paragraph is all math (#4904).
+                authoredDisplayMath: false,
             }),
         );
     }

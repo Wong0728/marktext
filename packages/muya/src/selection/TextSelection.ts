@@ -334,6 +334,27 @@ class TextSelection {
         this._emitSelectionChange();
     }
 
+    // Reconcile the cached caret with the document after an undo/redo entry
+    // that carried no selection (the very first edit after boot/clear, which
+    // has no pre-edit snapshot, #5387). A block that survived the revert gets
+    // its cached offsets clamped back inside the reverted text — the undo of
+    // `seedx` → `seed` must not leave the caret parked at the phantom offset
+    // 5. A block the revert removed keeps its detached reference untouched:
+    // callers read that detached reference as the no-caret signal.
+    clampIntoSurvivingBlocks() {
+        const { anchor, focus, anchorBlock, focusBlock, anchorPath, focusPath } = this;
+        if (!anchor || !focus || !anchorBlock || !focusBlock)
+            return;
+
+        if (!anchorBlock.outMostBlock || !focusBlock.outMostBlock)
+            return;
+
+        this.setSelection(
+            { offset: anchor.offset, block: anchorBlock, path: [...anchorPath] },
+            { offset: focus.offset, block: focusBlock, path: [...focusPath] },
+        );
+    }
+
     // The block's text state never contains a browser-cloned `mu-content`
     // span, so state is the source of truth: drop the clone, re-render the
     // real block, and collapse the native caret into it. During an active IME

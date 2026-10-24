@@ -307,7 +307,11 @@
       "pageMargin": "mm cinsinden sayfa kenar boşluğu:",
       "topBottom": "Üst/Alt:",
       "leftRight": "Sol/Sağ:",
-      "widthHeight": "mm cinsinden Genişlik/Yükseklik:"
+      "widthHeight": "mm cinsinden Genişlik/Yükseklik:",
+      "embedImages": "Dışa aktarılan HTML'e görselleri göm:",
+      "embedImagesDetail": "Yerel görselleri veri URI'si olarak satır içine gömer; böylece dışa aktarılan HTML, dosya tek başına taşınıp paylaşıldığında da görselleri göstermeye devam eder.",
+      "exportZip": "Yerel görsellerle birlikte ZIP olarak dışa aktar:",
+      "exportZipDetail": "HTML'i ve başvurulan tüm yerel görselleri (SVG dahil) görsellerin göreli yolla başvurulduğu tek bir ZIP arşivine paketler. Uzak görseller olduğu gibi kalır. Görsel gömme ile birlikte kullanılamaz."
     },
     "showFrontMatter": "Ön bilgiyi göster",
     "style": {
@@ -369,11 +373,28 @@
         "academic": "Akademik",
         "default": "GitHub (Varsayılan)",
         "liber": "Liber"
+      },
+      "docxEngines": {
+        "auto": "Otomatik (Önerilen)",
+        "js": "Yerleşik JS (daha iyi tablolar, yerel matematik)",
+        "pandoc": "Pandoc (yerel matematik denklemleri)"
+      },
+      "docxFonts": {
+        "defaultSize": "12 pt (varsayılan)",
+        "followWord": "Varsayılan (Word'e uy)"
       }
     },
     "info": {
       "label": "Bilgi",
       "description": "Lütfen sayfa görünümünü özelleştirin ve devam etmek için \"dışa aktar\"a tıklayın."
+    },
+    "docxEngine": {
+      "description": "DOCX motoru:"
+    },
+    "docxFonts": {
+      "eastAsia": "Çince yazı tipi (Doğu Asya):",
+      "latin": "Batı yazı tipi (Latin):",
+      "size": "Gövde yazı tipi boyutu:"
     }
   },
   "recent": {
@@ -982,7 +1003,10 @@
     "discard": "At",
     "recover": "Kurtar",
     "unsavedContentFound": "Son oturumdan kaydedilmemiş içerik bulundu",
-    "unsavedContentFoundDetail": "MarkText son seferinde düzgün kapanmadı. {count} kaydedilmemiş sekme kurtarılsın mı? Atarsanız kalıcı olarak silinir."
+    "unsavedContentFoundDetail": "MarkText son seferinde düzgün kapanmadı. {count} kaydedilmemiş sekme kurtarılsın mı? Atarsanız kalıcı olarak silinir.",
+    "installPandocOrSwitchEngine": "Pandoc bulunamadı. Word'ün yerel matematik denklemleri için pandoc'u yükleyin ya da dışa aktarma seçeneklerinde DOCX motorunu \"Yerleşik JS\" veya \"Otomatik\" olarak değiştirip pandoc olmadan devam edin.",
+    "windowNotResponding": "Bu pencere yanıt vermiyor",
+    "windowNotRespondingDetail": "Pencere yanıt vermeyi kestiği için MarkText kaydedilmemiş değişiklikleri doğrulayamıyor. Yine de kapatılsın mı? Kaydedilmemiş değişiklikler kaybolabilir."
   },
   "error": {
     "configSchemaViolation": "Yapılandırma şeması ihlali",

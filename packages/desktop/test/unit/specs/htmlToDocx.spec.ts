@@ -14,8 +14,11 @@ const mockPandocToFile = vi.hoisted(() => vi.fn())
 const mockIsFile = vi.hoisted(() => vi.fn())
 const mockReadFile = vi.hoisted(() => vi.fn())
 
+// v0.23.0 pandoc API: `exists()` resolves the binary asynchronously and
+// `toFile(target, outputPath, input, options)` replaced the old
+// `pandoc(from, to, ...args)` converter factory.
 vi.mock('main_renderer/utils/pandoc', () => ({
-  default: Object.assign(mockPandoc, { exists: mockPandocExists })
+  default: Object.assign(mockPandoc, { exists: mockPandocExists, toFile: mockPandocToFile })
 }))
 vi.mock('common/filesystem', () => ({ isFile: mockIsFile }))
 vi.mock('fs/promises', () => ({
@@ -66,9 +69,8 @@ const readDocxDocumentXml = async(buffer: Buffer): Promise<string> => {
 describe('exportDocxFile', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockPandocExists.mockReturnValue(true)
-    mockPandoc.mockReturnValue({ toFile: mockPandocToFile })
-    mockPandocToFile.mockResolvedValue(undefined)
+    mockPandocExists.mockResolvedValue(true)
+    mockPandocToFile.mockResolvedValue({ warnings: '' })
     mockPrepareReferenceDoc.mockResolvedValue('/mock/reference.docx')
     mockIsFile.mockReturnValue(true)
     mockReadFile.mockResolvedValue(Buffer.from('unchanged-docx'))
@@ -90,18 +92,26 @@ describe('exportDocxFile', () => {
         mockReadFile.mockResolvedValue(buffer)
       })
 
-      expect(resolveDocxEngine(docxEngine)).toBe('pandoc')
+      expect(await resolveDocxEngine(docxEngine)).toBe('pandoc')
       await exportDocxFile('<p>hello</p>', '/out/export.docx', {
         docxEngine, resourcePath: '/docs/with spaces', docxFont
       })
 
       expect(mockPrepareReferenceDoc).toHaveBeenCalledWith(docxFont)
       expect(mockIsFile).toHaveBeenCalledWith('/mock/reference.docx')
-      expect(mockPandoc).toHaveBeenCalledExactlyOnceWith(
-        'html', 'docx', '--wrap=none', '--resource-path=/docs/with spaces',
-        '--reference-doc=/mock/reference.docx'
+      // The old converter factory is gone; stdin HTML goes through
+      // `toFile` with the explicit `html` reader and the fork's extra args.
+      expect(mockPandoc).not.toHaveBeenCalled()
+      expect(mockPandocToFile).toHaveBeenCalledExactlyOnceWith(
+        'docx', '/out/export.docx', '<p>hello</p>', {
+          reader: 'html',
+          args: [
+            '--wrap=none',
+            '--resource-path=/docs/with spaces',
+            '--reference-doc=/mock/reference.docx'
+          ]
+        }
       )
-      expect(mockPandocToFile).toHaveBeenCalledExactlyOnceWith('<p>hello</p>', '/out/export.docx')
       expect(mockReadFile).toHaveBeenCalledWith('/out/export.docx')
       expect(mockWriteFile).toHaveBeenCalledExactlyOnceWith(
         '/out/export.docx', expect.any(Buffer), 'docx', 'binary'
@@ -115,7 +125,7 @@ describe('exportDocxFile', () => {
   it.each([
     ['js', true], ['auto', false], [undefined, false]
   ] as const)('uses JS for %s with pandoc installed=%s and forwards options', async(docxEngine, installed) => {
-    mockPandocExists.mockReturnValue(installed)
+    mockPandocExists.mockResolvedValue(installed)
     const convert = vi.spyOn(jsDocxEngine, 'convert').mockResolvedValue(undefined)
     const options = {
       docxEngine,
@@ -125,23 +135,25 @@ describe('exportDocxFile', () => {
       docxFont: { latin: 'Arial', eastAsia: '宋体', sizePt: 12 }
     }
 
-    expect(resolveDocxEngine(docxEngine)).toBe('js')
+    expect(await resolveDocxEngine(docxEngine)).toBe('js')
     await exportDocxFile('<p>hello</p>', '/out/export.docx', options)
 
     expect(convert).toHaveBeenCalledExactlyOnceWith('<p>hello</p>', '/out/export.docx', options)
     expect(mockPandoc).not.toHaveBeenCalled()
+    expect(mockPandocToFile).not.toHaveBeenCalled()
     expect(mockPrepareReferenceDoc).not.toHaveBeenCalled()
     expect(mockReadFile).not.toHaveBeenCalled()
   })
 
   it('rejects an explicit pandoc request when unavailable instead of silently using JS', async() => {
-    mockPandocExists.mockReturnValue(false)
+    mockPandocExists.mockResolvedValue(false)
 
-    expect(resolveDocxEngine('pandoc')).toBe('pandoc')
+    expect(await resolveDocxEngine('pandoc')).toBe('pandoc')
     await expect(exportDocxFile('<p>hello</p>', '/out/export.docx', { docxEngine: 'pandoc' }))
       .rejects.toThrow('Pandoc is not installed')
 
     expect(mockPandoc).not.toHaveBeenCalled()
+    expect(mockPandocToFile).not.toHaveBeenCalled()
     expect(mockHtmlToDocx).not.toHaveBeenCalled()
     expect(mockWriteFile).not.toHaveBeenCalled()
   })
@@ -151,8 +163,12 @@ describe('exportDocxFile', () => {
 
     await exportDocxFile('<p>hello</p>', '/out/export.docx')
 
-    expect(mockPandoc).toHaveBeenCalledExactlyOnceWith(
-      'html', 'docx', '--wrap=none', '--resource-path=/mock/documents'
+    expect(mockPandoc).not.toHaveBeenCalled()
+    expect(mockPandocToFile).toHaveBeenCalledExactlyOnceWith(
+      'docx', '/out/export.docx', '<p>hello</p>', {
+        reader: 'html',
+        args: ['--wrap=none', '--resource-path=/mock/documents']
+      }
     )
     expect(mockPrepareReferenceDoc).toHaveBeenCalledWith(undefined)
     expect(mockWriteFile).not.toHaveBeenCalled()

@@ -56,14 +56,17 @@ describe('pandoc', () => {
   })
 
   it('passes -o <outputPath> when writing binary output via toFile', async() => {
-    const converter = pandoc('html', 'docx', '--wrap=none', '--resource-path=/tmp')
-    await converter.toFile('<p>hello</p>', '/out/export.docx')
+    await pandoc.toFile('docx', '/out/export.docx', '<p>hello</p>', {
+      reader: 'html',
+      args: ['--wrap=none', '--resource-path=/tmp']
+    })
 
     expect(mockSpawn).toHaveBeenCalledTimes(1)
     const [, args] = mockSpawn.mock.calls[0] as [string, string[]]
     expect(args).toEqual([
       '-f', 'html',
       '-t', 'docx',
+      '-s',
       '--wrap=none',
       '--resource-path=/tmp',
       '-o', '/out/export.docx'
@@ -71,9 +74,8 @@ describe('pandoc', () => {
   })
 
   it('pipes the input to stdin when using toFile', async() => {
-    const converter = pandoc('html', 'docx')
     const input = '<h1>title</h1>'
-    await converter.toFile(input, '/out/export.docx')
+    await pandoc.toFile('docx', '/out/export.docx', input, { reader: 'html' })
 
     const mock = spawnMocks[0]
     expect(mock.stdin.end).toHaveBeenCalledWith(input)

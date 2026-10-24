@@ -11,8 +11,8 @@ import mathExtension, { doubleBackslashMathExtension, gfmMathExtension, singleBa
 import multilineBlockquoteExtension from './extensions/multilineBlockquote';
 import superSubScriptExtension from './extensions/superSubscript';
 import fm, { frontMatterRender } from './frontMatter';
-import { DEFAULT_OPTIONS } from './options';
 import { normalizeMarkdownInput } from './normalizeMarkdownInput';
+import { DEFAULT_OPTIONS } from './options';
 import walkTokens from './walkTokens';
 
 export function getClipBoardHtml(src: string, options: ILexOption = {}) {
@@ -45,6 +45,10 @@ export function getClipBoardHtml(src: string, options: ILexOption = {}) {
                 // text otherwise, matching the export render path.
                 useKatexRender: mathRenderAsMathml,
                 mathOutput: mathRenderAsMathml ? 'mathml' : 'html',
+                // The clipboard mirrors the editor's paragraph-only display
+                // rule and keeps the authored markers (#4904).
+                authoredDisplayMath: false,
+                texMathSingleBackslash,
             }),
         );
     }
