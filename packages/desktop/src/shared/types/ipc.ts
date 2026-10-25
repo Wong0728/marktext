@@ -1,3 +1,4 @@
+import type { ProjectRootsSnapshot, ProjectTreeEvent } from './project'
 /**
  * Cross-process IPC contract: invoke returns a Promise, send is fire-and-forget,
  * sync returns directly, and main events push payloads to renderer listeners.
@@ -40,7 +41,15 @@ export interface DocxClipboardPayload {
   mathBlocks?: Array<{ index: number; mathml: string; display: boolean }>
 }
 
+export interface RecentDocument {
+  pathname: string
+  isDirectory: boolean
+}
+
 export interface IpcInvokeChannels {
+  'mt::get-recently-used-documents': { args: []; ret: RecentDocument[] }
+  'mt::project-remove-root': { args: [key: string]; ret: boolean }
+  'mt::project-retry-root': { args: [key: string]; ret: boolean }
   'mt::clipboard::write-text': { args: [text: string]; ret: boolean }
   'mt::set-document-read-only': { args: [tabId: string, readOnly: boolean]; ret: void }
   'mt::ask-for-image-path': { args: []; ret: string[] }
@@ -117,11 +126,13 @@ export interface IpcInvokeChannels {
   'mt::win::is-maximized': { args: []; ret: boolean }
   // Main derives the BrowserWindow via BrowserWindow.fromWebContents(e.sender);
   // no need to pass windowId. Payload is the editor+project+layout snapshot.
-  'update-buffer-state': { args: [payload: unknown]; ret: void }
+  'update-buffer-state': { args: [payload: unknown]; ret: boolean }
 }
 
 
 export interface IpcSendChannels {
+  'mt::cmd-add-folder': []
+  'mt::project-renderer-ready': []
   'mt::forget-document': [tabId: string]
   'mt::update-document-mode': [readOnly: boolean, hasDocument?: boolean]
   'app-create-editor-window': [config?: unknown]
@@ -134,6 +145,7 @@ export interface IpcSendChannels {
   'broadcast-user-data-changed': [partial: unknown]
   'menu-add-recently-used': [filePath: string]
   'menu-clear-recently-used': []
+  'mt::remove-recently-used-document': [pathname: string]
   'mt::NEED_UPDATE': [payload?: unknown]
   'mt::add-recently-used-document': [filePath: string]
   'mt::app-try-quit': []
@@ -169,6 +181,7 @@ export interface IpcSendChannels {
   'mt::menu::popup-application': [position?: MenuPopupPosition]
   'mt::open-file': [filePath: string, options?: SidebarOpenOptions]
   'mt::open-file-by-window-id': [windowId: number, filePath: string, options?: unknown]
+  'mt::open-directory-by-window-id': [windowId: number, dirPath: string]
   'mt::open-keybindings-config': []
   'mt::open-setting-window': []
   'mt::rename': [
@@ -293,7 +306,7 @@ export interface IpcMainEventChannels {
   'mt::menu::click': [menuId: string]
   'mt::menu::closed': []
   'mt::new-untitled-tab': [selected?: boolean, markdown?: string]
-  'mt::open-directory': [directoryPath: string]
+  'mt::project-roots-changed': [snapshot: ProjectRootsSnapshot]
   'mt::open-new-tab': [
     markdownDocument: MarkdownDocument | null,
     options?: TabOptions,
@@ -326,7 +339,7 @@ export interface IpcMainEventChannels {
   'mt::toggle-view-layout-entry': [entry: string]
   'mt::toggle-view-mode-entry': [entry: string]
   'mt::update-file': [payload: { type: 'add' | 'change' | 'unlink'; change: FileChangeDetail }]
-  'mt::update-object-tree': [payload: unknown]
+  'mt::update-object-tree': [payload: ProjectTreeEvent]
   'mt::user-preference': [partial: unknown]
   'mt::window-active-status': [active: boolean]
   'mt::window-enter-full-screen': []

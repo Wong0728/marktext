@@ -81,7 +81,7 @@ describe('cut — forms its own undo entry inside the coalescing window', () => 
         content.setCursor(11, 11, true);
         content.text = 'hello world!!';
         muya.editor.history.markInputBoundary('insertText', '!');
-        muya.editor.jsonState.flush();
+        muya.editor.transactions.flush();
         await vi.waitFor(() => {
             expect(muya.getMarkdown()).toBe('hello world!!\n');
         });
@@ -89,7 +89,7 @@ describe('cut — forms its own undo entry inside the coalescing window', () => 
         // Cut the just-typed '!!' back out, still within the coalescing window.
         stubSameBlockSelection(muya, content, 11, 13);
         muya.editor.clipboard.cutHandler();
-        muya.editor.jsonState.flush();
+        muya.editor.transactions.flush();
         expect(muya.getMarkdown()).toBe('hello world\n');
 
         // The cut must be its own entry…

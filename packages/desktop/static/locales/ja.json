@@ -18,6 +18,7 @@
       "openFile": "ファイルを開く...",
       "openFolder": "フォルダーを開く...",
       "openRecent": "最近使ったファイル",
+      "openRecentMore": "最近使った項目を検索...",
       "clearRecentlyUsed": "最近使ったファイルをクリア",
       "save": "保存",
       "saveAs": "名前を付けて保存...",
@@ -34,7 +35,8 @@
       "closeWindow": "ウィンドウを閉じる",
       "quit": "終了",
       "preferences": "環境設定",
-      "exportDocx": "DOCXとしてエクスポート"
+      "exportDocx": "DOCXとしてエクスポート",
+      "addFolder": "Add Folder…"
     },
     "edit": {
       "edit": "編集",
@@ -245,8 +247,11 @@
       "noFolderOpen": "フォルダーが開かれていません",
       "noResultsFound": "一致するものがありません。",
       "cancel": "キャンセル",
-      "openFolder": "フォルダーを開く",
-      "showMoreMatches": "さらに一致するものを表示"
+      "openFolder": "Add Folder…",
+      "showMoreMatches": "さらに一致するものを表示",
+      "searchInFolders": "Search in added folders",
+      "partialSearch": "Some folders could not be searched.",
+      "noSearchableFolders": "No available folders to search."
     },
     "tree": {
       "openedFiles": "開いているファイル",
@@ -256,7 +261,17 @@
       "createFile": "ファイルの作成",
       "openFolder": "フォルダーを開く",
       "filterFiles": "ファイルを絞り込む...",
-      "noMatchingFiles": "一致するファイルがありません"
+      "noMatchingFiles": "一致するファイルがありません",
+      "noFolders": "No folders added",
+      "removeFolder": "Remove from Sidebar",
+      "retryFolder": "Retry",
+      "loadingFolder": "Loading folder…",
+      "unavailableFolder": "Folder unavailable",
+      "overlappingFolder": "This folder overlaps an existing folder. Remove the existing item first.",
+      "folderAlreadyAdded": "This folder has already been added.",
+      "fileOutsideFolders": "This file is not in an added folder.",
+      "sessionSaveFailed": "Unable to save session",
+      "resizeOpenedFiles": "開いているファイル一覧のサイズを変更"
     },
     "toc": {
       "expand": "目次を展開",
@@ -293,8 +308,16 @@
     "placeholders": {
       "selectOption": "オプションの選択",
       "searchFileToOpen": "開くファイルの検索",
-      "selectLanguage": "言語の選択"
-    }
+      "selectLanguage": "言語の選択",
+      "searchRecentFilesAndFolders": "最近使ったファイルとフォルダーを検索"
+    },
+    "recentlyOpened": "最近使った項目",
+    "fileResults": "ファイルの検索結果",
+    "folders": "フォルダー",
+    "files": "ファイル",
+    "removeFromRecent": "最近使った項目から削除",
+    "noResults": "一致する結果はありません",
+    "noRecentFiles": "最近使ったファイルやフォルダーはありません"
   },
   "exportSettings": {
     "autoNumberingHeadings": "見出しの自動番号付け",
@@ -479,6 +502,8 @@
         "isHtmlEnabled": "HTML レンダリングを有効にする",
         "softNewlineAsSpace": "ソフト改行をスペースとして扱う",
         "sequenceTheme": "シーケンス図のテーマ",
+        "mermaidLightTheme": "MarkText のライトテーマ用 Mermaid テーマ",
+        "mermaidDarkTheme": "MarkText のダークテーマ用 Mermaid テーマ",
         "plantumlServer": "PlantUML サーバーの URL",
         "theme": "MarkText で使用するテーマの選択",
         "followSystemTheme": "システムのテーマに従う",
@@ -583,7 +608,8 @@
           "dutch": "Nederlands",
           "portuguese": "Português",
           "turkish": "Türkçe",
-          "russian": "Русский"
+          "russian": "Русский",
+          "italian": "Italiano"
         }
       }
     },
@@ -737,6 +763,12 @@
           "handDrawn": "手描き",
           "simple": "シンプル"
         },
+        "mermaidLightTheme": {
+          "title": "MarkText のライトテーマ用 Mermaid テーマ"
+        },
+        "mermaidDarkTheme": {
+          "title": "MarkText のダークテーマ用 Mermaid テーマ"
+        },
         "plantumlServer": {
           "title": "PlantUML サーバーの URL"
         }
@@ -848,6 +880,7 @@
       "moveFile": "ファイルを移動",
       "renameFile": "ファイル名の変更",
       "quickOpen": "クイックオープン",
+      "quickOpenRecent": "最近使った項目をクイックオープン",
       "changeEncoding": "エンコーディングの変更",
       "changeLineEnding": "改行コードの変更",
       "trailingNewline": "末尾の改行",
@@ -862,7 +895,8 @@
       "exportFile": "ファイルのエクスポート",
       "exportFilePdf": "PDF としてエクスポート",
       "zoom": "ズーム",
-      "checkUpdate": "更新の確認"
+      "checkUpdate": "更新の確認",
+      "addFolder": "Add Folder…"
     },
     "edit": {
       "undo": "元に戻す",
@@ -941,6 +975,8 @@
       "toggleTypewriterMode": "タイプライターモードの切り替え",
       "toggleFocusMode": "フォーカスモードの切り替え",
       "toggleSidebar": "サイドバーの切り替え",
+      "outlineCollapseAll": "目次：すべて折りたたむ",
+      "outlineExpandAll": "目次：すべて展開",
       "toggleToc": "目次の切り替え",
       "toggleTabbar": "タブバーの切り替え",
       "toggleDevTools": "開発者ツールの切り替え",

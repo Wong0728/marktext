@@ -994,7 +994,6 @@ class Format extends Content {
     // The item becomes a task item; an ordered list keeps its numbering.
     private _convertToTaskList() {
         const { text, parent, muya, hasSelection } = this;
-        const { preferLooseListItem } = muya.options;
         const listItem = parent!.parent!;
         const list = listItem?.parent as BulletList | OrderList;
         const matches = text.match(/^\[([x ])\] {1,4}([\s\S]*)$/i);
@@ -1009,16 +1008,17 @@ class Format extends Content {
         }
 
         const offset = list.offset(listItem);
+        const { loose } = list.meta;
         const ordered = list.blockName === 'order-list';
         const meta: ITaskListState['meta'] = ordered
             ? {
                     ordered: true,
-                    loose: preferLooseListItem,
+                    loose,
                     start: (list.meta as IOrderListState['meta']).start + offset,
                     delimiter: (list.meta as IOrderListState['meta']).delimiter,
                 }
             : {
-                    loose: preferLooseListItem,
+                    loose,
                     marker: (list.meta as IBulletListState['meta']).marker,
                 };
         const listState: ITaskListState = {
@@ -1071,7 +1071,7 @@ class Format extends Content {
                     const path = list.path;
                     path.pop();
                     path.push('meta', 'start');
-                    list.jsonState.replaceOperation(
+                    list.transactions.replaceOperation(
                         path,
                         oldStart,
                         listMeta.start,
@@ -1090,7 +1090,7 @@ class Format extends Content {
                     ? {
                             name: 'order-list',
                             meta: {
-                                loose: preferLooseListItem,
+                                loose,
                                 start: (list.meta as IOrderListState['meta']).start + offset + 1,
                                 delimiter: (list.meta as IOrderListState['meta']).delimiter,
                             },
@@ -1099,7 +1099,7 @@ class Format extends Content {
                     : {
                             name: 'bullet-list',
                             meta: {
-                                loose: preferLooseListItem,
+                                loose,
                                 marker: (list.meta as IBulletListState['meta']).marker,
                             },
                             children: [],
@@ -1233,22 +1233,27 @@ class Format extends Content {
         const setextLines = [];
         const postParagraphLines = [];
         let setextLineHasPushed = false;
+        let underline = setextHeading;
 
         for (const l of lines) {
-            if (/^ {0,3}(?:={3,}|-{3,})(?= +|$)/.test(l) && !setextLineHasPushed)
+            if (/^ {0,3}(?:={3,}|-{3,})(?= +|$)/.test(l) && !setextLineHasPushed) {
                 setextLineHasPushed = true;
-            else if (!setextLineHasPushed)
+                underline = l;
+            }
+            else if (!setextLineHasPushed) {
                 setextLines.push(l);
-            else
+            }
+            else {
                 postParagraphLines.push(l);
+            }
         }
 
         const newNodeState = {
             name: 'setext-heading',
             meta: {
                 level,
-                underline: setextHeading,
             },
+            syntax: { underline },
             text: setextLines.join('\n'),
         };
 
@@ -1309,6 +1314,7 @@ class Format extends Content {
             quoteParagraphState = {
                 name: 'setext-heading',
                 meta: (this.parent as SetextHeading).meta,
+                syntax: (this.parent as SetextHeading).syntax,
                 text: quoteLines.join('\n'),
             };
         }
@@ -1691,15 +1697,19 @@ class Format extends Content {
     }
 
     override enterHandler(event: KeyboardEvent): void {
+        const { text } = this;
+        const { start, end } = this.getCursor()!;
+        this.splitToParagraph(event, text.substring(0, start.offset), text.substring(end.offset));
+    }
+
+    protected splitToParagraph(event: KeyboardEvent, head: string, tail: string): void {
         event.preventDefault();
         this.muya.editor.history.markInputBoundary('insertParagraph', '\n');
-        const { text: oldText, muya, parent } = this;
-        const { start, end } = this.getCursor()!;
-        this.text = oldText.substring(0, start.offset);
-        const textOfNewNode = oldText.substring(end.offset);
+        const { muya, parent } = this;
+        this.text = head;
         const newParagraphState = {
             name: 'paragraph',
-            text: textOfNewNode,
+            text: tail,
         };
 
         const newNode = ScrollPage.loadBlock(newParagraphState.name).create(

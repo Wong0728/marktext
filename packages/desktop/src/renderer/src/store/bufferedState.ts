@@ -6,7 +6,7 @@ const BUFFERED_STATE_DEBOUNCE_MS = 1000
 // it, non-stop typing keeps resetting the 1s debounce so the snapshot never
 // lands and a crash mid-session loses everything typed so far.
 const BUFFERED_STATE_MAX_WAIT_MS = 5000
-const BUFFERED_STATE_VERSION = 2
+const BUFFERED_STATE_VERSION = 3
 
 interface StoreCache {
   editorStore: ReturnType<typeof useEditorStore> | null
@@ -41,6 +41,7 @@ export const createBufferedState = (): Record<string, unknown> | null => {
 }
 
 export const sendBufferedState = (): Promise<unknown> => {
+  debouncedSendBufferedState.cancel()
   // Always invoke: `null` clears the snapshot on the main side.
   return window.electron.ipcRenderer.invoke('update-buffer-state', createBufferedState())
 }

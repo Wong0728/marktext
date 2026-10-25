@@ -3,18 +3,25 @@ import { delay } from '@/util'
 import FileSearcher from '@/node/fileSearcher'
 import type { EditorState } from '@/store/editor'
 import getCommandDescriptionById from './descriptions'
+import notice from '@/services/notification'
 import { t } from '../i18n'
+import type { RecentDocument } from '@shared/types/ipc'
 
 const SPECIAL_CHARS = /[\[\]\\^$.\|\?\*\+\(\)\/]{1}/g // eslint-disable-line no-useless-escape
+const PATH_SEPARATOR = /[\\/]/
 
 interface QuickOpenSubcommand {
   id: string
   description?: string
   title?: string
+  group?: string
+  removable?: boolean
 }
 
 interface FolderState {
   projectTree: { pathname: string } | null
+  availableRoots?: { pathname: string }[]
+  FILE_LABEL?: (pathname: string) => string
 }
 type RootState = { editor: EditorState; project: FolderState; [key: string]: unknown }
 
@@ -25,18 +32,23 @@ class QuickOpenCommand {
   description: string
   placeholder: string
   shortcut: string | null
+  noResultsText: string
   subcommands: QuickOpenSubcommand[]
   subcommandSelectedIndex: number
   private _editorState: EditorState
   private _folderState: FolderState
   private _directorySearcher: FileSearcher
   private _cancelFn: CancelFn
+  private _sequence = 0
+  private _recentDocuments: RecentDocument[] = []
+  private _recentPaths = new Set<string>()
 
   constructor(rootState: RootState) {
     this.id = 'file.quick-open'
     this.description = getCommandDescriptionById('file.quick-open')
     this.placeholder = t('commandPalette.placeholders.searchFileToOpen')
     this.shortcut = null
+    this.noResultsText = t('commandPalette.noRecentFiles')
 
     this.subcommands = []
     this.subcommandSelectedIndex = -1
@@ -49,40 +61,34 @@ class QuickOpenCommand {
   }
 
   search = async(query: string): Promise<QuickOpenSubcommand[]> => {
-    if (!query) {
-      return this.subcommands
-    }
-
-    const { _cancelFn } = this
-    if (_cancelFn) {
-      _cancelFn()
-      this._cancelFn = null
-    }
-
+    const sequence = ++this._sequence
+    this._cancelFn?.()
+    this._cancelFn = null
+    if (!query) return this.subcommands.map(item => ({ ...item, ...this._getPath(item.id) }))
     const timeout = delay(300)
-    this._cancelFn = () => {
-      timeout.cancel()
-      this._cancelFn = null
-    }
-
+    this._cancelFn = () => timeout.cancel()
     await timeout
-    return this._doSearch(query)
+    if (sequence !== this._sequence) throw new Error('')
+    const result = await this._doSearch(query)
+    if (sequence !== this._sequence) throw new Error('')
+    return result
   }
 
   run = async(): Promise<void> => {
-    const { _editorState, _folderState } = this
-    if (!_folderState.projectTree && _editorState.tabs.length === 0) {
+    const { _editorState } = this
+    this.noResultsText = t('commandPalette.noRecentFiles')
+    this._recentDocuments = await this._getRecentDocuments()
+    this._recentPaths = new Set(this._recentDocuments.map((document) => document.pathname))
+
+    if (
+      !this._roots().length &&
+      _editorState.tabs.length === 0 &&
+      this._recentDocuments.length === 0
+    ) {
       throw new Error(null as unknown as string)
     }
 
-    this.subcommands = _editorState.tabs
-      .map((tab) => tab.pathname)
-      .filter((tabPath: string | null | undefined) => !!tabPath)
-      .map((pathname: string) => {
-        const item: QuickOpenSubcommand = { id: pathname }
-        Object.assign(item, this._getPath(pathname))
-        return item
-      })
+    this.subcommands = this._buildSubcommands()
   }
 
   execute = async(): Promise<void> => {
@@ -96,67 +102,118 @@ class QuickOpenCommand {
     window.electron.ipcRenderer.send('mt::open-file-by-window-id', windowId, id)
   }
 
-  unload = (): void => {
-    this.subcommands = []
+  removeItem = (id: string): void => {
+    this.subcommands = this.subcommands.filter((item) => item.id !== id)
+    this._recentDocuments = this._recentDocuments.filter((document) => document.pathname !== id)
+    this._recentPaths.delete(id)
+    window.electron.ipcRenderer.send('mt::remove-recently-used-document', id)
   }
 
+  unload = (): void => {
+    this._sequence++
+    this._cancelFn?.()
+    this._cancelFn = null
+    this.subcommands = []
+    this._recentDocuments = []
+    this._recentPaths.clear()
+  }
+
+  _roots = (): string[] => this._folderState.availableRoots?.map(root => root.pathname)
+    ?? (this._folderState.projectTree ? [this._folderState.projectTree.pathname] : [])
+
+  private _getRecentDocuments = async(): Promise<RecentDocument[]> => {
+    try {
+      const documents = await window.electron.ipcRenderer.invoke('mt::get-recently-used-documents')
+      return documents.filter((document) => !document.isDirectory)
+    } catch {
+      return []
+    }
+  }
+
+  private _buildSubcommands = (): QuickOpenSubcommand[] => {
+    const group = t('commandPalette.recentlyOpened')
+    const items: QuickOpenSubcommand[] = []
+    const seen = new Set<string>()
+
+    const push = (pathname: string, removable: boolean): void => {
+      if (!pathname || seen.has(pathname)) return
+      seen.add(pathname)
+      items.push({
+        id: pathname,
+        group,
+        ...(removable ? { removable: true } : {}),
+        ...this._getPath(pathname)
+      })
+    }
+
+    this._recentDocuments.forEach((document) => push(document.pathname, true))
+    this._editorState.tabs.forEach((tab) => {
+      if (tab.pathname) push(tab.pathname, this._recentPaths.has(tab.pathname))
+    })
+
+    return items
+  }
 
   _doSearch = (query: string): QuickOpenSubcommand[] | Promise<QuickOpenSubcommand[]> => {
     this._cancelFn = null
-    const { _editorState, _folderState } = this
-    const isRootDirOpened = !!_folderState.projectTree
-    const tabsAvailable = _editorState.tabs.length > 0
+    const { _editorState } = this
+    const sequence = this._sequence
+    const rootPaths = this._roots()
+    const isRootDirOpened = !!rootPaths.length
+    const recentGroup = t('commandPalette.recentlyOpened')
+    const fileGroup = t('commandPalette.fileResults')
+    const re = this._createRegex(query)
+    const matchPath = PATH_SEPARATOR.test(query)
+    const items: QuickOpenSubcommand[] = []
+    const seen = new Set<string>()
+    const pathMatches: Array<{ pathname: string; removable: boolean }> = []
 
-    if (!isRootDirOpened && !tabsAvailable) {
-      return []
+    const push = (pathname: string, group: string, removable: boolean): void => {
+      if (!pathname || seen.has(pathname)) return
+      seen.add(pathname)
+      items.push({
+        id: pathname,
+        group,
+        ...(removable ? { removable: true } : {}),
+        ...this._getPath(pathname)
+      })
     }
 
-    const searchResult: string[] = []
-    const rootPath: string | null = isRootDirOpened ? _folderState.projectTree!.pathname : null
-
-    if (tabsAvailable) {
-      const re = new RegExp(
-        query.replace(SPECIAL_CHARS, (p) => {
-          if (p === '*') return '.*'
-          return p === '\\' ? '\\\\' : `\\${p}`
-        }),
-        'i'
-      )
-
-      for (const tab of _editorState.tabs) {
-        const { pathname } = tab
-        if (
-          pathname &&
-          re.test(pathname) &&
-          (!rootPath || !window.fileUtils.isChildOfDirectory(rootPath, pathname))
-        ) {
-          searchResult.push(pathname)
-        }
+    const addRecentMatch = (pathname: string, removable: boolean): void => {
+      if (matchPath) {
+        if (re.test(pathname)) push(pathname, recentGroup, removable)
+      } else if (re.test(window.path.basename(pathname))) {
+        push(pathname, recentGroup, removable)
+      } else if (re.test(pathname)) {
+        pathMatches.push({ pathname, removable })
       }
     }
 
+    for (const document of this._recentDocuments) addRecentMatch(document.pathname, true)
+
+    for (const tab of _editorState.tabs) {
+      if (tab.pathname) addRecentMatch(tab.pathname, this._recentPaths.has(tab.pathname))
+    }
+
+    pathMatches.forEach(({ pathname, removable }) => push(pathname, recentGroup, removable))
+
     if (!isRootDirOpened) {
-      return searchResult.map((pathname) => {
-        return {
-          id: pathname,
-          description: pathname,
-          title: pathname
-        }
-      })
+      return items
     }
 
     return new Promise<QuickOpenSubcommand[]>((resolve, reject) => {
       let canceled = false
       const promises: Promise<void> & { cancel?: () => void } = this._directorySearcher
-        .search([rootPath!], '', {
+        .search(rootPaths, '', {
           didMatch: (result: unknown) => {
-            if (canceled) return
-            searchResult.push(result as string)
+            if (canceled || sequence !== this._sequence) return
+            push(result as string, fileGroup, false)
           },
           didSearchPaths: (numPathsFound: unknown) => {
             // Cancel when more than 30 files were found. User should specify the search query.
-            if (!canceled && (numPathsFound as number) > 30) {
+            if (sequence === this._sequence && !canceled && (numPathsFound as number) > 30) {
               canceled = true
+              notice.notify({ title: this.description, type: 'info', message: t('search.searchLimited', { count: 30 }) })
               if (promises.cancel) {
                 promises.cancel()
               }
@@ -166,18 +223,16 @@ class QuickOpenCommand {
           inclusions: this._getInclusions(query)
         })
         .then(() => {
-          this._cancelFn = null
-          resolve(
-            searchResult.map((pathname) => {
-              const item: QuickOpenSubcommand = { id: pathname }
-              Object.assign(item, this._getPath(pathname))
-              return item
-            })
-          )
+          if (sequence === this._sequence) this._cancelFn = null
+          resolve(items)
         })
         .catch((error: unknown) => {
+          if (sequence !== this._sequence) { reject(new Error('')); return }
           this._cancelFn = null
-          reject(error)
+          if (items.length) {
+            notice.notify({ title: this.description, type: 'warning', message: t('sideBar.search.partialSearch') })
+            resolve(items)
+          } else reject(error)
         })
 
       this._cancelFn = () => {
@@ -189,6 +244,15 @@ class QuickOpenCommand {
       }
     })
   }
+
+  private _createRegex = (query: string): RegExp =>
+    new RegExp(
+      query.replace(SPECIAL_CHARS, (p) => {
+        if (p === '*') return '.*'
+        return p === '\\' ? '\\\\' : `\\${p}`
+      }),
+      'i'
+    )
 
   _getInclusions = (query: string): string[] => {
     // NOTE: This will fail on `foo.m` because we search for `foo.m.md`.
@@ -204,7 +268,7 @@ class QuickOpenCommand {
   }
 
   _getPath = (pathname: string): { title?: string; description: string } => {
-    // Files can be open without a folder; show their full path then.
+    if (this._folderState.FILE_LABEL) return { description: this._folderState.FILE_LABEL(pathname), title: pathname }
     const rootPath = this._folderState.projectTree?.pathname
     if (!rootPath || !window.fileUtils.isChildOfDirectory(rootPath, pathname)) {
       return { title: pathname, description: pathname }

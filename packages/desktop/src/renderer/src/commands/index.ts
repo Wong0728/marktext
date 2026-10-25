@@ -7,6 +7,7 @@ import { t } from '../i18n'
 export { default as FileEncodingCommand } from './fileEncoding'
 export { default as LineEndingCommand } from './lineEnding'
 export { default as QuickOpenCommand } from './quickOpen'
+export { default as QuickOpenRecentCommand } from './quickOpenRecent'
 export { default as SpellcheckerLanguageCommand } from './spellcheckerLanguage'
 export { default as TrailingNewlineCommand } from './trailingNewline'
 
@@ -86,6 +87,12 @@ const commands: CommandDescriptor[] = [
     id: 'file.open-folder',
     execute: async() => {
       window.electron.ipcRenderer.send('mt::cmd-open-folder')
+    }
+  },
+  {
+    id: 'file.add-folder',
+    execute: () => {
+      window.electron.ipcRenderer.send('mt::cmd-add-folder')
     }
   },
   {
@@ -593,6 +600,14 @@ const commands: CommandDescriptor[] = [
     execute: async() => {
       bus.emit('view:toggle-layout-entry', 'showSideBar')
     }
+  },
+  {
+    id: 'view.outline-collapse-all',
+    execute: () => bus.emit('outline:set-all-expanded', false)
+  },
+  {
+    id: 'view.outline-expand-all',
+    execute: () => bus.emit('outline:set-all-expanded', true)
   },
   {
     id: 'view.toggle-tabbar',

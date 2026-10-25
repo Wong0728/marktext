@@ -18,6 +18,7 @@
       "openFile": "開啟檔案…",
       "openFolder": "開啟資料夾…",
       "openRecent": "開啟最近使用",
+      "openRecentMore": "搜尋最近使用...",
       "clearRecentlyUsed": "清除最近使用",
       "save": "儲存",
       "saveAs": "另存為…",
@@ -34,7 +35,8 @@
       "closeWindow": "關閉視窗",
       "quit": "退出",
       "preferences": "偏好設定",
-      "exportDocx": "匯出為 DOCX"
+      "exportDocx": "匯出為 DOCX",
+      "addFolder": "加入資料夾…"
     },
     "edit": {
       "edit": "編輯",
@@ -245,8 +247,11 @@
       "noFolderOpen": "沒有開啟的資料夾",
       "noResultsFound": "找不到結果。",
       "cancel": "取消",
-      "openFolder": "開啟資料夾",
-      "showMoreMatches": "顯示更多符合項目"
+      "openFolder": "加入資料夾…",
+      "showMoreMatches": "顯示更多符合項目",
+      "searchInFolders": "在已加入的資料夾中搜尋",
+      "partialSearch": "部分資料夾無法搜尋。",
+      "noSearchableFolders": "沒有可供搜尋的資料夾。"
     },
     "tree": {
       "openedFiles": "已開啟的檔案",
@@ -256,7 +261,17 @@
       "createFile": "建立檔案",
       "openFolder": "開啟資料夾",
       "filterFiles": "篩選檔案...",
-      "noMatchingFiles": "沒有符合的檔案"
+      "noMatchingFiles": "沒有符合的檔案",
+      "noFolders": "尚未加入資料夾",
+      "removeFolder": "從側邊欄移除",
+      "retryFolder": "重試",
+      "loadingFolder": "正在載入資料夾…",
+      "unavailableFolder": "資料夾無法使用",
+      "overlappingFolder": "此資料夾與已加入項目有包含關係，請先移除原有項目。",
+      "folderAlreadyAdded": "此資料夾已加入。",
+      "fileOutsideFolders": "此檔案不在已加入的資料夾中。",
+      "sessionSaveFailed": "無法儲存工作階段",
+      "resizeOpenedFiles": "調整已開啟檔案清單的大小"
     },
     "toc": {
       "expand": "展開目錄",
@@ -293,8 +308,16 @@
     "placeholders": {
       "selectOption": "選擇選項",
       "searchFileToOpen": "搜尋要開啟的檔案",
-      "selectLanguage": "選擇語言"
-    }
+      "selectLanguage": "選擇語言",
+      "searchRecentFilesAndFolders": "搜尋最近開啟的檔案與資料夾"
+    },
+    "recentlyOpened": "最近開啟",
+    "fileResults": "檔案結果",
+    "folders": "資料夾",
+    "files": "檔案",
+    "removeFromRecent": "從最近使用中移除",
+    "noResults": "沒有符合的結果",
+    "noRecentFiles": "尚無最近開啟的檔案或資料夾"
   },
   "exportSettings": {
     "autoNumberingHeadings": "自動編號標題",
@@ -479,6 +502,8 @@
         "isHtmlEnabled": "啟用 HTML 轉譯",
         "softNewlineAsSpace": "將軟換行視為空格",
         "sequenceTheme": "序列圖主題",
+        "mermaidLightTheme": "MarkText 使用淺色主題時的 Mermaid 主題",
+        "mermaidDarkTheme": "MarkText 使用深色主題時的 Mermaid 主題",
         "plantumlServer": "PlantUML 伺服器 URL",
         "theme": "選擇 MarkText 中使用的主題",
         "followSystemTheme": "跟隨系統主題",
@@ -583,7 +608,8 @@
           "dutch": "Nederlands",
           "portuguese": "Português",
           "turkish": "Türkçe",
-          "russian": "Русский"
+          "russian": "Русский",
+          "italian": "Italiano"
         }
       }
     },
@@ -737,6 +763,12 @@
           "handDrawn": "手繪",
           "simple": "簡單"
         },
+        "mermaidLightTheme": {
+          "title": "MarkText 使用淺色主題時的 Mermaid 主題"
+        },
+        "mermaidDarkTheme": {
+          "title": "MarkText 使用深色主題時的 Mermaid 主題"
+        },
         "plantumlServer": {
           "title": "PlantUML 伺服器 URL"
         }
@@ -848,6 +880,7 @@
       "moveFile": "移動檔案",
       "renameFile": "重新命名檔案",
       "quickOpen": "快速開啟",
+      "quickOpenRecent": "快速開啟最近使用",
       "changeEncoding": "變更編碼",
       "changeLineEnding": "變更行結束符",
       "trailingNewline": "結尾換行",
@@ -862,7 +895,8 @@
       "exportFile": "匯出檔案",
       "exportFilePdf": "匯出為 PDF",
       "zoom": "縮放",
-      "checkUpdate": "檢查更新"
+      "checkUpdate": "檢查更新",
+      "addFolder": "加入資料夾…"
     },
     "edit": {
       "undo": "復原",
@@ -941,6 +975,8 @@
       "toggleTypewriterMode": "切換打字機模式",
       "toggleFocusMode": "切換專注模式",
       "toggleSidebar": "切換側邊欄",
+      "outlineCollapseAll": "大綱：全部摺疊",
+      "outlineExpandAll": "大綱：全部展開",
       "toggleToc": "切換目錄",
       "toggleTabbar": "切換標籤欄",
       "toggleDevTools": "切換開發者工具",

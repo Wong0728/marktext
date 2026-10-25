@@ -44,7 +44,7 @@ describe('history — the first undo restores a caret', () => {
         content.text = 'seedx';
         content.setCursor(5, 5, true);
         // json1 ops flush to the document state on the next animation frame.
-        muya.editor.jsonState.flush();
+        muya.editor.transactions.flush();
         await vi.waitFor(() => {
             expect(muya.getMarkdown()).toBe('seedx\n');
         });

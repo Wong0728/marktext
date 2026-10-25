@@ -1,6 +1,6 @@
 {
   "name": "marktext",
-  "version": "0.23.0-fork.1",
+  "version": "0.24.0-fork.1",
   "description": "MarkText",
   "main": "./out/main/index.js",
   "author": {

@@ -9,7 +9,9 @@ const COMMAND_KEY_MAP: Record<string, string> = {
   'file.new-tab': 'commands.file.newTab',
   'file.open-file': 'commands.file.openFile',
   'file.open-folder': 'commands.file.openFolder',
+  'file.add-folder': 'commands.file.addFolder',
   'file.quick-open': 'commands.file.quickOpen',
+  'file.quick-open-recent': 'commands.file.quickOpenRecent',
   'file.import-file': 'commands.file.importFile',
   'file.reveal-in-sidebar': 'commands.file.revealInSideBar',
 
@@ -117,6 +119,8 @@ const COMMAND_KEY_MAP: Record<string, string> = {
 
   'view.toggle-sidebar': 'commands.view.toggleSidebar',
   'view.toggle-tabbar': 'commands.view.toggleTabbar',
+  'view.outline-collapse-all': 'commands.view.outlineCollapseAll',
+  'view.outline-expand-all': 'commands.view.outlineExpandAll',
   'view.toggle-toc': 'commands.view.toggleToc',
 
   'view.toggle-source-code-mode': 'commands.view.toggleSourceCodeMode',

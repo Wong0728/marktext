@@ -18,6 +18,7 @@
       "openFile": "Abrir Arquivo...",
       "openFolder": "Abrir Pasta...",
       "openRecent": "Abrir Recente",
+      "openRecentMore": "Pesquisar nos recentes...",
       "clearRecentlyUsed": "Limpar Recentes",
       "save": "Salvar",
       "saveAs": "Salvar Como...",
@@ -34,7 +35,8 @@
       "closeWindow": "Fechar Janela",
       "quit": "Sair",
       "preferences": "Preferências",
-      "exportDocx": "Exportar como DOCX"
+      "exportDocx": "Exportar como DOCX",
+      "addFolder": "Add Folder…"
     },
     "edit": {
       "edit": "Editar",
@@ -245,8 +247,11 @@
       "noFolderOpen": "Nenhuma pasta aberta",
       "noResultsFound": "Nenhum resultado encontrado.",
       "cancel": "Cancelar",
-      "openFolder": "Abrir Pasta",
-      "showMoreMatches": "Mostrar mais correspondências"
+      "openFolder": "Add Folder…",
+      "showMoreMatches": "Mostrar mais correspondências",
+      "searchInFolders": "Search in added folders",
+      "partialSearch": "Some folders could not be searched.",
+      "noSearchableFolders": "No available folders to search."
     },
     "tree": {
       "openedFiles": "Arquivos abertos",
@@ -256,7 +261,17 @@
       "createFile": "Criar Arquivo",
       "openFolder": "Abrir Pasta",
       "filterFiles": "Filtrar arquivos...",
-      "noMatchingFiles": "Nenhum arquivo correspondente"
+      "noMatchingFiles": "Nenhum arquivo correspondente",
+      "noFolders": "No folders added",
+      "removeFolder": "Remove from Sidebar",
+      "retryFolder": "Retry",
+      "loadingFolder": "Loading folder…",
+      "unavailableFolder": "Folder unavailable",
+      "overlappingFolder": "This folder overlaps an existing folder. Remove the existing item first.",
+      "folderAlreadyAdded": "This folder has already been added.",
+      "fileOutsideFolders": "This file is not in an added folder.",
+      "sessionSaveFailed": "Unable to save session",
+      "resizeOpenedFiles": "Redimensionar a lista de arquivos abertos"
     },
     "toc": {
       "expand": "Expandir sumário",
@@ -293,8 +308,16 @@
     "placeholders": {
       "selectOption": "Selecionar opção",
       "searchFileToOpen": "Pesquisar arquivo para abrir",
-      "selectLanguage": "Selecionar idioma"
-    }
+      "selectLanguage": "Selecionar idioma",
+      "searchRecentFilesAndFolders": "Pesquisar arquivos e pastas recentes"
+    },
+    "recentlyOpened": "abertos recentemente",
+    "fileResults": "resultados de arquivos",
+    "folders": "pastas",
+    "files": "arquivos",
+    "removeFromRecent": "Remover dos abertos recentemente",
+    "noResults": "Nenhum resultado correspondente",
+    "noRecentFiles": "Nenhum arquivo ou pasta recente"
   },
   "exportSettings": {
     "autoNumberingHeadings": "Numeração automática de cabeçalhos",
@@ -479,6 +502,8 @@
         "isHtmlEnabled": "Habilitar renderização HTML",
         "softNewlineAsSpace": "Tratar quebras de linha suaves como espaços",
         "sequenceTheme": "Tema do diagrama de sequência",
+        "mermaidLightTheme": "Tema do Mermaid para temas claros do MarkText",
+        "mermaidDarkTheme": "Tema do Mermaid para temas escuros do MarkText",
         "plantumlServer": "URL do servidor PlantUML",
         "theme": "Selecionar o tema usado no MarkText",
         "followSystemTheme": "Seguir tema do sistema",
@@ -583,7 +608,8 @@
           "dutch": "Nederlands",
           "portuguese": "Português",
           "turkish": "Türkçe",
-          "russian": "Русский"
+          "russian": "Русский",
+          "italian": "Italiano"
         }
       }
     },
@@ -737,6 +763,12 @@
           "handDrawn": "Desenhado à Mão",
           "simple": "Simples"
         },
+        "mermaidLightTheme": {
+          "title": "Tema do Mermaid para temas claros do MarkText"
+        },
+        "mermaidDarkTheme": {
+          "title": "Tema do Mermaid para temas escuros do MarkText"
+        },
         "plantumlServer": {
           "title": "URL do servidor PlantUML"
         }
@@ -848,6 +880,7 @@
       "moveFile": "Mover Arquivo",
       "renameFile": "Renomear Arquivo",
       "quickOpen": "Abertura Rápida",
+      "quickOpenRecent": "Abertura rápida de recentes",
       "changeEncoding": "Alterar Codificação",
       "changeLineEnding": "Alterar Terminação de Linha",
       "trailingNewline": "Nova Linha Final",
@@ -862,7 +895,8 @@
       "exportFile": "Exportar Arquivo",
       "exportFilePdf": "Exportar como PDF",
       "zoom": "Zoom",
-      "checkUpdate": "Verificar Atualizações"
+      "checkUpdate": "Verificar Atualizações",
+      "addFolder": "Add Folder…"
     },
     "edit": {
       "undo": "Desfazer",
@@ -941,6 +975,8 @@
       "toggleTypewriterMode": "Alternar Modo Máquina de Escrever",
       "toggleFocusMode": "Alternar Modo Foco",
       "toggleSidebar": "Alternar Barra Lateral",
+      "outlineCollapseAll": "Índice: Recolher tudo",
+      "outlineExpandAll": "Índice: Expandir tudo",
       "toggleToc": "Alternar Índice",
       "toggleTabbar": "Alternar Barra de Abas",
       "toggleDevTools": "Alternar Ferramentas de Desenvolvedor",

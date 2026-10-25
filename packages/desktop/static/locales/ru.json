@@ -18,6 +18,7 @@
       "openFile": "Открыть файл...",
       "openFolder": "Открыть папку...",
       "openRecent": "Недавние",
+      "openRecentMore": "Поиск в недавних...",
       "clearRecentlyUsed": "Очистить недавние",
       "save": "Сохранить",
       "saveAs": "Сохранить как...",
@@ -34,7 +35,8 @@
       "closeWindow": "Закрыть окно",
       "quit": "Выход",
       "preferences": "Настройки",
-      "exportDocx": "Экспорт в DOCX"
+      "exportDocx": "Экспорт в DOCX",
+      "addFolder": "Add Folder…"
     },
     "edit": {
       "edit": "Правка",
@@ -245,8 +247,11 @@
       "noFolderOpen": "Папка не открыта",
       "noResultsFound": "Ничего не найдено.",
       "cancel": "Отмена",
-      "openFolder": "Открыть папку",
-      "showMoreMatches": "Показать ещё"
+      "openFolder": "Add Folder…",
+      "showMoreMatches": "Показать ещё",
+      "searchInFolders": "Search in added folders",
+      "partialSearch": "Some folders could not be searched.",
+      "noSearchableFolders": "No available folders to search."
     },
     "tree": {
       "openedFiles": "Открытые файлы",
@@ -256,7 +261,17 @@
       "createFile": "Создать файл",
       "openFolder": "Открыть папку",
       "filterFiles": "Фильтр файлов...",
-      "noMatchingFiles": "Нет подходящих файлов"
+      "noMatchingFiles": "Нет подходящих файлов",
+      "noFolders": "No folders added",
+      "removeFolder": "Remove from Sidebar",
+      "retryFolder": "Retry",
+      "loadingFolder": "Loading folder…",
+      "unavailableFolder": "Folder unavailable",
+      "overlappingFolder": "This folder overlaps an existing folder. Remove the existing item first.",
+      "folderAlreadyAdded": "This folder has already been added.",
+      "fileOutsideFolders": "This file is not in an added folder.",
+      "sessionSaveFailed": "Unable to save session",
+      "resizeOpenedFiles": "Изменить размер списка открытых файлов"
     },
     "toc": {
       "expand": "Развернуть оглавление",
@@ -293,8 +308,16 @@
     "placeholders": {
       "selectOption": "Выберите вариант",
       "searchFileToOpen": "Поиск файла для открытия",
-      "selectLanguage": "Выберите язык"
-    }
+      "selectLanguage": "Выберите язык",
+      "searchRecentFilesAndFolders": "Поиск недавних файлов и папок"
+    },
+    "recentlyOpened": "недавние",
+    "fileResults": "результаты по файлам",
+    "folders": "папки",
+    "files": "файлы",
+    "removeFromRecent": "Удалить из недавних",
+    "noResults": "Нет совпадающих результатов",
+    "noRecentFiles": "Нет недавних файлов или папок"
   },
   "exportSettings": {
     "autoNumberingHeadings": "Автонумерация заголовков",
@@ -478,6 +501,8 @@
         "isHtmlEnabled": "Включить рендеринг HTML",
         "softNewlineAsSpace": "Считать мягкие переносы строк пробелами",
         "sequenceTheme": "Тема диаграмм последовательностей",
+        "mermaidLightTheme": "Тема Mermaid для светлых тем MarkText",
+        "mermaidDarkTheme": "Тема Mermaid для тёмных тем MarkText",
         "plantumlServer": "URL сервера PlantUML",
         "theme": "Выберите тему, используемую в MarkText",
         "followSystemTheme": "Следовать системной теме",
@@ -583,7 +608,8 @@
           "dutch": "Nederlands",
           "portuguese": "Português",
           "turkish": "Türkçe",
-          "russian": "Русский"
+          "russian": "Русский",
+          "italian": "Italiano"
         }
       }
     },
@@ -737,6 +763,12 @@
           "handDrawn": "Нарисованная от руки",
           "simple": "Простая"
         },
+        "mermaidLightTheme": {
+          "title": "Тема Mermaid для светлых тем MarkText"
+        },
+        "mermaidDarkTheme": {
+          "title": "Тема Mermaid для тёмных тем MarkText"
+        },
         "plantumlServer": {
           "title": "URL сервера PlantUML"
         }
@@ -848,6 +880,7 @@
       "moveFile": "Переместить файл",
       "renameFile": "Переименовать файл",
       "quickOpen": "Быстрое открытие",
+      "quickOpenRecent": "Быстрое открытие недавних",
       "changeEncoding": "Изменить кодировку",
       "changeLineEnding": "Изменить конец строки",
       "trailingNewline": "Завершающий перевод строки",
@@ -862,7 +895,8 @@
       "exportFile": "Экспортировать файл",
       "exportFilePdf": "Экспорт в PDF",
       "zoom": "Масштаб",
-      "checkUpdate": "Проверить обновления"
+      "checkUpdate": "Проверить обновления",
+      "addFolder": "Add Folder…"
     },
     "edit": {
       "undo": "Отменить",
@@ -941,6 +975,8 @@
       "toggleTypewriterMode": "Режим печатной машинки",
       "toggleFocusMode": "Режим фокусировки",
       "toggleSidebar": "Переключить боковую панель",
+      "outlineCollapseAll": "Оглавление: Свернуть всё",
+      "outlineExpandAll": "Оглавление: Развернуть всё",
       "toggleToc": "Переключить оглавление",
       "toggleTabbar": "Переключить панель вкладок",
       "toggleDevTools": "Переключить инструменты разработчика",

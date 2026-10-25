@@ -166,8 +166,8 @@ class Clipboard {
         eventCenter.attachDOMEvent(document, 'copy', copyCutHandler);
         eventCenter.attachDOMEvent(document, 'cut', copyCutHandler);
         eventCenter.attachDOMEvent(document, 'paste', pasteHandler);
-        eventCenter.attachDOMEvent(document, 'keydown', keydownHandler);
-        eventCenter.attachDOMEvent(document, 'beforeinput', beforeInputHandler);
+        eventCenter.attachDOMEvent(document, 'keydown', event => this.muya.transact(() => keydownHandler(event)));
+        eventCenter.attachDOMEvent(document, 'beforeinput', event => this.muya.transact(() => beforeInputHandler(event)));
     }
 
     getClipboardData(): IClipboardPayload {
@@ -181,7 +181,7 @@ class Clipboard {
     cutHandler(): void {
         if (!this.muya.canMutate)
             return;
-        cutSelection(this);
+        this.muya.transact(() => cutSelection(this));
     }
 
     pasteHandler(

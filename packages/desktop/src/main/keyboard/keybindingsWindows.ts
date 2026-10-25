@@ -24,7 +24,7 @@ const keybindings: Map<string, string> = new Map([
   ['file.export-file.pdf', 'Ctrl+Alt+E'],
 
   ['edit.undo', 'Ctrl+Z'],
-  ['edit.redo', 'Ctrl+Shift+Z'],
+  ['edit.redo', 'Ctrl+Y'],
   ['edit.cut', 'Ctrl+X'],
   ['edit.copy', 'Ctrl+C'],
   ['edit.paste', 'Ctrl+V'],
@@ -110,7 +110,8 @@ const keybindings: Map<string, string> = new Map([
   ['tabs.switchToEighth', 'Ctrl+8'],
   ['tabs.switchToNinth', 'Ctrl+9'],
   ['tabs.switchToTenth', 'Ctrl+0'],
-  ['file.quick-open', 'Ctrl+P']
+  ['file.quick-open', 'Ctrl+P'],
+  ['file.quick-open-recent', '']
 ])
 
 export default keybindings

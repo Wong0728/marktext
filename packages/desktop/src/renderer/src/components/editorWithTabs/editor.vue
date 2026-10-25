@@ -147,6 +147,7 @@ import {
 } from '@/util/tocNavigation'
 import { findActiveHeadingSlug, type HeadingPosition } from '@/util/findActiveHeading'
 import { addCommonStyle, setEditorWidth } from '@/util/theme'
+import { isDarkThemeId, resolveMermaidTheme } from 'common/theme'
 import { usePreferencesStore } from '@/store/preferences'
 import {
   registerDocumentView,
@@ -242,6 +243,8 @@ const {
   imageRelativeDirectoryName,
   imageFolderPath,
   theme,
+  mermaidLightTheme,
+  mermaidDarkTheme,
   sequenceTheme,
   hideScrollbar,
   spellcheckerEnabled,
@@ -270,7 +273,6 @@ const readingSelectionChanged = () => {
   }
 }
 
-const { projectTree } = storeToRefs(projectStore)
 
 // Preferences loaded from disk allow arbitrary strings; the engine accepts two themes.
 const toSequenceTheme = (value: string): IMuyaOptions['sequenceTheme'] =>
@@ -517,27 +519,18 @@ watch(tabSize, (value, oldValue) => {
   }
 })
 
-watch(theme, (value, oldValue) => {
-  if (value !== oldValue && editor.value) {
-    // Agreement：Any black series theme needs to contain dark `word`.
-    if (/dark/i.test(value)) {
-      editor.value.setOptions(
-        {
-          mermaidTheme: 'dark',
-          vegaTheme: 'dark'
-        },
-        true
-      )
-    } else {
-      editor.value.setOptions(
-        {
-          mermaidTheme: 'default',
-          vegaTheme: 'latimes'
-        },
-        true
-      )
-    }
-  }
+watch([theme, mermaidLightTheme, mermaidDarkTheme], () => {
+  if (!editor.value) return
+  const dark = isDarkThemeId(theme.value)
+  const mermaidTheme = resolveMermaidTheme(
+    theme.value,
+    mermaidLightTheme.value,
+    mermaidDarkTheme.value
+  )
+  const vegaTheme = dark ? 'dark' : 'latimes'
+  const options = editor.value.options
+  if (mermaidTheme === options.mermaidTheme && vegaTheme === options.vegaTheme) return
+  editor.value.setOptions({ mermaidTheme, vegaTheme }, true)
 })
 
 watch(sequenceTheme, (value, oldValue) => {
@@ -862,8 +855,8 @@ const imageAction = async (
   let relativeBasePath: string | null = isTabSavedOnDisk
     ? window.path.dirname(currentPathname)
     : null
-  if (isTabSavedOnDisk && imageRelativeDirectoryBase.value !== 'file' && projectTree.value) {
-    const { pathname: rootPath } = projectTree.value as { pathname?: string }
+  if (isTabSavedOnDisk && imageRelativeDirectoryBase.value !== 'file') {
+    const rootPath = projectStore.ROOT_BASE(currentPathname)
     if (rootPath && window.fileUtils.isChildOfDirectory(rootPath, currentPathname)) {
       relativeBasePath = rootPath
     }
@@ -1819,8 +1812,7 @@ const handleFileChange = (payload: unknown) => {
   }
 
   if (typeof scrollTop === 'number') {
-    container.style.visibility = 'hidden'
-    container.style.pointerEvents = 'none'
+    // The synchronous rebuild and rAF scroll restore finish before paint; hiding here forces a second layout (#5860).
     scrollToCords(scrollTop)
   } else {
     container.style.visibility = 'visible'
@@ -2007,17 +1999,15 @@ onMounted(() => {
     getPathForFile: (file: File) => window.electron.webUtils.getPathForFile(file)
   }
 
-  if (/dark/i.test(theme.value)) {
-    Object.assign(options, {
-      mermaidTheme: 'dark',
-      vegaTheme: 'dark'
-    })
-  } else {
-    Object.assign(options, {
-      mermaidTheme: 'default',
-      vegaTheme: 'latimes'
-    })
-  }
+  const darkTheme = isDarkThemeId(theme.value)
+  Object.assign(options, {
+    mermaidTheme: resolveMermaidTheme(
+      theme.value,
+      mermaidLightTheme.value,
+      mermaidDarkTheme.value
+    ),
+    vegaTheme: darkTheme ? 'dark' : 'latimes'
+  })
 
   // Keep the engine outside Vue proxies: DOM/block identity is required by rendering.
   const muya = markRaw(new Muya(ele, options))

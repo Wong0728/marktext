@@ -18,6 +18,7 @@
       "openFile": "Open File...",
       "openFolder": "Open Folder...",
       "openRecent": "Open Recent",
+      "openRecentMore": "Search Recent...",
       "clearRecentlyUsed": "Clear Recently Used",
       "save": "Save",
       "saveAs": "Save As...",
@@ -34,7 +35,8 @@
       "closeWindow": "Close Window",
       "quit": "Quit",
       "preferences": "Preferences",
-      "exportDocx": "Export as DOCX"
+      "exportDocx": "Export as DOCX",
+      "addFolder": "Add Folder…"
     },
     "edit": {
       "edit": "Edit",
@@ -245,18 +247,31 @@
       "noFolderOpen": "No folder open",
       "noResultsFound": "No results found.",
       "cancel": "Cancel",
-      "openFolder": "Open Folder",
-      "showMoreMatches": "Show more matches"
+      "openFolder": "Add Folder…",
+      "showMoreMatches": "Show more matches",
+      "searchInFolders": "Search in added folders",
+      "partialSearch": "Some folders could not be searched.",
+      "noSearchableFolders": "No available folders to search."
     },
     "tree": {
       "openedFiles": "Opened files",
+      "resizeOpenedFiles": "Resize opened files list",
       "saveAll": "Save All",
       "closeAll": "Close All",
       "emptyProject": "Empty project",
       "createFile": "Create File",
       "openFolder": "Open Folder",
       "filterFiles": "Filter files...",
-      "noMatchingFiles": "No matching files"
+      "noMatchingFiles": "No matching files",
+      "noFolders": "No folders added",
+      "removeFolder": "Remove from Sidebar",
+      "retryFolder": "Retry",
+      "loadingFolder": "Loading folder…",
+      "unavailableFolder": "Folder unavailable",
+      "overlappingFolder": "This folder overlaps an existing folder. Remove the existing item first.",
+      "folderAlreadyAdded": "This folder has already been added.",
+      "fileOutsideFolders": "This file is not in an added folder.",
+      "sessionSaveFailed": "Unable to save session"
     },
     "toc": {
       "expand": "Expand table of contents",
@@ -293,8 +308,16 @@
     "placeholders": {
       "selectOption": "Select an option",
       "searchFileToOpen": "Search file to open",
+      "searchRecentFilesAndFolders": "Search recent files and folders",
       "selectLanguage": "Select a language to switch to"
-    }
+    },
+    "recentlyOpened": "recently opened",
+    "fileResults": "file results",
+    "folders": "folders",
+    "files": "files",
+    "removeFromRecent": "Remove from Recently Opened",
+    "noResults": "No matching results",
+    "noRecentFiles": "No recent files or folders"
   },
   "exportSettings": {
     "autoNumberingHeadings": "Auto numbering headings",
@@ -478,6 +501,8 @@
         "isHtmlEnabled": "Enable HTML rendering",
         "softNewlineAsSpace": "Treat soft newlines as spaces",
         "sequenceTheme": "Sequence diagram theme",
+        "mermaidLightTheme": "Mermaid theme for light MarkText themes",
+        "mermaidDarkTheme": "Mermaid theme for dark MarkText themes",
         "plantumlServer": "PlantUML server URL",
         "theme": "Select the theme used in MarkText",
         "followSystemTheme": "Follow System Theme",
@@ -583,7 +608,8 @@
           "dutch": "Nederlands",
           "portuguese": "Português",
           "turkish": "Türkçe",
-          "russian": "Русский"
+          "russian": "Русский",
+          "italian": "Italiano"
         }
       }
     },
@@ -737,6 +763,12 @@
           "handDrawn": "Hand Drawn",
           "simple": "Simple"
         },
+        "mermaidLightTheme": {
+          "title": "Mermaid theme for light MarkText themes"
+        },
+        "mermaidDarkTheme": {
+          "title": "Mermaid theme for dark MarkText themes"
+        },
         "plantumlServer": {
           "title": "PlantUML Server URL"
         }
@@ -848,6 +880,7 @@
       "moveFile": "Move File",
       "renameFile": "Rename File",
       "quickOpen": "Quick Open",
+      "quickOpenRecent": "Quick Open Recent",
       "changeEncoding": "Change Encoding",
       "changeLineEnding": "Change Line Ending",
       "trailingNewline": "Trailing Newline",
@@ -862,7 +895,8 @@
       "exportFile": "Export File",
       "exportFilePdf": "Export as PDF",
       "zoom": "Zoom",
-      "checkUpdate": "Check for Updates"
+      "checkUpdate": "Check for Updates",
+      "addFolder": "Add Folder…"
     },
     "edit": {
       "undo": "Undo",
@@ -941,6 +975,8 @@
       "toggleTypewriterMode": "Toggle Typewriter Mode",
       "toggleFocusMode": "Toggle Focus Mode",
       "toggleSidebar": "Toggle Sidebar",
+      "outlineCollapseAll": "Outline: Collapse All",
+      "outlineExpandAll": "Outline: Expand All",
       "toggleToc": "Toggle Table of Contents",
       "toggleTabbar": "Toggle Tab Bar",
       "toggleDevTools": "Toggle Developer Tools",

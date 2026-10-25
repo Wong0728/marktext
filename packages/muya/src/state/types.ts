@@ -10,6 +10,7 @@ export interface IAtxHeadingState {
     meta: {
         level: number;
     };
+    // The complete editable line, including opening/closing markers and whitespace.
     text: string;
 }
 
@@ -17,8 +18,8 @@ export interface ISetextHeadingState {
     name: 'setext-heading';
     meta: {
         level: number;
-        underline: string; // "===" | "---";
     };
+    syntax: { underline: string }; // The complete underline line, excluding its EOL.
     text: string;
 }
 
@@ -262,6 +263,10 @@ export const isFootnoteBlockState = (s: TState): s is IFootnoteBlockState => s.n
 
 export function isAnyListState(s: TState): s is IOrderListState | IBulletListState | ITaskListState {
     return s.name === 'order-list' || s.name === 'bullet-list' || s.name === 'task-list';
+}
+
+export function markdownListMarker(list: IOrderListState | IBulletListState | ITaskListState): string {
+    return 'delimiter' in list.meta ? `ordered:${list.meta.delimiter}` : `bullet:${list.meta.marker}`;
 }
 
 export interface ITurnoverOptions {

@@ -5,6 +5,8 @@ import writeFileAtomic from 'write-file-atomic'
 import { BrowserWindow, ipcMain, type IpcMainInvokeEvent } from 'electron'
 import log from 'electron-log'
 import { TypedEmitter } from '@shared/types/typedEmitter'
+import type { ProjectRoots } from '../windows/projectRoots'
+import { readBufferedRoots } from '@shared/types/project'
 
 interface EditorBufferStorePaths {
   editorBufferStorePath: string
@@ -160,6 +162,17 @@ class EditorBufferStore extends TypedEmitter<EditorBufferStoreEvents> {
       return true
     }
 
+    // Upstream: persist the window's project-root collapse state alongside the
+    // snapshot so a recovered window restores which roots were folded.
+    const rootState = (win as unknown as { projectRoots?: ProjectRoots }).projectRoots
+    if (rootState && typeof newState === 'object') {
+      const snapshot = newState as { project?: unknown }
+      const buffered = readBufferedRoots(snapshot.project)
+      snapshot.project = { roots: rootState.roots.map(root => ({
+        pathname: root.pathname,
+        collapsedPaths: buffered.find(entry => entry.pathname === root.pathname)?.collapsedPaths ?? []
+      })) }
+    }
     this.writeBufferStoreFile(filePath, newState)
     return true
   }

@@ -89,6 +89,8 @@ export interface PreferencesState {
   writingTarget: number
   showHeadingNumbers: boolean
   sequenceTheme: SequenceTheme | string
+  mermaidLightTheme: string
+  mermaidDarkTheme: string
   plantumlServer: string
 
   theme: string
@@ -216,6 +218,8 @@ export const usePreferencesStore = defineStore('preferences', {
     writingTarget: 0,
     showHeadingNumbers: false,
     sequenceTheme: 'hand',
+    mermaidLightTheme: 'default',
+    mermaidDarkTheme: 'dark',
     plantumlServer: 'https://www.plantuml.com/plantuml',
 
     theme: 'light',

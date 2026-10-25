@@ -2,7 +2,7 @@ import type Format from '../block/base/format';
 import type ParagraphContent from '../block/content/paragraphContent';
 import type { Muya } from '../muya';
 import type { IRenderCursor } from '../selection/types';
-import type { IParagraphState, TContainerState, TState } from '../state/types';
+import type { IParagraphState, TState } from '../state/types';
 import type { IHighlight, Labels } from './types';
 import { prepareReadingLinks } from '../editor/readOnly';
 import logger from '../utils/logger';
@@ -15,7 +15,7 @@ const debug = logger('inlineRenderer:');
 class InlineRenderer {
     public labels: Labels = new Map();
     public renderer: Renderer;
-    private _labelsVersion: number = -1;
+    private _labelsState: readonly TState[] | null = null;
 
     constructor(public muya: Muya) {
         this.renderer = new Renderer(muya, this);
@@ -38,7 +38,7 @@ class InlineRenderer {
     }
 
     /**
-     * Flush every cached image and math render and force a re-render.
+     * Flush every cached image and force inline images to reload.
      *
      * The renderer memoises loaded images in `loadImageMap` (keyed by src,
      * skipped on the next render once `isSuccess` is true), resolved URLs
@@ -50,6 +50,8 @@ class InlineRenderer {
     invalidateImageCache() {
         this.renderer.loadImageMap.clear();
         this.renderer.urlMap.clear();
+        // Fork: KaTeX caches rendered formulas, so a stale math bitmap/text
+        // survives the image flush unless the math map is cleared too.
         this.renderer.loadMathMap.clear();
 
         const { scrollPage } = this.muya.editor;
@@ -63,11 +65,7 @@ class InlineRenderer {
     }
 
     patch(block: Format, cursor?: IRenderCursor, highlights: IHighlight[] = []) {
-        const { jsonState } = this.muya.editor;
-        if (jsonState.version !== this._labelsVersion) {
-            this.labels = this.collectReferenceDefinitions();
-            this._labelsVersion = jsonState.version;
-        }
+        this.labels = this.collectReferenceDefinitions();
         const { domNode } = block;
         if (block.isParent())
             debug.error('Patch can only handle content block');
@@ -83,30 +81,33 @@ class InlineRenderer {
             prepareReadingLinks(domNode!);
     }
 
-    // Reference definitions (`[ref]: url`) live in their own paragraphs, so
-    // resolving `[text][ref]` needs a document-wide pass. Shared with
-    // `getTOC`, which tokenizes headings outside a rendered block.
+    // Definitions live in paragraphs across the document; rescanning for every block caused #4887.
     collectReferenceDefinitions(): Labels {
-        const state = this.muya.editor.jsonState.getState();
+        const state = this.muya.editor.transactions.candidateState;
+        if (this._labelsState === state)
+            return this.labels;
+
         const labels = new Map();
-
-        const travel = (sts: TState[]) => {
-            if (Array.isArray(sts) && sts.length) {
-                for (const st of sts) {
-                    if (st.name === 'paragraph') {
-                        const { label, info } = this.getLabelInfo(st);
-                        if (label && info)
-                            labels.set(label, info);
-                    }
-                    else if ((st as TContainerState).children) {
-                        travel((st as TContainerState).children);
-                    }
-                }
+        const stack: Iterator<TState>[] = [state[Symbol.iterator]()];
+        while (stack.length) {
+            const next = stack[stack.length - 1].next();
+            if (next.done) {
+                stack.pop();
+                continue;
             }
-        };
+            const state = next.value;
+            if (state.name === 'paragraph') {
+                const { label, info } = this.getLabelInfo(state);
+                if (label && info)
+                    labels.set(label, info);
+            }
+            else if ('children' in state && Array.isArray(state.children)) {
+                stack.push(state.children[Symbol.iterator]());
+            }
+        }
 
-        travel(state);
-
+        this.labels = labels;
+        this._labelsState = state;
         return labels;
     }
 

@@ -18,6 +18,7 @@
       "openFile": "Dosya Aç...",
       "openFolder": "Klasör Aç...",
       "openRecent": "Son Kullanılanları Aç",
+      "openRecentMore": "Son kullanılanlarda ara...",
       "clearRecentlyUsed": "Son Kullanılanları Temizle",
       "save": "Kaydet",
       "saveAs": "Farklı Kaydet...",
@@ -34,7 +35,8 @@
       "closeWindow": "Pencereyi Kapat",
       "quit": "Çıkış",
       "preferences": "Tercihler",
-      "exportDocx": "DOCX Olarak Dışa Aktar"
+      "exportDocx": "DOCX Olarak Dışa Aktar",
+      "addFolder": "Add Folder…"
     },
     "edit": {
       "edit": "Düzen",
@@ -245,8 +247,11 @@
       "noFolderOpen": "Açık klasör yok",
       "noResultsFound": "Sonuç bulunamadı.",
       "cancel": "İptal",
-      "openFolder": "Klasör Aç",
-      "showMoreMatches": "Daha fazla eşleşme göster"
+      "openFolder": "Add Folder…",
+      "showMoreMatches": "Daha fazla eşleşme göster",
+      "searchInFolders": "Search in added folders",
+      "partialSearch": "Some folders could not be searched.",
+      "noSearchableFolders": "No available folders to search."
     },
     "tree": {
       "openedFiles": "Açık dosyalar",
@@ -256,7 +261,17 @@
       "createFile": "Dosya Oluştur",
       "openFolder": "Klasör Aç",
       "filterFiles": "Dosyaları filtrele...",
-      "noMatchingFiles": "Eşleşen dosya yok"
+      "noMatchingFiles": "Eşleşen dosya yok",
+      "noFolders": "No folders added",
+      "removeFolder": "Remove from Sidebar",
+      "retryFolder": "Retry",
+      "loadingFolder": "Loading folder…",
+      "unavailableFolder": "Folder unavailable",
+      "overlappingFolder": "This folder overlaps an existing folder. Remove the existing item first.",
+      "folderAlreadyAdded": "This folder has already been added.",
+      "fileOutsideFolders": "This file is not in an added folder.",
+      "sessionSaveFailed": "Unable to save session",
+      "resizeOpenedFiles": "Açık dosyalar listesini yeniden boyutlandır"
     },
     "toc": {
       "expand": "İçindekileri genişlet",
@@ -293,8 +308,16 @@
     "placeholders": {
       "selectOption": "Bir seçenek seçin",
       "searchFileToOpen": "Açılacak dosyayı arayın",
-      "selectLanguage": "Geçilecek dili seçin"
-    }
+      "selectLanguage": "Geçilecek dili seçin",
+      "searchRecentFilesAndFolders": "Son kullanılan dosya ve klasörlerde ara"
+    },
+    "recentlyOpened": "son kullanılanlar",
+    "fileResults": "dosya sonuçları",
+    "folders": "klasörler",
+    "files": "dosyalar",
+    "removeFromRecent": "Son kullanılanlardan kaldır",
+    "noResults": "Eşleşen sonuç yok",
+    "noRecentFiles": "Son kullanılan dosya veya klasör yok"
   },
   "exportSettings": {
     "autoNumberingHeadings": "Başlıkları otomatik numaralandır",
@@ -478,6 +501,8 @@
         "isHtmlEnabled": "HTML işlemeyi etkinleştir",
         "softNewlineAsSpace": "Yumuşak satır sonlarını boşluk olarak değerlendir",
         "sequenceTheme": "Dizi diyagramı teması",
+        "mermaidLightTheme": "MarkText açık temaları için Mermaid teması",
+        "mermaidDarkTheme": "MarkText koyu temaları için Mermaid teması",
         "theme": "MarkText'te kullanılan temayı seçin",
         "followSystemTheme": "Sistem Temasını Takip Et",
         "lightModeTheme": "Sistem açık moddayken kullanılacak tema",
@@ -583,7 +608,8 @@
           "dutch": "Nederlands",
           "portuguese": "Português",
           "turkish": "Türkçe",
-          "russian": "Русский"
+          "russian": "Русский",
+          "italian": "Italiano"
         }
       }
     },
@@ -737,6 +763,12 @@
           "handDrawn": "El Çizimi",
           "simple": "Basit"
         },
+        "mermaidLightTheme": {
+          "title": "MarkText açık temaları için Mermaid teması"
+        },
+        "mermaidDarkTheme": {
+          "title": "MarkText koyu temaları için Mermaid teması"
+        },
         "plantumlServer": {
           "title": "PlantUML Sunucu URL'si"
         }
@@ -848,6 +880,7 @@
       "moveFile": "Dosyayı Taşı",
       "renameFile": "Dosyayı Yeniden Adlandır",
       "quickOpen": "Hızlı Aç",
+      "quickOpenRecent": "Son kullanılanları hızlı aç",
       "changeEncoding": "Kodlamayı Değiştir",
       "changeLineEnding": "Satır Sonunu Değiştir",
       "trailingNewline": "Sondaki Yeni Satır",
@@ -862,7 +895,8 @@
       "exportFile": "Dosya Dışa Aktar",
       "exportFilePdf": "PDF Olarak Dışa Aktar",
       "zoom": "Yakınlaştırma",
-      "checkUpdate": "Güncellemeleri Denetle"
+      "checkUpdate": "Güncellemeleri Denetle",
+      "addFolder": "Add Folder…"
     },
     "edit": {
       "undo": "Geri Al",
@@ -941,6 +975,8 @@
       "toggleTypewriterMode": "Daktilo Modunu Aç/Kapat",
       "toggleFocusMode": "Odak Modunu Aç/Kapat",
       "toggleSidebar": "Kenar Çubuğunu Aç/Kapat",
+      "outlineCollapseAll": "İçindekiler: Tümünü daralt",
+      "outlineExpandAll": "İçindekiler: Tümünü genişlet",
       "toggleToc": "İçindekileri Aç/Kapat",
       "toggleTabbar": "Sekme Çubuğunu Aç/Kapat",
       "toggleDevTools": "Geliştirici Araçlarını Aç/Kapat",

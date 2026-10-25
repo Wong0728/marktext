@@ -56,6 +56,8 @@ export interface IUserPreferences {
   vimMode?: boolean
   writingTarget?: number
   showHeadingNumbers?: boolean
+  mermaidLightTheme?: string
+  mermaidDarkTheme?: string
   theme?: string
   spellcheckerEnabled?: boolean
   spellcheckerNoUnderline?: boolean
