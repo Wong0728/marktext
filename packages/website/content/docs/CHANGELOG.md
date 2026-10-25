@@ -4,6 +4,24 @@ The entries below are this fork's releases; everything under them is inherited
 upstream history. Release artifacts and notes:
 https://github.com/Wong0728/marktext/releases
 
+## 0.24.0-fork.1
+
+Fork release on top of upstream **develop through 1f206c02** (v0.24.0 development, 37 commits past v0.23.0), reconciled **upstream-first**. The integration landed as merge commit 4a4cac30. From upstream this release gains multi-root project folders with per-root collapse state and status handling (#5835–#5838, #2222), recent documents in quick open and a recent picker (#1609, #5864), light and dark Mermaid theme preferences (#2293, #5862), an outline collapse/expand-all toggle (#5796, #5867), outline state preserved across tab switches (#4914, #5865), Ctrl+Y as redo on Windows (#2183, #5858), a draggable sash to resize the opened-files list (#5685, #5807), proportional viewer wheel zoom (#5824, #5825), search across sidebar folder roots (#2222, #5836), Italian localization (beta, #5538), ATX/Setext heading source-form preservation (#5878), list spacing kept consistent through edit transactions (#5872), and the removal of the quadratic costs that froze large documents (#4887, #4942, #3211) — muya's state layer was rebuilt on the upstream edit-transactions architecture in the same pass.
+
+**:cactus:Preserved fork features**
+
+- All fork features from 0.23.0-fork.1 carry over: Word clipboard byte-exact rich copy, the DOCX dual engine (`auto`/`pandoc`/`js`), the three-way external-change merge with merged-region highlighting, MathML clipboard, native multi-window tabs with crash-recovery snapshots, high-contrast theme, frontmatter export presets, and the Windows-specific write/watcher fixes.
+- `Muya.replaceContent` still returns the touched top-level block indices for the merge flash: `buildReplaceOp` was extended with `changedIndices` on top of the upstream rewrite.
+- The crash-recovery snapshot contract stays fork-side (`snapshotId`, `restoreUnsavedTabs`, `null` clears the snapshot); upstream's project-root collapse state is now persisted alongside each snapshot.
+- The sidebar tree keeps the render-layer filename filter, re-ported onto the multi-root template (one filter box narrows every root; `treeFolder` filtering unchanged).
+- IME composition survival, the anchorBlock caret fallback, KaTeX render-cache invalidation and the #5387 first-undo caret clamp all carry over onto the new transactions layer.
+
+**:warning:Known risks**
+
+- The muya state/history rewrite is the biggest structural change since the v0.23.0 integration: the state-level operation cache was replaced by `EditTransactions`. Covered by the unit suites (1339 passing) but not by a packaged manual smoke pass yet.
+- `eslint --cache .` exits 0 with 195 warnings (0 errors), dominated by `@typescript-eslint/no-non-null-assertion`, inherited from both integrations.
+- Deliberate divergence to watch: Electron stays at ~44.3.0 (the fork's Windows fixes depend on it) while upstream pins ~42.1.0.
+
 ## 0.23.0-fork.1
 
 First fork release on top of upstream **v0.23.0**, reconciled **upstream-first**: the official v0.23.0 tree and its restructuring are adopted wholesale, and the fork's features were re-ported onto the new structure rather than kept on the old one. The integration landed as merge commit 57d7a15b and was finished by 286a73ce (drop committed test artifacts and stray lockfiles), 96c71155 (DOCX dual-engine adapted to the async v0.23.0 pandoc API), 445abe64 (fork-only dependencies restored) and 39c3ce85 (typecheck, unit, lint and build repairs after the integration). From upstream this release gains per-tab editing, source-code, reading and read-only document modes (#5801, #5802, #5793), a `--read-only` CLI option (#5821), foldable headings and a rebuilt document outline (#5276, #5791), preview tabs for sidebar files (#5820, #5792), a title-bar document statistics popover (#5794, #5819) and Linux arm64 release packages (#5778) — the full upstream list is in the 0.23.0 section below.
